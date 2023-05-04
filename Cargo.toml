@@ -1,0 +1,27 @@
+[package]
+name = "kinesis-tailf"
+version = "0.0.1"
+license = "GPL-3,0-or-later"
+description = "kinesis-tailr"
+readme = "README.md"
+homepage = ""
+repository = ""
+authors = ["Romain Gallet <rgallet@grumlimited.co.uk>"]
+edition = "2021"
+
+[dependencies]
+async-trait = "0.1.68"
+aws-config= { version = "0.55.2" }
+aws-sdk-kinesis= { version = "0.27.0" }
+chrono = "0.4.21"
+clap = { version = "4.2.7", features = ["derive"] }
+config = "0.13.3"
+ctrlc-async = "3.2.2"
+env_logger = "0.10.0"
+log = "0.4.17"
+log4rs = "1.2.0"
+tokio = { version = "1.28.0", features = ["rt-multi-thread",  "macros"] }
+
+[features]
+default = ["clap/cargo", "clap/derive", "config/json"]
+

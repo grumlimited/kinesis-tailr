@@ -1,0 +1,13 @@
+/target
+.idea
+*.iml
+
+*~
+*#
+*.deb
+*.swp
+*.gz
+*.bak
+
+rpmbuild/RPMS
+rpmbuild/SRPMS
