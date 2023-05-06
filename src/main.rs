@@ -114,7 +114,7 @@ async fn main() -> Result<(), io::Error> {
 
     let client = Client::new(&shared_config);
 
-    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(100);
+    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(500);
 
     let shards = get_shards(&client, &stream_name)
         .await

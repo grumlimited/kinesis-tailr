@@ -21,7 +21,7 @@ pub struct ShardIteratorProgress {
 #[derive(Debug, Clone)]
 pub enum ShardProcessorADT {
     Termination,
-    Progress(RecordResult),
+    Progress(Vec<RecordResult>),
 }
 
 #[derive(Debug, Clone)]
@@ -52,7 +52,7 @@ pub struct ShardProcessorLatest {
 #[derive(Debug, Clone)]
 pub struct ShardProcessorAtTimestamp {
     pub config: ShardProcessorConfig,
-    pub from: chrono::DateTime<Utc>,
+    pub from_datetime: chrono::DateTime<Utc>,
 }
 
 #[async_trait]
@@ -70,18 +70,18 @@ pub fn new(
     client: Client,
     stream: String,
     shard_id: String,
-    from: Option<chrono::DateTime<Utc>>,
+    from_datetime: Option<chrono::DateTime<Utc>>,
     tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
 ) -> Box<dyn ShardProcessor + Send + Sync> {
-    match from {
-        Some(from) => Box::new(ShardProcessorAtTimestamp {
+    match from_datetime {
+        Some(from_datetime) => Box::new(ShardProcessorAtTimestamp {
             config: ShardProcessorConfig {
                 client,
                 stream,
                 shard_id,
                 tx_records,
             },
-            from,
+            from_datetime,
         }),
         None => Box::new(ShardProcessorLatest {
             config: ShardProcessorConfig {
@@ -119,7 +119,7 @@ impl IteratorProvider for ShardProcessorAtTimestamp {
     }
 
     async fn get_iterator(&self) -> Result<GetShardIteratorOutput, Error> {
-        helpers::get_iterator_at_timestamp(self.clone(), self.from).await
+        helpers::get_iterator_at_timestamp(self.clone(), self.from_datetime).await
     }
 }
 
@@ -244,40 +244,44 @@ where
             .await?;
 
         let next_shard_iterator = resp.next_shard_iterator();
-        let mut has_errors = false;
 
-        for record in resp.records().unwrap().iter() {
-            let data = record.data().unwrap().as_ref();
-            let datetime = *record.approximate_arrival_timestamp().unwrap();
+        let record_results = resp
+            .records()
+            .unwrap()
+            .iter()
+            .map(|record| {
+                let data = record.data().unwrap().as_ref();
+                let datetime = *record.approximate_arrival_timestamp().unwrap();
 
-            let result = self
-                .get_config()
-                .tx_records
-                .send(Ok(ShardProcessorADT::Progress(RecordResult {
+                RecordResult {
                     shard_id: self.get_config().shard_id.clone(),
                     sequence_id: record.sequence_number().unwrap().into(),
                     datetime,
                     data: data.into(),
-                })))
-                .await;
+                }
+            })
+            .collect::<Vec<RecordResult>>();
 
-            has_errors = has_errors || result.is_err();
+        if !record_results.is_empty() {
+            self.get_config()
+                .tx_records
+                .send(Ok(ShardProcessorADT::Progress(record_results)))
+                .await
+                .expect("TODO: panic message")
         }
 
-        if !has_errors {
-            let last_sequence_id: Option<String> = resp
-                .records()
-                .and_then(|r| r.last())
-                .and_then(|r| r.sequence_number())
-                .map(|s| s.into());
+        let last_sequence_id: Option<String> = resp
+            .records()
+            .and_then(|r| r.last())
+            .and_then(|r| r.sequence_number())
+            .map(|s| s.into());
 
-            let results = ShardIteratorProgress {
-                last_sequence_id,
-                next_shard_iterator: next_shard_iterator.map(|s| s.into()),
-            };
+        let results = ShardIteratorProgress {
+            last_sequence_id,
+            next_shard_iterator: next_shard_iterator.map(|s| s.into()),
+        };
 
-            tx_shard_iterator_progress.send(results).await.unwrap();
-        }
+        tx_shard_iterator_progress.send(results).await.unwrap();
 
         Ok(())
     }
