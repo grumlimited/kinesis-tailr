@@ -17,41 +17,49 @@ mod kinesis;
 
 #[derive(Debug, Parser)]
 struct Opt {
-    /// The AWS Region.
+    /// AWS Region
     #[structopt(short, long)]
     region: Option<String>,
 
-    /// The name of the stream.
+    /// Name of the stream
     #[structopt(short, long)]
     stream_name: String,
 
-    /// Whether to display additional information.
-    #[structopt(short, long)]
-    verbose: bool,
-
-    #[structopt(long)]
-    max_messages: Option<u32>,
-
-    #[structopt(long)]
-    print_key: bool,
-
-    #[structopt(long)]
-    print_shardid: bool,
-
-    #[structopt(long)]
-    print_timestamp: bool,
-
-    #[structopt(long)]
-    print_delimiter: bool,
-
-    #[structopt(long)]
-    from: Option<String>,
-
+    /// Shard ID to tail from
     #[structopt(long)]
     shard_id: Option<String>,
 
+    /// Maximum number of messages to retrieve
+    #[structopt(long)]
+    max_messages: Option<u32>,
+
+    /// Start datetime position to tail from. ISO 8601 format.
+    #[structopt(long)]
+    from_datetime: Option<String>,
+
+    /// Print the partition key
+    #[structopt(long)]
+    print_key: bool,
+
+    /// Print the shard ID
+    #[structopt(long)]
+    print_shardid: bool,
+
+    /// Print timestamps
+    #[structopt(long)]
+    print_timestamp: bool,
+
+    /// Print a delimiter between each payload
+    #[structopt(long)]
+    print_delimiter: bool,
+
+    /// Endpoint URL to use
     #[structopt(long)]
     endpoint_url: Option<String>,
+
+    /// Display additional information
+    #[structopt(short, long)]
+    verbose: bool,
 }
 
 #[tokio::main]
@@ -65,7 +73,7 @@ async fn main() -> Result<(), io::Error> {
         print_shardid: print_shard,
         print_timestamp,
         print_delimiter,
-        from,
+        from_datetime: from,
         shard_id,
         endpoint_url,
     } = Opt::parse();
@@ -106,7 +114,7 @@ async fn main() -> Result<(), io::Error> {
 
     let client = Client::new(&shared_config);
 
-    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(100);
+    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(500);
 
     let shards = get_shards(&client, &stream_name)
         .await

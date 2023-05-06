@@ -1,4 +1,4 @@
-use crate::kinesis::{PanicError, ShardProcessorADT};
+use crate::kinesis::{PanicError, RecordResult, ShardProcessorADT};
 use chrono::*;
 use std::io::{self, BufWriter, Error, Stdout, Write};
 use std::rc::Rc;
@@ -59,6 +59,41 @@ impl Console {
         Ok(())
     }
 
+    fn format_records(&self, record_results: &[RecordResult]) -> Vec<String> {
+        record_results
+            .iter()
+            .map(|record_result| self.format_record(record_result))
+            .collect()
+    }
+
+    fn format_record(&self, record_result: &RecordResult) -> String {
+        let data = std::str::from_utf8(record_result.data.as_slice())
+            .unwrap()
+            .to_string();
+
+        let data = if self.print_key {
+            format!("{} {}", record_result.sequence_id, data)
+        } else {
+            data
+        };
+
+        let data = if self.print_shardid {
+            format!("{} {}", record_result.shard_id, data)
+        } else {
+            data
+        };
+
+        if self.print_timestamp {
+            let date = chrono::Utc
+                .timestamp_opt(record_result.datetime.secs(), 0)
+                .unwrap();
+
+            format!("{} {}", date.format("%+"), data)
+        } else {
+            data
+        }
+    }
+
     pub async fn run(&mut self) -> io::Result<()> {
         let count = Rc::new(Mutex::new(0));
 
@@ -69,32 +104,8 @@ impl Console {
 
         while let Some(res) = self.rx_records.recv().await {
             match res {
-                Ok(xxx) => match xxx {
+                Ok(adt) => match adt {
                     ShardProcessorADT::Progress(res) => {
-                        let data = std::str::from_utf8(res.data.as_slice())
-                            .unwrap()
-                            .to_string();
-
-                        let data = if self.print_key {
-                            format!("{} {}", res.sequence_id, data)
-                        } else {
-                            data
-                        };
-
-                        let data = if self.print_shardid {
-                            format!("{} {}", res.shard_id, data)
-                        } else {
-                            data
-                        };
-
-                        let data = if self.print_timestamp {
-                            let date = chrono::Utc.timestamp_opt(res.datetime.secs(), 0).unwrap();
-
-                            format!("{} {}", date.format("%+"), data)
-                        } else {
-                            data
-                        };
-
                         let mut lock = count.lock().await;
 
                         match self.max_messages {
@@ -106,21 +117,43 @@ impl Console {
                                         .unwrap();
                                 }
 
-                                if *lock < max_messages {
-                                    *lock += 1;
-                                    writeln!(handle, "{}", data)?;
+                                let remaining = if *lock < max_messages {
+                                    max_messages - *lock
+                                } else {
+                                    0
+                                };
+
+                                if remaining > 0 && res.len() > 0 {
+                                    *lock += res.len() as u32;
+
+                                    let split = res.split_at(remaining as usize);
+                                    let to_display = split.0;
+
+                                    let data = self.format_records(&to_display);
+
+                                    data.iter().for_each(|data| {
+                                        writeln!(handle, "{}", data).unwrap();
+                                    });
                                     self.delimiter(&mut handle)?
                                 };
                             }
                             None => {
-                                *lock += 1;
-                                writeln!(handle, "{}", data)?;
+                                let data = self.format_records(res.as_slice());
+
+                                *lock += data.len() as u32;
+                                data.iter().for_each(|data| {
+                                    writeln!(handle, "{}", data).unwrap();
+                                });
                                 self.delimiter(&mut handle)?
                             }
                         }
                     }
                     ShardProcessorADT::Termination => {
-                        writeln!(handle, "{} messages processed", count.lock().await)?;
+                        let messages_processed = match self.max_messages {
+                            Some(max_messages) => max_messages,
+                            _ => *count.lock().await,
+                        };
+                        writeln!(handle, "{} messages processed", messages_processed)?;
                         handle.flush()?;
                         self.rx_records.close();
                         std::process::exit(0);
