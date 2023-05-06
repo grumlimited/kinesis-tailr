@@ -29,27 +29,35 @@ struct Opt {
     #[structopt(short, long)]
     verbose: bool,
 
+    /// The maximum number of messages to retrieve.
     #[structopt(long)]
     max_messages: Option<u32>,
 
+    /// Whether to print the partition key.
     #[structopt(long)]
     print_key: bool,
 
+    /// Whether to print the shard ID.
     #[structopt(long)]
     print_shardid: bool,
 
+    /// Whether to print the timestamp.
     #[structopt(long)]
     print_timestamp: bool,
 
+    /// Whether to print the delimiter.
     #[structopt(long)]
     print_delimiter: bool,
 
+    /// The start time position to tail from.
     #[structopt(long)]
     from: Option<String>,
 
+    /// The shard ID to tail from.
     #[structopt(long)]
     shard_id: Option<String>,
 
+    /// The endpoint URL to use.
     #[structopt(long)]
     endpoint_url: Option<String>,
 }
