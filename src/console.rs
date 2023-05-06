@@ -37,62 +37,6 @@ impl Console {
         }
     }
 
-    fn handle_termination(&self) {
-        let tx_records_clone = self.tx_records.clone();
-        ctrlc_async::set_async_handler(async move {
-            tx_records_clone
-                .send(Ok(ShardProcessorADT::Termination))
-                .await
-                .unwrap();
-        })
-        .expect("Error setting Ctrl-C handler");
-    }
-
-    fn delimiter(&self, handle: &mut BufWriter<Stdout>) -> Result<(), Error> {
-        if self.print_delimiter {
-            writeln!(
-                handle,
-                "------------------------------------------------------------------------"
-            )?
-        }
-        Ok(())
-    }
-
-    fn format_records(&self, record_results: &[RecordResult]) -> Vec<String> {
-        record_results
-            .iter()
-            .map(|record_result| self.format_record(record_result))
-            .collect()
-    }
-
-    fn format_record(&self, record_result: &RecordResult) -> String {
-        let data = std::str::from_utf8(record_result.data.as_slice())
-            .unwrap()
-            .to_string();
-
-        let data = if self.print_key {
-            format!("{} {}", record_result.sequence_id, data)
-        } else {
-            data
-        };
-
-        let data = if self.print_shardid {
-            format!("{} {}", record_result.shard_id, data)
-        } else {
-            data
-        };
-
-        if self.print_timestamp {
-            let date = chrono::Utc
-                .timestamp_opt(record_result.datetime.secs(), 0)
-                .unwrap();
-
-            format!("{} {}", date.format("%+"), data)
-        } else {
-            data
-        }
-    }
-
     pub async fn run(&mut self) -> io::Result<()> {
         let count = Rc::new(Mutex::new(0));
 
@@ -164,5 +108,61 @@ impl Console {
             };
         }
         Ok(())
+    }
+
+    fn handle_termination(&self) {
+        let tx_records_clone = self.tx_records.clone();
+        ctrlc_async::set_async_handler(async move {
+            tx_records_clone
+                .send(Ok(ShardProcessorADT::Termination))
+                .await
+                .unwrap();
+        })
+        .expect("Error setting Ctrl-C handler");
+    }
+
+    fn delimiter(&self, handle: &mut BufWriter<Stdout>) -> Result<(), Error> {
+        if self.print_delimiter {
+            writeln!(
+                handle,
+                "------------------------------------------------------------------------"
+            )?
+        }
+        Ok(())
+    }
+
+    fn format_records(&self, record_results: &[RecordResult]) -> Vec<String> {
+        record_results
+            .iter()
+            .map(|record_result| self.format_record(record_result))
+            .collect()
+    }
+
+    fn format_record(&self, record_result: &RecordResult) -> String {
+        let data = std::str::from_utf8(record_result.data.as_slice())
+            .unwrap()
+            .to_string();
+
+        let data = if self.print_key {
+            format!("{} {}", record_result.sequence_id, data)
+        } else {
+            data
+        };
+
+        let data = if self.print_shardid {
+            format!("{} {}", record_result.shard_id, data)
+        } else {
+            data
+        };
+
+        if self.print_timestamp {
+            let date = chrono::Utc
+                .timestamp_opt(record_result.datetime.secs(), 0)
+                .unwrap();
+
+            format!("{} {}", date.format("%+"), data)
+        } else {
+            data
+        }
     }
 }
