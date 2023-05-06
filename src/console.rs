@@ -1,10 +1,9 @@
-use crate::kinesis::{PanicError, RecordResult, ShardProcessorADT};
+use crate::kinesis::models::*;
 use chrono::*;
 use std::io::{self, BufWriter, Error, Stdout, Write};
 use std::rc::Rc;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::Mutex;
-
 pub const CONSOLE_BUF_SIZE: usize = 8 * 1024; // 8kB
 
 pub struct Console {

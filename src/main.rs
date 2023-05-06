@@ -9,6 +9,7 @@ use std::io;
 use tokio::sync::mpsc;
 
 use crate::console::Console;
+use kinesis::models::*;
 use kinesis::*;
 
 mod console;
