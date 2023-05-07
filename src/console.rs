@@ -66,13 +66,13 @@ impl Console {
                                     0
                                 };
 
-                                if remaining > 0 && res.len() > 0 {
+                                if remaining > 0 && !res.is_empty() {
                                     *lock += res.len() as u32;
 
                                     let split = res.split_at(remaining as usize);
                                     let to_display = split.0;
 
-                                    let data = self.format_records(&to_display);
+                                    let data = self.format_records(to_display);
 
                                     data.iter().for_each(|data| {
                                         writeln!(handle, "{}", data).unwrap();

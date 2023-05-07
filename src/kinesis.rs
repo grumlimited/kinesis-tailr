@@ -201,7 +201,7 @@ where
                 let datetime = *record.approximate_arrival_timestamp().unwrap();
 
                 RecordResult {
-                    shard_id: self.get_config().shard_id.clone(),
+                    shard_id: self.get_config().shard_id,
                     sequence_id: record.sequence_number().unwrap().into(),
                     datetime,
                     data: data.into(),
