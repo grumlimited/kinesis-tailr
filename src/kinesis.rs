@@ -10,7 +10,7 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{sleep, Duration};
 
-mod helpers;
+pub mod helpers;
 pub mod models;
 
 pub fn new(
@@ -232,15 +232,4 @@ where
 
         Ok(())
     }
-}
-
-pub async fn get_shards(client: &Client, stream: &str) -> Result<Vec<String>, Error> {
-    let resp = client.list_shards().stream_name(stream).send().await?;
-
-    Ok(resp
-        .shards()
-        .unwrap()
-        .iter()
-        .map(|s| s.shard_id.as_ref().unwrap().clone())
-        .collect())
 }

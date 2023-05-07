@@ -1,5 +1,5 @@
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
-use aws_sdk_kinesis::Error;
+use aws_sdk_kinesis::{Client, Error};
 use chrono::Utc;
 use tokio::sync::mpsc::Sender;
 
@@ -85,4 +85,15 @@ pub async fn handle_iterator_refresh<T>(
         })
         .await
         .unwrap();
+}
+
+pub async fn get_shards(client: &Client, stream: &str) -> Result<Vec<String>, Error> {
+    let resp = client.list_shards().stream_name(stream).send().await?;
+
+    Ok(resp
+        .shards()
+        .unwrap()
+        .iter()
+        .map(|s| s.shard_id.as_ref().unwrap().clone())
+        .collect())
 }
