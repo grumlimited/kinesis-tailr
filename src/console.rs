@@ -1,6 +1,6 @@
 use crate::kinesis::models::*;
 use chrono::*;
-use std::io::{self, BufWriter, Error, Stdout, Write};
+use std::io::{self, BufWriter, Error, Write};
 use std::rc::Rc;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::Mutex;
@@ -38,10 +38,18 @@ impl Console {
     }
 
     pub async fn run(&mut self) -> io::Result<()> {
-        let count = Rc::new(Mutex::new(0));
-
         let stdout = io::stdout(); // get the global stdout entity
-        let mut handle: BufWriter<Stdout> = io::BufWriter::with_capacity(CONSOLE_BUF_SIZE, stdout);
+        let mut handle = io::BufWriter::with_capacity(CONSOLE_BUF_SIZE, stdout);
+
+        self.run_inner(&mut handle).await
+    }
+
+    pub async fn run_inner<W>(&mut self, handle: &mut BufWriter<W>) -> io::Result<()>
+    where
+        W: std::io::Write,
+    {
+        self.delimiter(handle).unwrap();
+        let count = Rc::new(Mutex::new(0));
 
         self.handle_termination();
 
@@ -77,7 +85,7 @@ impl Console {
                                     data.iter().for_each(|data| {
                                         writeln!(handle, "{}", data).unwrap();
                                     });
-                                    self.delimiter(&mut handle)?
+                                    self.delimiter(handle)?
                                 };
                             }
                             None => {
@@ -87,7 +95,7 @@ impl Console {
                                 data.iter().for_each(|data| {
                                     writeln!(handle, "{}", data).unwrap();
                                 });
-                                self.delimiter(&mut handle)?
+                                self.delimiter(handle)?
                             }
                         }
                     }
@@ -112,6 +120,7 @@ impl Console {
 
     fn format_nb_messages(&self, messages_processed: u32) -> String {
         match messages_processed {
+            0 => "0 message processed".to_string(),
             1 => "1 message processed".to_string(),
             _ => format!("{} messages processed", messages_processed),
         }
@@ -128,7 +137,10 @@ impl Console {
         .expect("Error setting Ctrl-C handler");
     }
 
-    fn delimiter(&self, handle: &mut BufWriter<Stdout>) -> Result<(), Error> {
+    fn delimiter<W>(&self, handle: &mut BufWriter<W>) -> Result<(), Error>
+    where
+        W: std::io::Write,
+    {
         if self.print_delimiter {
             writeln!(
                 handle,
