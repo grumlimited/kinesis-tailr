@@ -15,7 +15,7 @@ A simple tool to tail a Kinesis stream built with Rust.
 make install
 ```
 
-Install a single binary to `/usr/bin/kinesis-tailf`.
+Installs a single binary to `/usr/bin/kinesis-tailf`.
 
 # Usage
 
@@ -24,9 +24,9 @@ Install a single binary to `/usr/bin/kinesis-tailf`.
     Usage: kinesis-tailf [OPTIONS] --stream-name <STREAM_NAME>
     
     Options:
-    -r, --region <REGION>                AWS Region
-    -s, --stream-name <STREAM_NAME>      Name of the stream
-    --shard-id <SHARD_ID>               Shard ID to tail from
+    -r, --region <REGION>               AWS Region
+    -s, --stream-name <STREAM_NAME>     Name of the stream
+    --shard-id <SHARD_ID>               ShardID to tail from
     --max-messages <MAX_MESSAGES>       Maximum number of messages to retrieve
     --from-datetime <FROM_DATETIME>     Start datetime position to tail from. ISO 8601 format
     --print-key                         Print the partition key
