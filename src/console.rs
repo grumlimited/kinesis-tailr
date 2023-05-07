@@ -12,6 +12,7 @@ pub struct Console {
     print_shardid: bool,
     print_timestamp: bool,
     print_delimiter: bool,
+    exit_after_termination: bool,
     rx_records: Receiver<Result<ShardProcessorADT, PanicError>>,
     tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
 }
@@ -32,6 +33,7 @@ impl Console {
             print_shardid,
             print_timestamp,
             print_delimiter,
+            exit_after_termination: true,
             rx_records,
             tx_records,
         }
@@ -107,7 +109,10 @@ impl Console {
                         writeln!(handle, "{}", self.format_nb_messages(messages_processed))?;
                         handle.flush()?;
                         self.rx_records.close();
-                        std::process::exit(0);
+
+                        if self.exit_after_termination {
+                            std::process::exit(0)
+                        }
                     }
                 },
                 Err(e) => {
