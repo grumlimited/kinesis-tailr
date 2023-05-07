@@ -2,12 +2,12 @@
 
 use aws_config::meta::region::RegionProviderChain;
 use aws_sdk_kinesis::{config::Region, meta::PKG_VERSION, Client};
-use chrono::TimeZone;
 use clap::Parser;
 use log::info;
 use std::io;
 use tokio::sync::mpsc;
 
+use crate::cli_helpers::parse_date;
 use crate::console::Console;
 use kinesis::models::*;
 use kinesis::*;
@@ -85,7 +85,7 @@ async fn main() -> Result<(), io::Error> {
         .or_default_provider()
         .or_else(Region::new("us-east-1"));
 
-    let from = from.map(|f| chrono::Utc.datetime_from_str(f.as_str(), "%+").unwrap());
+    let from_datetime = parse_date(from.as_deref());
 
     if verbose {
         info!("Kinesis client version: {}", PKG_VERSION);
@@ -94,7 +94,7 @@ async fn main() -> Result<(), io::Error> {
             region_provider.region().await.unwrap().as_ref()
         );
         info!("Stream name:            {}", &stream_name);
-        from.iter().for_each(|f| {
+        from_datetime.iter().for_each(|f| {
             info!("From:                   {}", &f.format("%+"));
         });
     }
@@ -151,7 +151,7 @@ async fn main() -> Result<(), io::Error> {
             client.clone(),
             stream_name.clone(),
             shard_id.clone(),
-            from,
+            from_datetime,
             tx_records.clone(),
         );
 
@@ -172,4 +172,32 @@ async fn main() -> Result<(), io::Error> {
     )
     .run()
     .await
+}
+
+mod cli_helpers {
+    use chrono::{DateTime, TimeZone, Utc};
+
+    pub fn parse_date(from: Option<&str>) -> Option<DateTime<Utc>> {
+        from.map(|f| chrono::Utc.datetime_from_str(f, "%+").unwrap())
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::cli_helpers::*;
+
+    #[test]
+    fn parse_date_test_ok() {
+        let date = "2023-05-04T20:57:12Z";
+        let result = parse_date(Some(date)).unwrap();
+        let result = result.to_rfc3339().to_string();
+        assert_eq!(result, "2023-05-04T20:57:12+00:00");
+    }
+
+    #[test]
+    #[should_panic]
+    fn parse_date_test_fail() {
+        let invalid_date = "xxx";
+        parse_date(Some(invalid_date));
+    }
 }
