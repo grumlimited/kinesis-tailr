@@ -96,7 +96,7 @@ impl Console {
                             Some(max_messages) => max_messages,
                             _ => *count.lock().await,
                         };
-                        writeln!(handle, "{} messages processed", messages_processed)?;
+                        writeln!(handle, "{}", self.format_nb_messages(messages_processed))?;
                         handle.flush()?;
                         self.rx_records.close();
                         std::process::exit(0);
@@ -108,6 +108,13 @@ impl Console {
             };
         }
         Ok(())
+    }
+
+    fn format_nb_messages(&self, messages_processed: u32) -> String {
+        match messages_processed {
+            1 => "1 message processed".to_string(),
+            _ => format!("{} messages processed", messages_processed),
+        }
     }
 
     fn handle_termination(&self) {
@@ -164,5 +171,29 @@ impl Console {
         } else {
             data
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use tokio::sync::mpsc;
+
+    #[test]
+    fn format_nb_messages_ok() {
+        let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(1);
+
+        let console = Console {
+            max_messages: None,
+            print_key: false,
+            print_shardid: false,
+            print_timestamp: false,
+            print_delimiter: false,
+            rx_records,
+            tx_records,
+        };
+
+        assert_eq!(console.format_nb_messages(1), "1 message processed");
+        assert_eq!(console.format_nb_messages(2), "2 messages processed");
     }
 }
