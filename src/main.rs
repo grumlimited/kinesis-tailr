@@ -8,13 +8,14 @@ use std::io;
 use tokio::sync::mpsc;
 
 use crate::cli_helpers::parse_date;
-use crate::console::{ConsoleSink, Sink};
+use crate::sink::console::ConsoleSink;
+use crate::sink::Sink;
 use kinesis::helpers::get_shards;
 use kinesis::models::*;
 
-mod console;
 mod iterator;
 mod kinesis;
+mod sink;
 
 #[derive(Debug, Parser)]
 struct Opt {

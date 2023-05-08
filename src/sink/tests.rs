@@ -1,5 +1,6 @@
 use super::*;
 use crate::kinesis::models::ShardProcessorADT::Termination;
+use crate::sink::console::ConsoleSink;
 use tokio::sync::mpsc;
 
 #[test]

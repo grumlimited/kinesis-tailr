@@ -1,39 +1,14 @@
 use async_trait::async_trait;
 use chrono::TimeZone;
 use std::io;
-use std::io::{BufWriter, Error, Stdout, Write};
+use std::io::{BufWriter, Error, Write};
 use std::sync::Arc;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::Mutex;
 
 use crate::kinesis::models::{PanicError, RecordResult, ShardProcessorADT};
 
-pub const CONSOLE_BUF_SIZE: usize = 8 * 1024;
-
-pub struct ConsoleSink {
-    config: SinkConfig,
-}
-
-impl ConsoleSink {
-    pub fn new(
-        max_messages: Option<u32>,
-        print_key: bool,
-        print_shardid: bool,
-        print_timestamp: bool,
-        print_delimiter: bool,
-    ) -> Self {
-        ConsoleSink {
-            config: SinkConfig {
-                max_messages,
-                print_key,
-                print_shardid,
-                print_timestamp,
-                print_delimiter,
-                exit_after_termination: true,
-            },
-        }
-    }
-}
+pub mod console;
 
 #[derive(Clone)]
 pub struct SinkConfig {
@@ -47,20 +22,6 @@ pub struct SinkConfig {
 
 pub trait Configurable {
     fn get_config(&self) -> SinkConfig;
-}
-
-impl Configurable for ConsoleSink {
-    fn get_config(&self) -> SinkConfig {
-        self.config.clone()
-    }
-}
-
-impl SinkOutput<Stdout> for ConsoleSink {
-    fn offer(&mut self) -> BufWriter<Stdout> {
-        let stdout = io::stdout(); // get the global stdout entity
-        let handle = io::BufWriter::with_capacity(CONSOLE_BUF_SIZE, stdout);
-        handle
-    }
 }
 
 #[async_trait]
