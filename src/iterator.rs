@@ -5,6 +5,8 @@ use aws_sdk_kinesis::types::ShardIteratorType;
 use aws_sdk_kinesis::{Client, Error};
 use chrono::Utc;
 
+mod aws;
+
 #[async_trait]
 pub trait ShardIterator {
     async fn iterator<'a>(
