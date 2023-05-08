@@ -8,12 +8,14 @@ use std::io;
 use tokio::sync::mpsc;
 
 use crate::cli_helpers::parse_date;
-use crate::console::Console;
+use crate::sink::console::ConsoleSink;
+use crate::sink::Sink;
 use kinesis::helpers::get_shards;
 use kinesis::models::*;
-mod console;
+
 mod iterator;
 mod kinesis;
+mod sink;
 
 #[derive(Debug, Parser)]
 struct Opt {
@@ -160,16 +162,14 @@ async fn main() -> Result<(), io::Error> {
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?
     }
 
-    Console::new(
+    ConsoleSink::new(
         max_messages,
         print_key,
         print_shard,
         print_timestamp,
         print_delimiter,
-        rx_records,
-        tx_records,
     )
-    .run()
+    .run(tx_records, rx_records)
     .await
 }
 
