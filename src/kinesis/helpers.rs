@@ -1,3 +1,4 @@
+use crate::aws::client::MyClient;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::{Client, Error};
 use chrono::Utc;
@@ -12,7 +13,7 @@ use crate::kinesis::models::{
 use crate::kinesis::{IteratorProvider, ShardIteratorProgress};
 
 pub fn new(
-    client: Client,
+    client: MyClient,
     stream: String,
     shard_id: String,
     from_datetime: Option<chrono::DateTime<Utc>>,

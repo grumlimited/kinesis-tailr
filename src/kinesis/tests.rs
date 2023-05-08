@@ -23,14 +23,14 @@ async fn xxx() {
 
     let client = Client::new(&shared_config);
 
-    let processor = ShardProcessorLatest {
-        config: ShardProcessorConfig {
-            client,
-            stream: "test".to_string(),
-            shard_id: "shardId-000000000000".to_string(),
-            tx_records,
-        },
-    };
+    // let processor = ShardProcessorLatest {
+    //     config: ShardProcessorConfig {
+    //         client,
+    //         stream: "test".to_string(),
+    //         shard_id: "shardId-000000000000".to_string(),
+    //         tx_records,
+    //     },
+    // };
 
     // processor.get_iterator().await.unwrap();
 }

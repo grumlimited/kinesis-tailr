@@ -134,6 +134,7 @@ where
         let resp = self
             .get_config()
             .client
+            .client()
             .get_records()
             .shard_iterator(shard_iterator)
             .send()

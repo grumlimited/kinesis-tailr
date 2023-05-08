@@ -1,11 +1,10 @@
+use crate::aws::client::MyClient;
 use async_trait::async_trait;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::primitives::DateTime;
 use aws_sdk_kinesis::types::ShardIteratorType;
 use aws_sdk_kinesis::{Client, Error};
 use chrono::Utc;
-
-mod aws;
 
 #[async_trait]
 pub trait ShardIterator {
@@ -20,12 +19,12 @@ fn to_aws_datetime(timestamp: &chrono::DateTime<Utc>) -> DateTime {
     DateTime::from_millis(timestamp.timestamp_millis())
 }
 
-pub fn latest<'a>(client: &'a Client) -> Box<dyn ShardIterator + 'a + Send + Sync> {
+pub fn latest<'a>(client: &'a MyClient) -> Box<dyn ShardIterator + 'a + Send + Sync> {
     Box::new(LatestShardIterator { client })
 }
 
 pub fn at_sequence<'a>(
-    client: &'a Client,
+    client: &'a MyClient,
     starting_sequence_number: &'a str,
 ) -> Box<dyn ShardIterator + 'a + Send + Sync> {
     Box::new(AtSequenceShardIterator {
@@ -35,23 +34,23 @@ pub fn at_sequence<'a>(
 }
 
 pub fn at_timestamp<'a>(
-    client: &'a Client,
+    client: &'a MyClient,
     timestamp: &'a chrono::DateTime<Utc>,
 ) -> Box<dyn ShardIterator + 'a + Send + Sync> {
     Box::new(AtTimestampShardIterator { client, timestamp })
 }
 
 struct LatestShardIterator<'a> {
-    client: &'a Client,
+    client: &'a MyClient,
 }
 
 struct AtSequenceShardIterator<'a> {
-    client: &'a Client,
+    client: &'a MyClient,
     starting_sequence_number: &'a str,
 }
 
 struct AtTimestampShardIterator<'a> {
-    client: &'a Client,
+    client: &'a MyClient,
     timestamp: &'a chrono::DateTime<Utc>,
 }
 
@@ -63,6 +62,7 @@ impl ShardIterator for LatestShardIterator<'_> {
         shard_id: &'a str,
     ) -> Result<GetShardIteratorOutput, Error> {
         self.client
+            .client()
             .get_shard_iterator()
             .shard_iterator_type(ShardIteratorType::Latest)
             .stream_name(stream)
@@ -81,6 +81,7 @@ impl ShardIterator for AtSequenceShardIterator<'_> {
         shard_id: &'a str,
     ) -> Result<GetShardIteratorOutput, Error> {
         self.client
+            .client()
             .get_shard_iterator()
             .shard_iterator_type(ShardIteratorType::AtSequenceNumber)
             .starting_sequence_number(self.starting_sequence_number)
@@ -100,6 +101,7 @@ impl ShardIterator for AtTimestampShardIterator<'_> {
         shard_id: &'a str,
     ) -> Result<GetShardIteratorOutput, Error> {
         self.client
+            .client()
             .get_shard_iterator()
             .shard_iterator_type(ShardIteratorType::AtTimestamp)
             .timestamp(to_aws_datetime(self.timestamp))
