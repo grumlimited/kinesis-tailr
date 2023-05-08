@@ -1,5 +1,6 @@
 use std::fmt::Debug;
 
+use crate::aws::client::KinesisClientOps;
 use crate::kinesis::models::*;
 use async_trait::async_trait;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
@@ -131,14 +132,7 @@ where
         shard_iterator: &str,
         tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
     ) -> Result<(), Error> {
-        let resp = self
-            .get_config()
-            .client
-            .client()
-            .get_records()
-            .shard_iterator(shard_iterator)
-            .send()
-            .await?;
+        let resp = self.get_config().client.get_records(shard_iterator).await?;
 
         let next_shard_iterator = resp.next_shard_iterator();
 

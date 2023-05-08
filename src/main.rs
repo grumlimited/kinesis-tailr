@@ -1,11 +1,12 @@
 #![allow(clippy::result_large_err)]
 
-use aws_config::meta::region::RegionProviderChain;
-use aws_sdk_kinesis::{config::Region, meta::PKG_VERSION, Client};
+use aws_sdk_kinesis::{config::Region, meta::PKG_VERSION};
 use clap::Parser;
 use log::info;
 use std::io;
 use tokio::sync::mpsc;
+
+use crate::aws::client::*;
 
 use crate::cli_helpers::parse_date;
 use crate::sink::console::ConsoleSink;
@@ -84,10 +85,6 @@ async fn main() -> Result<(), io::Error> {
 
     env_logger::init();
 
-    // let region_provider = RegionProviderChain::first_try(region.map(Region::new))
-    //     .or_default_provider()
-    //     .or_else(Region::new("us-east-1"));
-
     let from_datetime = parse_date(from.as_deref());
     let client = aws::client::create_client(region, endpoint_url).await;
 
@@ -103,25 +100,9 @@ async fn main() -> Result<(), io::Error> {
         });
     }
 
-    // let shared_config = {
-    //     let inner = aws_config::from_env().region(region_provider);
-    //
-    //     let inner = if endpoint_url.is_some() {
-    //         inner.endpoint_url(endpoint_url.unwrap().as_str())
-    //     } else {
-    //         inner
-    //     };
-    //
-    //     inner
-    // }
-    // .load()
-    // .await;
-
-    // let client = Client::new(&shared_config);
-
     let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(500);
 
-    let shards = get_shards(&client.client(), &stream_name)
+    let shards = get_shards(&client, &stream_name)
         .await
         .unwrap_or_else(|_| panic!("Could not describe shards for stream {}", stream_name));
 

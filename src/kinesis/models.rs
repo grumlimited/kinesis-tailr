@@ -1,10 +1,11 @@
-use crate::aws::client::MyClient;
-use crate::kinesis::helpers::{get_iterator_at_timestamp, get_latest_iterator};
+use crate::aws::client::KinesisClient;
+use crate::iterator::at_timestamp;
+use crate::kinesis::helpers::get_latest_iterator;
 use crate::kinesis::IteratorProvider;
 use async_trait::async_trait;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::primitives::DateTime;
-use aws_sdk_kinesis::{Client, Error};
+use aws_sdk_kinesis::Error;
 use chrono::Utc;
 use std::fmt::Debug;
 use tokio::sync::mpsc::Sender;
@@ -35,7 +36,7 @@ pub struct RecordResult {
 
 #[derive(Debug, Clone)]
 pub struct ShardProcessorConfig {
-    pub client: MyClient,
+    pub client: KinesisClient,
     pub stream: String,
     pub shard_id: String,
     pub tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
@@ -70,7 +71,9 @@ impl IteratorProvider for ShardProcessorAtTimestamp {
     }
 
     async fn get_iterator(&self) -> Result<GetShardIteratorOutput, Error> {
-        get_iterator_at_timestamp(self.clone(), self.from_datetime).await
+        at_timestamp(&self.config.client, &self.from_datetime)
+            .iterator(&self.config.stream, &self.config.shard_id)
+            .await
     }
 }
 

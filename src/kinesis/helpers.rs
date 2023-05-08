@@ -1,11 +1,12 @@
-use crate::aws::client::MyClient;
+use crate::aws::client::{KinesisClient, KinesisClientOps};
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
-use aws_sdk_kinesis::{Client, Error};
+use aws_sdk_kinesis::Error;
 use chrono::Utc;
+use log::debug;
 use tokio::sync::mpsc::Sender;
 
+use crate::iterator::at_sequence;
 use crate::iterator::latest;
-use crate::iterator::{at_sequence, at_timestamp};
 use crate::kinesis::models::{
     PanicError, ShardProcessor, ShardProcessorADT, ShardProcessorAtTimestamp, ShardProcessorConfig,
     ShardProcessorLatest,
@@ -13,7 +14,7 @@ use crate::kinesis::models::{
 use crate::kinesis::{IteratorProvider, ShardIteratorProgress};
 
 pub fn new(
-    client: MyClient,
+    client: KinesisClient,
     stream: String,
     shard_id: String,
     from_datetime: Option<chrono::DateTime<Utc>>,
@@ -70,43 +71,30 @@ where
     .await
 }
 
-pub async fn get_iterator_at_timestamp<T>(
-    iterator_provider: T,
-    timestamp: chrono::DateTime<Utc>,
-) -> Result<GetShardIteratorOutput, Error>
-where
-    T: IteratorProvider,
-{
-    at_timestamp(&iterator_provider.get_config().client, &timestamp)
-        .iterator(
-            &iterator_provider.get_config().stream,
-            &iterator_provider.get_config().shard_id,
-        )
-        .await
-}
-
 pub async fn handle_iterator_refresh<T>(
     shard_iterator_progress: ShardIteratorProgress,
-    reader: T,
+    iterator_provider: T,
     tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
 ) where
     T: IteratorProvider,
 {
     let (sequence_id, iterator) = match shard_iterator_progress.last_sequence_id {
         Some(last_sequence_id) => {
-            let resp = get_iterator_since(reader, &last_sequence_id).await.unwrap();
+            let resp = get_iterator_since(iterator_provider, &last_sequence_id)
+                .await
+                .unwrap();
             (
                 Some(last_sequence_id),
                 resp.shard_iterator().map(|v| v.into()),
             )
         }
         None => {
-            let resp = get_latest_iterator(reader).await.unwrap();
+            let resp = get_latest_iterator(iterator_provider).await.unwrap();
             (None, resp.shard_iterator().map(|v| v.into()))
         }
     };
 
-    println!(
+    debug!(
         "Refreshing with next_shard_iterator: {:?} / last_sequence_id {:?}",
         iterator, sequence_id
     );
@@ -120,8 +108,8 @@ pub async fn handle_iterator_refresh<T>(
         .unwrap();
 }
 
-pub async fn get_shards(client: &Client, stream: &str) -> Result<Vec<String>, Error> {
-    let resp = client.list_shards().stream_name(stream).send().await?;
+pub async fn get_shards(client: &KinesisClient, stream: &str) -> Result<Vec<String>, Error> {
+    let resp = client.list_shards(stream).await?;
 
     Ok(resp
         .shards()
