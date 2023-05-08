@@ -8,12 +8,10 @@ use std::io;
 use tokio::sync::mpsc;
 
 use crate::cli_helpers::parse_date;
-use crate::console::Console;
 use crate::console2::{Console2, Sink};
 use kinesis::helpers::get_shards;
 use kinesis::models::*;
 
-mod console;
 mod console2;
 mod iterator;
 mod kinesis;

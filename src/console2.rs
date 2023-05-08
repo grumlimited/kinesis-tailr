@@ -1,4 +1,3 @@
-use crate::console::Console;
 use async_trait::async_trait;
 use chrono::TimeZone;
 use std::io;
@@ -258,3 +257,6 @@ where
         }
     }
 }
+
+#[cfg(test)]
+mod tests;
