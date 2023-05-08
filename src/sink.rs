@@ -113,9 +113,10 @@ where
                                 };
 
                                 if remaining > 0 && !res.is_empty() {
-                                    *lock += res.len() as u32;
+                                    let split_at = std::cmp::min(remaining as usize, res.len());
+                                    *lock += split_at as u32;
 
-                                    let split = res.split_at(remaining as usize);
+                                    let split = res.split_at(split_at);
                                     let to_display = split.0;
 
                                     let data = self.format_records(to_display);
@@ -138,10 +139,7 @@ where
                         }
                     }
                     ShardProcessorADT::Termination => {
-                        let messages_processed = match self.get_config().max_messages {
-                            Some(max_messages) => max_messages,
-                            _ => *count.lock().await,
-                        };
+                        let messages_processed = *count.lock().await;
 
                         writeln!(handle, "{}", self.format_nb_messages(messages_processed))?;
                         handle.flush()?;
@@ -171,13 +169,17 @@ where
     }
 
     fn handle_termination(&self, tx_records: Sender<Result<ShardProcessorADT, PanicError>>) {
-        ctrlc_async::set_async_handler(async move {
-            tx_records
-                .send(Ok(ShardProcessorADT::Termination))
-                .await
-                .unwrap();
-        })
-        .expect("Error setting Ctrl-C handler");
+        // Note: the exit_after_termination check is to help
+        // with tests where only one handler can be registered.
+        if self.get_config().exit_after_termination {
+            ctrlc_async::set_async_handler(async move {
+                tx_records
+                    .send(Ok(ShardProcessorADT::Termination))
+                    .await
+                    .unwrap();
+            })
+            .expect("Error setting Ctrl-C handler");
+        }
     }
 
     fn delimiter(&self, handle: &mut BufWriter<W>) -> Result<(), Error> {
