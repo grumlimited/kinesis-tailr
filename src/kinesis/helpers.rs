@@ -19,7 +19,7 @@ pub fn new(
     shard_id: String,
     from_datetime: Option<chrono::DateTime<Utc>>,
     tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
-) -> Box<dyn ShardProcessor + Send + Sync> {
+) -> Box<dyn ShardProcessor<AwsKinesisClient> + Send + Sync> {
     match from_datetime {
         Some(from_datetime) => Box::new(ShardProcessorAtTimestamp {
             config: ShardProcessorConfig {
@@ -41,9 +41,11 @@ pub fn new(
     }
 }
 
-pub async fn get_latest_iterator<T>(iterator_provider: T) -> Result<GetShardIteratorOutput, Error>
+pub async fn get_latest_iterator<T, K: KinesisClient>(
+    iterator_provider: T,
+) -> Result<GetShardIteratorOutput, Error>
 where
-    T: IteratorProvider,
+    T: IteratorProvider<K>,
 {
     latest(&iterator_provider.get_config().client)
         .iterator(
@@ -53,12 +55,12 @@ where
         .await
 }
 
-pub async fn get_iterator_since<T>(
+pub async fn get_iterator_since<T, K: KinesisClient>(
     iterator_provider: T,
     starting_sequence_number: &str,
 ) -> Result<GetShardIteratorOutput, Error>
 where
-    T: IteratorProvider,
+    T: IteratorProvider<K>,
 {
     at_sequence(
         &iterator_provider.get_config().client,
@@ -71,12 +73,12 @@ where
     .await
 }
 
-pub async fn handle_iterator_refresh<T>(
+pub async fn handle_iterator_refresh<T, K: KinesisClient>(
     shard_iterator_progress: ShardIteratorProgress,
     iterator_provider: T,
     tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
 ) where
-    T: IteratorProvider,
+    T: IteratorProvider<K>,
 {
     let (sequence_id, iterator) = match shard_iterator_progress.last_sequence_id {
         Some(last_sequence_id) => {

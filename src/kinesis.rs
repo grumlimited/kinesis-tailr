@@ -1,5 +1,3 @@
-use std::fmt::Debug;
-
 use crate::aws::client::KinesisClient;
 use crate::kinesis::models::*;
 use async_trait::async_trait;
@@ -9,21 +7,21 @@ use log::{debug, error};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{sleep, Duration};
-
 pub mod helpers;
 pub mod models;
 
 #[async_trait]
-pub trait IteratorProvider: Send + Sync + Debug + Clone {
-    fn get_config(&self) -> ShardProcessorConfig;
+pub trait IteratorProvider<K: KinesisClient>: Send + Sync + Clone {
+    fn get_config(&self) -> ShardProcessorConfig<K>;
 
     async fn get_iterator(&self) -> Result<GetShardIteratorOutput, Error>;
 }
 
 #[async_trait]
-impl<T> ShardProcessor for T
+impl<T, K> ShardProcessor<K> for T
 where
-    T: IteratorProvider + Send + Sync + Debug + 'static,
+    K: KinesisClient,
+    T: IteratorProvider<K> + 'static,
 {
     async fn run(&self) -> Result<(), Error> {
         let (tx_shard_iterator_progress, mut rx_shard_iterator_progress) =

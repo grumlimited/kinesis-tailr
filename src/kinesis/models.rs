@@ -1,4 +1,4 @@
-use crate::aws::client::AwsKinesisClient;
+use crate::aws::client::KinesisClient;
 use crate::iterator::at_timestamp;
 use crate::kinesis::helpers::get_latest_iterator;
 use crate::kinesis::IteratorProvider;
@@ -34,28 +34,28 @@ pub struct RecordResult {
     pub data: Vec<u8>,
 }
 
-#[derive(Debug, Clone)]
-pub struct ShardProcessorConfig {
-    pub client: AwsKinesisClient,
+#[derive(Clone)]
+pub struct ShardProcessorConfig<K: KinesisClient> {
+    pub client: K,
     pub stream: String,
     pub shard_id: String,
     pub tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
 }
 
-#[derive(Debug, Clone)]
-pub struct ShardProcessorLatest {
-    pub config: ShardProcessorConfig,
+#[derive(Clone)]
+pub struct ShardProcessorLatest<K: KinesisClient> {
+    pub config: ShardProcessorConfig<K>,
 }
 
-#[derive(Debug, Clone)]
-pub struct ShardProcessorAtTimestamp {
-    pub config: ShardProcessorConfig,
+#[derive(Clone)]
+pub struct ShardProcessorAtTimestamp<K: KinesisClient> {
+    pub config: ShardProcessorConfig<K>,
     pub from_datetime: chrono::DateTime<Utc>,
 }
 
 #[async_trait]
-impl IteratorProvider for ShardProcessorLatest {
-    fn get_config(&self) -> ShardProcessorConfig {
+impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorLatest<K> {
+    fn get_config(&self) -> ShardProcessorConfig<K> {
         self.config.clone()
     }
 
@@ -65,8 +65,8 @@ impl IteratorProvider for ShardProcessorLatest {
 }
 
 #[async_trait]
-impl IteratorProvider for ShardProcessorAtTimestamp {
-    fn get_config(&self) -> ShardProcessorConfig {
+impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorAtTimestamp<K> {
+    fn get_config(&self) -> ShardProcessorConfig<K> {
         self.config.clone()
     }
 
@@ -78,7 +78,7 @@ impl IteratorProvider for ShardProcessorAtTimestamp {
 }
 
 #[async_trait]
-pub trait ShardProcessor: Send + Sync + Debug {
+pub trait ShardProcessor<K: KinesisClient>: Send + Sync {
     async fn run(&self) -> Result<(), Error>;
 
     async fn publish_records_shard(

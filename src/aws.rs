@@ -17,7 +17,7 @@ pub mod client {
     }
 
     #[async_trait]
-    pub trait KinesisClient: Sync + Send {
+    pub trait KinesisClient: Sync + Send + Clone {
         async fn list_shards(&self, stream: &str) -> Result<ListShardsOutput, Error>;
 
         async fn get_records(&self, shard_iterator: &str) -> Result<GetRecordsOutput, Error>;
@@ -44,9 +44,7 @@ pub mod client {
 
         fn get_region(&self) -> Option<&Region>;
 
-        fn to_aws_datetime(timestamp: &chrono::DateTime<Utc>) -> DateTime {
-            DateTime::from_millis(timestamp.timestamp_millis())
-        }
+        fn to_aws_datetime(&self, timestamp: &chrono::DateTime<Utc>) -> DateTime;
     }
 
     #[async_trait]
@@ -78,7 +76,7 @@ pub mod client {
             self.client
                 .get_shard_iterator()
                 .shard_iterator_type(ShardIteratorType::AtTimestamp)
-                .timestamp(Self::to_aws_datetime(timestamp))
+                .timestamp(self.to_aws_datetime(timestamp))
                 .stream_name(stream)
                 .shard_id(shard_id)
                 .send()
@@ -120,6 +118,10 @@ pub mod client {
 
         fn get_region(&self) -> Option<&Region> {
             self.client.conf().region()
+        }
+
+        fn to_aws_datetime(&self, timestamp: &chrono::DateTime<Utc>) -> DateTime {
+            DateTime::from_millis(timestamp.timestamp_millis())
         }
     }
 
