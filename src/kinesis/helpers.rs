@@ -1,4 +1,4 @@
-use crate::aws::client::{KinesisClient, KinesisClientOps};
+use crate::aws::client::{AwsKinesisClient, KinesisClient};
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::Error;
 use chrono::Utc;
@@ -14,7 +14,7 @@ use crate::kinesis::models::{
 use crate::kinesis::{IteratorProvider, ShardIteratorProgress};
 
 pub fn new(
-    client: KinesisClient,
+    client: AwsKinesisClient,
     stream: String,
     shard_id: String,
     from_datetime: Option<chrono::DateTime<Utc>>,
@@ -108,7 +108,7 @@ pub async fn handle_iterator_refresh<T>(
         .unwrap();
 }
 
-pub async fn get_shards(client: &KinesisClient, stream: &str) -> Result<Vec<String>, Error> {
+pub async fn get_shards(client: &AwsKinesisClient, stream: &str) -> Result<Vec<String>, Error> {
     let resp = client.list_shards(stream).await?;
 
     Ok(resp

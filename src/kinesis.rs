@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::aws::client::KinesisClientOps;
+use crate::aws::client::KinesisClient;
 use crate::kinesis::models::*;
 use async_trait::async_trait;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;

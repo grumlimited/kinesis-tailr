@@ -12,12 +12,12 @@ pub mod client {
     use chrono::Utc;
 
     #[derive(Clone, Debug)]
-    pub struct KinesisClient {
+    pub struct AwsKinesisClient {
         client: Client,
     }
 
     #[async_trait]
-    pub trait KinesisClientOps {
+    pub trait KinesisClient: Sync + Send {
         async fn list_shards(&self, stream: &str) -> Result<ListShardsOutput, Error>;
 
         async fn get_records(&self, shard_iterator: &str) -> Result<GetRecordsOutput, Error>;
@@ -50,7 +50,7 @@ pub mod client {
     }
 
     #[async_trait]
-    impl KinesisClientOps for KinesisClient {
+    impl KinesisClient for AwsKinesisClient {
         async fn list_shards(&self, stream: &str) -> Result<ListShardsOutput, Error> {
             self.client
                 .list_shards()
@@ -126,7 +126,7 @@ pub mod client {
     pub async fn create_client(
         region: Option<String>,
         endpoint_url: Option<String>,
-    ) -> KinesisClient {
+    ) -> AwsKinesisClient {
         let region_provider = RegionProviderChain::first_try(region.map(Region::new))
             .or_default_provider()
             .or_else(Region::new("us-east-1"));
@@ -147,6 +147,6 @@ pub mod client {
 
         let client = Client::new(&shared_config);
 
-        KinesisClient { client }
+        AwsKinesisClient { client }
     }
 }

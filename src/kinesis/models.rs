@@ -1,4 +1,4 @@
-use crate::aws::client::KinesisClient;
+use crate::aws::client::AwsKinesisClient;
 use crate::iterator::at_timestamp;
 use crate::kinesis::helpers::get_latest_iterator;
 use crate::kinesis::IteratorProvider;
@@ -36,7 +36,7 @@ pub struct RecordResult {
 
 #[derive(Debug, Clone)]
 pub struct ShardProcessorConfig {
-    pub client: KinesisClient,
+    pub client: AwsKinesisClient,
     pub stream: String,
     pub shard_id: String,
     pub tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
