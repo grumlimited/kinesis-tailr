@@ -4,7 +4,7 @@ use tokio::sync::mpsc;
 
 #[test]
 fn format_nb_messages_ok() {
-    let console = Console2 {
+    let console = ConsoleSink {
         config: SinkConfig {
             max_messages: None,
             print_key: false,

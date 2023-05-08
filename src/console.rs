@@ -10,11 +10,11 @@ use crate::kinesis::models::{PanicError, RecordResult, ShardProcessorADT};
 
 pub const CONSOLE_BUF_SIZE: usize = 8 * 1024;
 
-pub struct Console2 {
+pub struct ConsoleSink {
     config: SinkConfig,
 }
 
-impl Console2 {
+impl ConsoleSink {
     pub fn new(
         max_messages: Option<u32>,
         print_key: bool,
@@ -22,7 +22,7 @@ impl Console2 {
         print_timestamp: bool,
         print_delimiter: bool,
     ) -> Self {
-        Console2 {
+        ConsoleSink {
             config: SinkConfig {
                 max_messages,
                 print_key,
@@ -49,13 +49,13 @@ pub trait Configurable {
     fn get_config(&self) -> SinkConfig;
 }
 
-impl Configurable for Console2 {
+impl Configurable for ConsoleSink {
     fn get_config(&self) -> SinkConfig {
         self.config.clone()
     }
 }
 
-impl SinkOutput<Stdout> for Console2 {
+impl SinkOutput<Stdout> for ConsoleSink {
     fn offer(&mut self) -> BufWriter<Stdout> {
         let stdout = io::stdout(); // get the global stdout entity
         let handle = io::BufWriter::with_capacity(CONSOLE_BUF_SIZE, stdout);
