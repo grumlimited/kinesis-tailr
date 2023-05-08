@@ -9,9 +9,12 @@ use tokio::sync::mpsc;
 
 use crate::cli_helpers::parse_date;
 use crate::console::Console;
+use crate::console2::{Console2, Sink};
 use kinesis::helpers::get_shards;
 use kinesis::models::*;
+
 mod console;
+mod console2;
 mod iterator;
 mod kinesis;
 
@@ -160,16 +163,14 @@ async fn main() -> Result<(), io::Error> {
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?
     }
 
-    Console::new(
+    Console2::new(
         max_messages,
         print_key,
         print_shard,
         print_timestamp,
         print_delimiter,
-        rx_records,
-        tx_records,
     )
-    .run()
+    .run(tx_records, rx_records)
     .await
 }
 
