@@ -5,7 +5,39 @@ use tokio::sync::mpsc::Sender;
 
 use crate::iterator::latest;
 use crate::iterator::{at_sequence, at_timestamp};
+use crate::kinesis::models::{
+    PanicError, ShardProcessor, ShardProcessorADT, ShardProcessorAtTimestamp, ShardProcessorConfig,
+    ShardProcessorLatest,
+};
 use crate::kinesis::{IteratorProvider, ShardIteratorProgress};
+
+pub fn new(
+    client: Client,
+    stream: String,
+    shard_id: String,
+    from_datetime: Option<chrono::DateTime<Utc>>,
+    tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
+) -> Box<dyn ShardProcessor + Send + Sync> {
+    match from_datetime {
+        Some(from_datetime) => Box::new(ShardProcessorAtTimestamp {
+            config: ShardProcessorConfig {
+                client,
+                stream,
+                shard_id,
+                tx_records,
+            },
+            from_datetime,
+        }),
+        None => Box::new(ShardProcessorLatest {
+            config: ShardProcessorConfig {
+                client,
+                stream,
+                shard_id,
+                tx_records,
+            },
+        }),
+    }
+}
 
 pub async fn get_latest_iterator<T>(iterator_provider: T) -> Result<GetShardIteratorOutput, Error>
 where

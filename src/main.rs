@@ -148,7 +148,7 @@ async fn main() -> Result<(), io::Error> {
     }
 
     for shard_id in &selected_shards {
-        let shard_processor = kinesis::new(
+        let shard_processor = kinesis::helpers::new(
             client.clone(),
             stream_name.clone(),
             shard_id.clone(),

@@ -1,4 +1,7 @@
+use crate::kinesis::helpers::{get_iterator_at_timestamp, get_latest_iterator};
+use crate::kinesis::IteratorProvider;
 use async_trait::async_trait;
+use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::primitives::DateTime;
 use aws_sdk_kinesis::{Client, Error};
 use chrono::Utc;
@@ -46,6 +49,28 @@ pub struct ShardProcessorLatest {
 pub struct ShardProcessorAtTimestamp {
     pub config: ShardProcessorConfig,
     pub from_datetime: chrono::DateTime<Utc>,
+}
+
+#[async_trait]
+impl IteratorProvider for ShardProcessorLatest {
+    fn get_config(&self) -> ShardProcessorConfig {
+        self.config.clone()
+    }
+
+    async fn get_iterator(&self) -> Result<GetShardIteratorOutput, Error> {
+        get_latest_iterator(self.clone()).await
+    }
+}
+
+#[async_trait]
+impl IteratorProvider for ShardProcessorAtTimestamp {
+    fn get_config(&self) -> ShardProcessorConfig {
+        self.config.clone()
+    }
+
+    async fn get_iterator(&self) -> Result<GetShardIteratorOutput, Error> {
+        get_iterator_at_timestamp(self.clone(), self.from_datetime).await
+    }
 }
 
 #[async_trait]
