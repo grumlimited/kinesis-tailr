@@ -11,7 +11,7 @@ pub mod helpers;
 pub mod models;
 
 #[async_trait]
-pub trait IteratorProvider<K: KinesisClient>: Send + Sync + Clone {
+pub trait IteratorProvider<K: KinesisClient>: Send + Sync + Clone + 'static {
     fn get_config(&self) -> ShardProcessorConfig<K>;
 
     async fn get_iterator(&self) -> Result<GetShardIteratorOutput, Error>;
@@ -21,7 +21,7 @@ pub trait IteratorProvider<K: KinesisClient>: Send + Sync + Clone {
 impl<T, K> ShardProcessor<K> for T
 where
     K: KinesisClient,
-    T: IteratorProvider<K> + 'static,
+    T: IteratorProvider<K>,
 {
     async fn run(&self) -> Result<(), Error> {
         let (tx_shard_iterator_progress, mut rx_shard_iterator_progress) =
