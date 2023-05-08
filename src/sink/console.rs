@@ -38,7 +38,6 @@ impl Configurable for ConsoleSink {
 impl SinkOutput<Stdout> for ConsoleSink {
     fn offer(&mut self) -> BufWriter<Stdout> {
         let stdout = io::stdout(); // get the global stdout entity
-        let handle = io::BufWriter::with_capacity(CONSOLE_BUF_SIZE, stdout);
-        handle
+        io::BufWriter::with_capacity(CONSOLE_BUF_SIZE, stdout)
     }
 }
