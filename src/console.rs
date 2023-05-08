@@ -1,6 +1,6 @@
 use crate::kinesis::models::*;
 use chrono::*;
-use std::io::{self, BufWriter, Error, Stdout, Write};
+use std::io::{self, BufWriter, Error, Write};
 use std::rc::Rc;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::Mutex;
@@ -12,6 +12,7 @@ pub struct Console {
     print_shardid: bool,
     print_timestamp: bool,
     print_delimiter: bool,
+    exit_after_termination: bool,
     rx_records: Receiver<Result<ShardProcessorADT, PanicError>>,
     tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
 }
@@ -32,16 +33,25 @@ impl Console {
             print_shardid,
             print_timestamp,
             print_delimiter,
+            exit_after_termination: true,
             rx_records,
             tx_records,
         }
     }
 
     pub async fn run(&mut self) -> io::Result<()> {
-        let count = Rc::new(Mutex::new(0));
-
         let stdout = io::stdout(); // get the global stdout entity
-        let mut handle: BufWriter<Stdout> = io::BufWriter::with_capacity(CONSOLE_BUF_SIZE, stdout);
+        let mut handle = io::BufWriter::with_capacity(CONSOLE_BUF_SIZE, stdout);
+
+        self.run_inner(&mut handle).await
+    }
+
+    pub async fn run_inner<W>(&mut self, handle: &mut BufWriter<W>) -> io::Result<()>
+    where
+        W: std::io::Write,
+    {
+        self.delimiter(handle).unwrap();
+        let count = Rc::new(Mutex::new(0));
 
         self.handle_termination();
 
@@ -77,7 +87,7 @@ impl Console {
                                     data.iter().for_each(|data| {
                                         writeln!(handle, "{}", data).unwrap();
                                     });
-                                    self.delimiter(&mut handle)?
+                                    self.delimiter(handle)?
                                 };
                             }
                             None => {
@@ -87,7 +97,7 @@ impl Console {
                                 data.iter().for_each(|data| {
                                     writeln!(handle, "{}", data).unwrap();
                                 });
-                                self.delimiter(&mut handle)?
+                                self.delimiter(handle)?
                             }
                         }
                     }
@@ -99,7 +109,10 @@ impl Console {
                         writeln!(handle, "{}", self.format_nb_messages(messages_processed))?;
                         handle.flush()?;
                         self.rx_records.close();
-                        std::process::exit(0);
+
+                        if self.exit_after_termination {
+                            std::process::exit(0)
+                        }
                     }
                 },
                 Err(e) => {
@@ -112,6 +125,7 @@ impl Console {
 
     fn format_nb_messages(&self, messages_processed: u32) -> String {
         match messages_processed {
+            0 => "0 message processed".to_string(),
             1 => "1 message processed".to_string(),
             _ => format!("{} messages processed", messages_processed),
         }
@@ -128,7 +142,10 @@ impl Console {
         .expect("Error setting Ctrl-C handler");
     }
 
-    fn delimiter(&self, handle: &mut BufWriter<Stdout>) -> Result<(), Error> {
+    fn delimiter<W>(&self, handle: &mut BufWriter<W>) -> Result<(), Error>
+    where
+        W: std::io::Write,
+    {
         if self.print_delimiter {
             writeln!(
                 handle,
@@ -175,25 +192,4 @@ impl Console {
 }
 
 #[cfg(test)]
-mod tests {
-    use super::*;
-    use tokio::sync::mpsc;
-
-    #[test]
-    fn format_nb_messages_ok() {
-        let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(1);
-
-        let console = Console {
-            max_messages: None,
-            print_key: false,
-            print_shardid: false,
-            print_timestamp: false,
-            print_delimiter: false,
-            rx_records,
-            tx_records,
-        };
-
-        assert_eq!(console.format_nb_messages(1), "1 message processed");
-        assert_eq!(console.format_nb_messages(2), "2 messages processed");
-    }
-}
+mod tests;

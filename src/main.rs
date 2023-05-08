@@ -9,9 +9,8 @@ use tokio::sync::mpsc;
 
 use crate::cli_helpers::parse_date;
 use crate::console::Console;
+use kinesis::helpers::get_shards;
 use kinesis::models::*;
-use kinesis::*;
-
 mod console;
 mod iterator;
 mod kinesis;
