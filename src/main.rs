@@ -1,11 +1,12 @@
 #![allow(clippy::result_large_err)]
 
-use aws_config::meta::region::RegionProviderChain;
-use aws_sdk_kinesis::{config::Region, meta::PKG_VERSION, Client};
+use aws_sdk_kinesis::{config::Region, meta::PKG_VERSION};
 use clap::Parser;
 use log::info;
 use std::io;
 use tokio::sync::mpsc;
+
+use crate::aws::client::*;
 
 use crate::cli_helpers::parse_date;
 use crate::sink::console::ConsoleSink;
@@ -16,6 +17,8 @@ use kinesis::models::*;
 mod iterator;
 mod kinesis;
 mod sink;
+
+mod aws;
 
 #[derive(Debug, Parser)]
 struct Opt {
@@ -80,41 +83,22 @@ async fn main() -> Result<(), io::Error> {
         endpoint_url,
     } = Opt::parse();
 
-    env_logger::init();
-
-    let region_provider = RegionProviderChain::first_try(region.map(Region::new))
-        .or_default_provider()
-        .or_else(Region::new("us-east-1"));
+    env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
 
     let from_datetime = parse_date(from.as_deref());
+    let client = aws::client::create_client(region, endpoint_url).await;
 
     if verbose {
         info!("Kinesis client version: {}", PKG_VERSION);
         info!(
             "Region:                 {}",
-            region_provider.region().await.unwrap().as_ref()
+            client.get_region().unwrap_or(&Region::new("us-east-1"))
         );
         info!("Stream name:            {}", &stream_name);
         from_datetime.iter().for_each(|f| {
             info!("From:                   {}", &f.format("%+"));
         });
     }
-
-    let shared_config = {
-        let inner = aws_config::from_env().region(region_provider);
-
-        let inner = if endpoint_url.is_some() {
-            inner.endpoint_url(endpoint_url.unwrap().as_str())
-        } else {
-            inner
-        };
-
-        inner
-    }
-    .load()
-    .await;
-
-    let client = Client::new(&shared_config);
 
     let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(500);
 
@@ -148,7 +132,7 @@ async fn main() -> Result<(), io::Error> {
     }
 
     for shard_id in &selected_shards {
-        let shard_processor = kinesis::new(
+        let shard_processor = kinesis::helpers::new(
             client.clone(),
             stream_name.clone(),
             shard_id.clone(),

@@ -1,6 +1,11 @@
+use crate::aws::client::KinesisClient;
+use crate::iterator::at_timestamp;
+use crate::kinesis::helpers::get_latest_iterator;
+use crate::kinesis::IteratorProvider;
 use async_trait::async_trait;
+use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::primitives::DateTime;
-use aws_sdk_kinesis::{Client, Error};
+use aws_sdk_kinesis::Error;
 use chrono::Utc;
 use std::fmt::Debug;
 use tokio::sync::mpsc::Sender;
@@ -29,27 +34,51 @@ pub struct RecordResult {
     pub data: Vec<u8>,
 }
 
-#[derive(Debug, Clone)]
-pub struct ShardProcessorConfig {
-    pub client: Client,
+#[derive(Clone)]
+pub struct ShardProcessorConfig<K: KinesisClient> {
+    pub client: K,
     pub stream: String,
     pub shard_id: String,
     pub tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
 }
 
-#[derive(Debug, Clone)]
-pub struct ShardProcessorLatest {
-    pub config: ShardProcessorConfig,
+#[derive(Clone)]
+pub struct ShardProcessorLatest<K: KinesisClient> {
+    pub config: ShardProcessorConfig<K>,
 }
 
-#[derive(Debug, Clone)]
-pub struct ShardProcessorAtTimestamp {
-    pub config: ShardProcessorConfig,
+#[derive(Clone)]
+pub struct ShardProcessorAtTimestamp<K: KinesisClient> {
+    pub config: ShardProcessorConfig<K>,
     pub from_datetime: chrono::DateTime<Utc>,
 }
 
 #[async_trait]
-pub trait ShardProcessor: Send + Sync + Debug {
+impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorLatest<K> {
+    fn get_config(&self) -> ShardProcessorConfig<K> {
+        self.config.clone()
+    }
+
+    async fn get_iterator(&self) -> Result<GetShardIteratorOutput, Error> {
+        get_latest_iterator(self.clone()).await
+    }
+}
+
+#[async_trait]
+impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorAtTimestamp<K> {
+    fn get_config(&self) -> ShardProcessorConfig<K> {
+        self.config.clone()
+    }
+
+    async fn get_iterator(&self) -> Result<GetShardIteratorOutput, Error> {
+        at_timestamp(&self.config.client, &self.from_datetime)
+            .iterator(&self.config.stream, &self.config.shard_id)
+            .await
+    }
+}
+
+#[async_trait]
+pub trait ShardProcessor<K: KinesisClient>: Send + Sync {
     async fn run(&self) -> Result<(), Error>;
 
     async fn publish_records_shard(

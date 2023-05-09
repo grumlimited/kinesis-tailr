@@ -1,8 +1,7 @@
+use crate::aws::client::KinesisClient;
 use async_trait::async_trait;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
-use aws_sdk_kinesis::primitives::DateTime;
-use aws_sdk_kinesis::types::ShardIteratorType;
-use aws_sdk_kinesis::{Client, Error};
+use aws_sdk_kinesis::Error;
 use chrono::Utc;
 
 #[async_trait]
@@ -14,16 +13,15 @@ pub trait ShardIterator {
     ) -> Result<GetShardIteratorOutput, Error>;
 }
 
-fn to_aws_datetime(timestamp: &chrono::DateTime<Utc>) -> DateTime {
-    DateTime::from_millis(timestamp.timestamp_millis())
-}
-
-pub fn latest<'a>(client: &'a Client) -> Box<dyn ShardIterator + 'a + Send + Sync> {
+pub fn latest<'a, K>(client: &'a K) -> Box<dyn ShardIterator + 'a + Send + Sync>
+where
+    K: KinesisClient,
+{
     Box::new(LatestShardIterator { client })
 }
 
-pub fn at_sequence<'a>(
-    client: &'a Client,
+pub fn at_sequence<'a, K: KinesisClient>(
+    client: &'a K,
     starting_sequence_number: &'a str,
 ) -> Box<dyn ShardIterator + 'a + Send + Sync> {
     Box::new(AtSequenceShardIterator {
@@ -32,79 +30,62 @@ pub fn at_sequence<'a>(
     })
 }
 
-pub fn at_timestamp<'a>(
-    client: &'a Client,
+pub fn at_timestamp<'a, K: KinesisClient>(
+    client: &'a K,
     timestamp: &'a chrono::DateTime<Utc>,
 ) -> Box<dyn ShardIterator + 'a + Send + Sync> {
     Box::new(AtTimestampShardIterator { client, timestamp })
 }
 
-struct LatestShardIterator<'a> {
-    client: &'a Client,
+struct LatestShardIterator<'a, K: KinesisClient> {
+    client: &'a K,
 }
 
-struct AtSequenceShardIterator<'a> {
-    client: &'a Client,
+struct AtSequenceShardIterator<'a, K: KinesisClient> {
+    client: &'a K,
     starting_sequence_number: &'a str,
 }
 
-struct AtTimestampShardIterator<'a> {
-    client: &'a Client,
+struct AtTimestampShardIterator<'a, K: KinesisClient> {
+    client: &'a K,
     timestamp: &'a chrono::DateTime<Utc>,
 }
 
 #[async_trait]
-impl ShardIterator for LatestShardIterator<'_> {
+impl<K: KinesisClient> ShardIterator for LatestShardIterator<'_, K> {
     async fn iterator<'a>(
         &'a self,
         stream: &'a str,
         shard_id: &'a str,
     ) -> Result<GetShardIteratorOutput, Error> {
         self.client
-            .get_shard_iterator()
-            .shard_iterator_type(ShardIteratorType::Latest)
-            .stream_name(stream)
-            .shard_id(shard_id)
-            .send()
+            .get_shard_iterator_latest(stream, shard_id)
             .await
-            .map_err(|e| e.into())
     }
 }
 
 #[async_trait]
-impl ShardIterator for AtSequenceShardIterator<'_> {
+impl<K: KinesisClient> ShardIterator for AtSequenceShardIterator<'_, K> {
     async fn iterator<'a>(
         &'a self,
         stream: &'a str,
         shard_id: &'a str,
     ) -> Result<GetShardIteratorOutput, Error> {
         self.client
-            .get_shard_iterator()
-            .shard_iterator_type(ShardIteratorType::AtSequenceNumber)
-            .starting_sequence_number(self.starting_sequence_number)
-            .stream_name(stream)
-            .shard_id(shard_id)
-            .send()
+            .get_shard_iterator_at_sequence(stream, shard_id, self.starting_sequence_number)
             .await
-            .map_err(|e| e.into())
     }
 }
 
 #[async_trait]
-impl ShardIterator for AtTimestampShardIterator<'_> {
+impl<K: KinesisClient> ShardIterator for AtTimestampShardIterator<'_, K> {
     async fn iterator<'a>(
         &'a self,
         stream: &'a str,
         shard_id: &'a str,
     ) -> Result<GetShardIteratorOutput, Error> {
         self.client
-            .get_shard_iterator()
-            .shard_iterator_type(ShardIteratorType::AtTimestamp)
-            .timestamp(to_aws_datetime(self.timestamp))
-            .stream_name(stream)
-            .shard_id(shard_id)
-            .send()
+            .get_shard_iterator_at_timestamp(stream, shard_id, self.timestamp)
             .await
-            .map_err(|e| e.into())
     }
 }

@@ -1,79 +1,27 @@
-use std::fmt::Debug;
-
+use crate::aws::client::KinesisClient;
 use crate::kinesis::models::*;
 use async_trait::async_trait;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
-use aws_sdk_kinesis::{Client, Error};
-use chrono::Utc;
+use aws_sdk_kinesis::Error;
 use log::{debug, error};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{sleep, Duration};
-
 pub mod helpers;
 pub mod models;
 
-pub fn new(
-    client: Client,
-    stream: String,
-    shard_id: String,
-    from_datetime: Option<chrono::DateTime<Utc>>,
-    tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
-) -> Box<dyn ShardProcessor + Send + Sync> {
-    match from_datetime {
-        Some(from_datetime) => Box::new(ShardProcessorAtTimestamp {
-            config: ShardProcessorConfig {
-                client,
-                stream,
-                shard_id,
-                tx_records,
-            },
-            from_datetime,
-        }),
-        None => Box::new(ShardProcessorLatest {
-            config: ShardProcessorConfig {
-                client,
-                stream,
-                shard_id,
-                tx_records,
-            },
-        }),
-    }
-}
-
 #[async_trait]
-pub trait IteratorProvider: Send + Sync + Debug + Clone {
-    fn get_config(&self) -> ShardProcessorConfig;
+pub trait IteratorProvider<K: KinesisClient>: Send + Sync + Clone + 'static {
+    fn get_config(&self) -> ShardProcessorConfig<K>;
 
     async fn get_iterator(&self) -> Result<GetShardIteratorOutput, Error>;
 }
 
 #[async_trait]
-impl IteratorProvider for ShardProcessorLatest {
-    fn get_config(&self) -> ShardProcessorConfig {
-        self.config.clone()
-    }
-
-    async fn get_iterator(&self) -> Result<GetShardIteratorOutput, Error> {
-        helpers::get_latest_iterator(self.clone()).await
-    }
-}
-
-#[async_trait]
-impl IteratorProvider for ShardProcessorAtTimestamp {
-    fn get_config(&self) -> ShardProcessorConfig {
-        self.config.clone()
-    }
-
-    async fn get_iterator(&self) -> Result<GetShardIteratorOutput, Error> {
-        helpers::get_iterator_at_timestamp(self.clone(), self.from_datetime).await
-    }
-}
-
-#[async_trait]
-impl<T> ShardProcessor for T
+impl<T, K> ShardProcessor<K> for T
 where
-    T: IteratorProvider + Send + Sync + Debug + 'static,
+    K: KinesisClient,
+    T: IteratorProvider<K>,
 {
     async fn run(&self) -> Result<(), Error> {
         let (tx_shard_iterator_progress, mut rx_shard_iterator_progress) =
@@ -81,7 +29,6 @@ where
 
         {
             let cloned_self = self.clone();
-
             let tx_shard_iterator_progress = tx_shard_iterator_progress.clone();
             tokio::spawn(async move {
                 #[allow(unused_assignments)]
@@ -182,13 +129,7 @@ where
         shard_iterator: &str,
         tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
     ) -> Result<(), Error> {
-        let resp = self
-            .get_config()
-            .client
-            .get_records()
-            .shard_iterator(shard_iterator)
-            .send()
-            .await?;
+        let resp = self.get_config().client.get_records(shard_iterator).await?;
 
         let next_shard_iterator = resp.next_shard_iterator();
 
@@ -233,3 +174,6 @@ where
         Ok(())
     }
 }
+
+#[cfg(test)]
+mod tests;

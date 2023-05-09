@@ -1,8 +1,9 @@
-use async_trait::async_trait;
-use chrono::TimeZone;
 use std::io;
 use std::io::{BufWriter, Error, Write};
 use std::sync::Arc;
+
+use async_trait::async_trait;
+use chrono::TimeZone;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::Mutex;
 
@@ -123,8 +124,8 @@ where
 
                                     data.iter().for_each(|data| {
                                         writeln!(handle, "{}", data).unwrap();
+                                        self.delimiter(handle).unwrap();
                                     });
-                                    self.delimiter(handle)?
                                 }
                             }
                             None => {
@@ -133,8 +134,8 @@ where
                                 *lock += data.len() as u32;
                                 data.iter().for_each(|data| {
                                     writeln!(handle, "{}", data).unwrap();
+                                    self.delimiter(handle).unwrap()
                                 });
-                                self.delimiter(handle)?
                             }
                         }
                     }
