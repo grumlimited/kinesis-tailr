@@ -63,26 +63,6 @@ jobs:
             kinesis-tailr-${{ github.event.release.tag_name }}-x86_64.deb
             kinesis-tailr-${{ github.event.release.tag_name }}-x86_64.deb.md5sum
 
-#      - name: Upload Debian release
-#        uses: actions/upload-release-asset@v1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          upload_url: '${{ github.event.release.upload_url }}'
-#          asset_path: 'kinesis-tailr-${{ github.event.release.tag_name }}-x86_64.deb'
-#          asset_name: 'kinesis-tailr-${{ github.event.release.tag_name }}-x86_64.deb'
-#          asset_content_type: application/octet-stream
-#
-#      - name: Upload Debian release checksum
-#        uses: actions/upload-release-asset@v1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          upload_url: '${{ github.event.release.upload_url }}'
-#          asset_path: 'kinesis-tailr-${{ github.event.release.tag_name }}-x86_64.deb.md5sum'
-#          asset_name: 'kinesis-tailr-${{ github.event.release.tag_name }}-x86_64.deb.md5sum'
-#          asset_content_type: text/plain
-
   arch:
     runs-on: ubuntu-latest
     needs: [ci]
@@ -120,23 +100,3 @@ jobs:
           files: |
             build-aux/arch/kinesis-tailr-bin/kinesis-tailr-bin-${{ github.event.release.tag_name }}-1-x86_64.pkg.tar.zst
             build-aux/arch/kinesis-tailr-bin/kinesis-tailr-bin-${{ github.event.release.tag_name }}-1-x86_64.pkg.tar.zst.md5sum
-
-#      - name: Upload Arch Linux release
-#        uses: actions/upload-release-asset@v1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          upload_url: '${{ github.event.release.upload_url }}'
-#          asset_path: 'build-aux/arch/kinesis-tailr-bin/kinesis-tailr-bin-${{ github.event.release.tag_name }}-1-x86_64.pkg.tar.zst'
-#          asset_name: 'kinesis-tailr-bin-${{ github.event.release.tag_name }}-1-x86_64.pkg.tar.zst'
-#          asset_content_type: application/octet-stream
-#
-#      - name: Upload Arch Linux release checksum
-#        uses: actions/upload-release-asset@v1
-#        env:
-#          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-#        with:
-#          upload_url: '${{ github.event.release.upload_url }}'
-#          asset_path: 'build-aux/arch/kinesis-tailr-bin/kinesis-tailr-bin-${{ github.event.release.tag_name }}-1-x86_64.pkg.tar.zst.md5sum'
-#          asset_name: 'kinesis-tailr-bin-${{ github.event.release.tag_name }}-1-x86_64.pkg.tar.zst.md5sum'
-#          asset_content_type: text/plain
