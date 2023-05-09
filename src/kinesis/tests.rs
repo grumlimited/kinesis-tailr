@@ -2,23 +2,26 @@ use crate::aws::client::KinesisClient;
 use crate::kinesis::models::{
     PanicError, ShardProcessor, ShardProcessorADT, ShardProcessorConfig, ShardProcessorLatest,
 };
-use crate::kinesis::IteratorProvider;
 use async_trait::async_trait;
-use aws_config::meta::region::RegionProviderChain;
 use aws_sdk_kinesis::config::Region;
 use aws_sdk_kinesis::operation::get_records::GetRecordsOutput;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::operation::list_shards::ListShardsOutput;
-use aws_sdk_kinesis::primitives::DateTime;
-use aws_sdk_kinesis::{Client, Error};
+use aws_sdk_kinesis::primitives::{Blob, DateTime};
+use aws_sdk_kinesis::types::{Record, Shard};
+use aws_sdk_kinesis::Error;
 use chrono::Utc;
+use std::time::Duration;
 use tokio::sync::mpsc;
+use tokio::time::sleep;
 
 #[tokio::test]
 async fn xxx() {
-    let (tx_records, _rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(1);
+    let (tx_records, mut rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(1);
 
-    let client = TestKinesisClient {};
+    let client = TestKinesisClient {
+        region: Some(Region::new("us-east-1")),
+    };
 
     let processor = ShardProcessorLatest {
         config: ShardProcessorConfig {
@@ -29,57 +32,74 @@ async fn xxx() {
         },
     };
 
-    processor.get_iterator().await.unwrap();
+    tokio::spawn(async move {
+        while let Some(res) = rx_records.recv().await {
+            println!("{:?}", res)
+        }
+    });
+
+    processor.run().await.unwrap();
+
+    sleep(Duration::from_secs(10)).await
 }
 
 #[derive(Clone, Debug)]
-pub struct TestKinesisClient {}
+pub struct TestKinesisClient {
+    region: Option<Region>,
+}
 
 #[async_trait]
 impl KinesisClient for TestKinesisClient {
-    async fn list_shards(&self, stream: &str) -> Result<ListShardsOutput, Error> {
-        todo!()
+    async fn list_shards(&self, _stream: &str) -> Result<ListShardsOutput, Error> {
+        Ok(ListShardsOutput::builder()
+            .shards(Shard::builder().shard_id("000001").build())
+            .build())
     }
 
-    async fn get_records(&self, shard_iterator: &str) -> Result<GetRecordsOutput, Error> {
-        todo!()
+    async fn get_records(&self, _shard_iterator: &str) -> Result<GetRecordsOutput, Error> {
+        Ok(GetRecordsOutput::builder()
+            .records(Record::builder().data(Blob::new("dsq")).build())
+            .next_shard_iterator("shard_iterator2".to_string())
+            .build())
     }
 
     async fn get_shard_iterator_at_timestamp(
         &self,
-        stream: &str,
-        shard_id: &str,
-        timestamp: &chrono::DateTime<Utc>,
+        _stream: &str,
+        _shard_id: &str,
+        _timestamp: &chrono::DateTime<Utc>,
     ) -> Result<GetShardIteratorOutput, Error> {
-        todo!()
+        Ok(GetShardIteratorOutput::builder()
+            .shard_iterator("shard_iterator".to_string())
+            .build())
     }
 
     async fn get_shard_iterator_at_sequence(
         &self,
-        stream: &str,
-        shard_id: &str,
-        starting_sequence_number: &str,
+        _stream: &str,
+        _shard_id: &str,
+        _starting_sequence_number: &str,
     ) -> Result<GetShardIteratorOutput, Error> {
-        todo!()
+        Ok(GetShardIteratorOutput::builder()
+            .shard_iterator("shard_iterator".to_string())
+            .build())
     }
 
     async fn get_shard_iterator_latest(
         &self,
-        stream: &str,
-        shard_id: &str,
+        _stream: &str,
+        _shard_id: &str,
     ) -> Result<GetShardIteratorOutput, Error> {
-        let r = GetShardIteratorOutput::builder()
+        Ok(GetShardIteratorOutput::builder()
             .shard_iterator("shard_iterator".to_string())
-            .build();
-
-        Ok(r)
+            .build())
     }
 
     fn get_region(&self) -> Option<&Region> {
-        todo!()
+        self.region.as_ref()
     }
 
-    fn to_aws_datetime(&self, timestamp: &chrono::DateTime<Utc>) -> DateTime {
-        todo!()
+    fn to_aws_datetime(&self, _timestamp: &chrono::DateTime<Utc>) -> DateTime {
+        DateTime::from_secs(5000)
     }
 }
