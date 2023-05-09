@@ -1,0 +1,30 @@
+# Maintainer: Romain Gallet <rgallet@grumlimited.co.uk>
+# Contributor: Romain Gallet <rgallet@grumlimited.co.uk>
+_packager="Romain Gallet <rgallet@grumlimited.co.uk>"
+_deb_pkgname=kinesis-tailr
+pkgname=kinesis-tailr-bin
+pkgrel=1
+pkgdesc='Kinesis tail tool'
+arch=('x86_64')
+url="https://github.com/grumlimited/$_deb_pkgname"
+license=('GPLv3')
+groups=()
+depends=()
+makedepends=()
+checkdepends=()
+optdepends=()
+provides=()
+replaces=()
+backup=()
+options=()
+source=("$url/releases/download/$pkgver/$_deb_pkgname-$pkgver-$arch.deb")
+noextract=()
+
+build() {
+	rm control.tar.xz
+	tar xvf data.tar.xz
+}
+
+package() {
+	cp -fr usr/ ${pkgdir}
+}
