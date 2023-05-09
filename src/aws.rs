@@ -44,7 +44,9 @@ pub mod client {
 
         fn get_region(&self) -> Option<&Region>;
 
-        fn to_aws_datetime(&self, timestamp: &chrono::DateTime<Utc>) -> DateTime;
+        fn to_aws_datetime(timestamp: &chrono::DateTime<Utc>) -> DateTime {
+            DateTime::from_millis(timestamp.timestamp_millis())
+        }
     }
 
     #[async_trait]
@@ -76,7 +78,7 @@ pub mod client {
             self.client
                 .get_shard_iterator()
                 .shard_iterator_type(ShardIteratorType::AtTimestamp)
-                .timestamp(self.to_aws_datetime(timestamp))
+                .timestamp(Self::to_aws_datetime(timestamp))
                 .stream_name(stream)
                 .shard_id(shard_id)
                 .send()
@@ -118,10 +120,6 @@ pub mod client {
 
         fn get_region(&self) -> Option<&Region> {
             self.client.conf().region()
-        }
-
-        fn to_aws_datetime(&self, timestamp: &chrono::DateTime<Utc>) -> DateTime {
-            DateTime::from_millis(timestamp.timestamp_millis())
         }
     }
 
