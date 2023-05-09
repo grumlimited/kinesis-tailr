@@ -16,8 +16,8 @@ use tokio::sync::mpsc;
 use tokio::time::sleep;
 
 #[tokio::test]
-async fn xxx() {
-    let (tx_records, mut rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(1);
+async fn produced_record_is_processed() {
+    let (tx_records, mut rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(10);
 
     let client = TestKinesisClient {
         region: Some(Region::new("us-east-1")),
@@ -32,15 +32,36 @@ async fn xxx() {
         },
     };
 
-    tokio::spawn(async move {
-        while let Some(res) = rx_records.recv().await {
-            println!("{:?}", res)
+    // start producer
+    tokio::spawn(async move { processor.run().await });
+
+    let mut done_processing = false;
+    let mut closed_resources = false;
+    let mut count = 0;
+
+    while let Some(res) = rx_records.recv().await {
+        if !done_processing {
+            match res {
+                Ok(adt) => match adt {
+                    ShardProcessorADT::Progress(res) => {
+                        count += res.len();
+                    }
+                    _ => {}
+                },
+                Err(_) => {}
+            }
+
+            done_processing = true;
+        } else {
+            if !closed_resources {
+                sleep(Duration::from_millis(100)).await;
+                rx_records.close();
+            }
+            closed_resources = true;
         }
-    });
+    }
 
-    processor.run().await.unwrap();
-
-    sleep(Duration::from_secs(10)).await
+    assert_eq!(count, 1)
 }
 
 #[derive(Clone, Debug)]
@@ -57,8 +78,15 @@ impl KinesisClient for TestKinesisClient {
     }
 
     async fn get_records(&self, _shard_iterator: &str) -> Result<GetRecordsOutput, Error> {
+        let dt = DateTime::from_secs(5000);
+        let record = Record::builder()
+            .approximate_arrival_timestamp(dt)
+            .sequence_number("1")
+            .data(Blob::new("data"))
+            .build();
+
         Ok(GetRecordsOutput::builder()
-            .records(Record::builder().data(Blob::new("dsq")).build())
+            .records(record)
             .next_shard_iterator("shard_iterator2".to_string())
             .build())
     }
@@ -97,9 +125,5 @@ impl KinesisClient for TestKinesisClient {
 
     fn get_region(&self) -> Option<&Region> {
         self.region.as_ref()
-    }
-
-    fn to_aws_datetime(&self, _timestamp: &chrono::DateTime<Utc>) -> DateTime {
-        DateTime::from_secs(5000)
     }
 }

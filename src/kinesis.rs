@@ -42,8 +42,6 @@ where
                 while let Some(res) = rx_shard_iterator_progress.recv().await {
                     let res_clone = res.clone();
 
-                    println!("XXXXX {:?}", res_clone);
-
                     if res_clone.last_sequence_id.is_some() {
                         current_get_records_result_ref.last_sequence_id =
                             res_clone.last_sequence_id;
@@ -114,9 +112,7 @@ where
         }
 
         let resp = self.get_iterator().await?;
-        println!("resp {:?}", resp);
         let shard_iterator = resp.shard_iterator().map(|s| s.into());
-        println!("shard_iterator {:?}", shard_iterator);
         tx_shard_iterator_progress
             .send(ShardIteratorProgress {
                 last_sequence_id: None,
@@ -124,8 +120,6 @@ where
             })
             .await
             .unwrap();
-
-        println!("tx_shard_iterator_progress",);
 
         Ok(())
     }
