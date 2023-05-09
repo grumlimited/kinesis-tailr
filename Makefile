@@ -41,3 +41,13 @@ clean :
 
 uninstall :
 	rm -f $(bindir)/$(NAME)
+
+debian-pkg : install
+	mkdir -p $(DESTDIR)/DEBIAN
+	cp build-aux/debian/control $(DESTDIR)/DEBIAN/
+	echo "Version: $(RELEASE_VERSION)" >> $(DESTDIR)/DEBIAN/control
+	cp build-aux/debian/postinst $(DESTDIR)/DEBIAN/
+	chmod 775 $(DESTDIR)/DEBIAN/postinst
+	dpkg-deb --build $(DESTDIR) kinesis-tailr-$(RELEASE_VERSION)-x86_64.deb
+	md5sum kinesis-tailr-$(RELEASE_VERSION)-x86_64.deb > kinesis-tailr-$(RELEASE_VERSION)-x86_64.deb.md5sum
+

@@ -1,0 +1,6 @@
+Package: kinesis-tailr
+Section: development
+Priority: optional
+Architecture: all
+Maintainer: rgallet_at_grumlimited.co.uk
+Description: Kinesis tail tool

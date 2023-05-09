@@ -1,0 +1,8 @@
+version: '3'
+services:
+  rust:
+    build: .
+#    entrypoint: ['/bin/sleep', '60000']
+    volumes:
+      - '.:/kinesis-tailr'
+      - '~/.cargo:/root/.cargo'

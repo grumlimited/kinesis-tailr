@@ -11,3 +11,5 @@
 
 rpmbuild/RPMS
 rpmbuild/SRPMS
+*.deb
+*.md5sum
