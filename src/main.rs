@@ -83,7 +83,7 @@ async fn main() -> Result<(), io::Error> {
         endpoint_url,
     } = Opt::parse();
 
-    env_logger::init();
+    env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
 
     let from_datetime = parse_date(from.as_deref());
     let client = aws::client::create_client(region, endpoint_url).await;
