@@ -47,10 +47,6 @@ Installs a single binary to `/usr/bin/kinesis-tailr`.
         --from-datetime '2023-05-04T20:57:12+00:00' \
         --max-messages 2
 
-### Output
-
-![kinesis-tailr](./build-aux/output.png "Output")
-
 ### Logging
 
 General logging level for debugging can be turned on with:
