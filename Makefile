@@ -1,7 +1,7 @@
 # Install to /usr unless otherwise specified, such as `make PREFIX=/app`
 PREFIX=/usr
 
-NAME=kinesis-tailf
+NAME=kinesis-tailr
 
 # What to run to install various files
 INSTALL=install

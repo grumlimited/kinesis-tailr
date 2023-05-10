@@ -15,13 +15,13 @@ A simple tool to tail a Kinesis stream built with Rust.
 make install
 ```
 
-Installs a single binary to `/usr/bin/kinesis-tailf`.
+Installs a single binary to `/usr/bin/kinesis-tailr`.
 
 # Usage
 
-    ❯ kinesis-tailf -help
+    ❯ kinesis-tailr -help
 
-    Usage: kinesis-tailf [OPTIONS] --stream-name <STREAM_NAME>
+    Usage: kinesis-tailr [OPTIONS] --stream-name <STREAM_NAME>
     
     Options:
     -r, --region <REGION>               AWS Region
@@ -39,7 +39,7 @@ Installs a single binary to `/usr/bin/kinesis-tailf`.
 
 ### Example
 
-     kinesis-tailf \
+     kinesis-tailr \
         -r eu-west-1 \
         --stream-name=ddb-stream-dev \
         --print-timestamp \
