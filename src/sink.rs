@@ -13,6 +13,7 @@ pub mod console;
 #[derive(Clone)]
 pub struct SinkConfig {
     max_messages: Option<u32>,
+    no_color: bool,
     print_key: bool,
     print_shardid: bool,
     print_timestamp: bool,

@@ -9,6 +9,7 @@ fn format_nb_messages_ok() {
     let console = ConsoleSink {
         config: SinkConfig {
             max_messages: None,
+            no_color: false,
             print_key: false,
             print_shardid: false,
             print_timestamp: false,
@@ -91,6 +92,7 @@ fn get_string_sink(max_messages: Option<u32>) -> StringSink {
     StringSink {
         config: SinkConfig {
             max_messages,
+            no_color: false,
             print_key: false,
             print_shardid: false,
             print_timestamp: false,
