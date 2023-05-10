@@ -22,6 +22,46 @@ fn format_nb_messages_ok() {
     assert_eq!(console.format_nb_messages(2), "2 messages processed");
 }
 
+#[test]
+fn format_outputs() {
+    let console = ConsoleSink {
+        config: SinkConfig {
+            max_messages: None,
+            no_color: false,
+            print_key: false,
+            print_shardid: false,
+            print_timestamp: false,
+            print_delimiter: false,
+            exit_after_termination: false,
+        },
+    };
+
+    let bw_console = ConsoleSink {
+        config: SinkConfig {
+            max_messages: None,
+            no_color: true,
+            print_key: false,
+            print_shardid: false,
+            print_timestamp: false,
+            print_delimiter: false,
+            exit_after_termination: false,
+        },
+    };
+
+    assert_eq!(console.write_date("data"), "\u{1b}[31mdata\u{1b}[0m");
+    assert_eq!(console.write_shard_id("data"), "\u{1b}[34mdata\u{1b}[0m");
+    assert_eq!(console.write_key("data"), "\u{1b}[33mdata\u{1b}[0m");
+    assert_eq!(
+        console.write_delimiter("data"),
+        "\u{1b}[38;2;128;128;128mdata\u{1b}[0m"
+    );
+
+    assert_eq!(bw_console.write_date("data"), "data");
+    assert_eq!(bw_console.write_shard_id("data"), "data");
+    assert_eq!(bw_console.write_key("data"), "data");
+    assert_eq!(bw_console.write_delimiter("data"), "data");
+}
+
 #[tokio::test]
 async fn expect_zero_messages_processed() {
     let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(1);
