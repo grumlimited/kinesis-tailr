@@ -10,7 +10,7 @@ use crate::kinesis::models::{PanicError, RecordResult, ShardProcessorADT};
 
 pub mod console;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct SinkConfig {
     max_messages: Option<u32>,
     no_color: bool,
