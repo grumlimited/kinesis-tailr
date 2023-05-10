@@ -42,7 +42,7 @@ struct Opt {
     #[structopt(long)]
     max_messages: Option<u32>,
 
-    /// Print the shard ID
+    /// Disable color output
     #[structopt(long)]
     no_color: bool,
 
