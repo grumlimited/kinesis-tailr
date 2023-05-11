@@ -91,7 +91,7 @@ where
                                                 message: format!("{:?}", e),
                                             }))
                                             .await
-                                            .expect("TODO: panic message");
+                                            .expect("Could not send error to tx_records");
                                     }
                                 }
                             }
@@ -151,11 +151,16 @@ where
             .collect::<Vec<RecordResult>>();
 
         if !record_results.is_empty() {
+            debug!(
+                "Received {} records from {}",
+                record_results.len(),
+                self.get_config().shard_id
+            );
             self.get_config()
                 .tx_records
                 .send(Ok(ShardProcessorADT::Progress(record_results)))
                 .await
-                .expect("TODO: panic message")
+                .expect("Could not sent records to tx_records");
         }
 
         let last_sequence_id: Option<String> = resp

@@ -1,9 +1,8 @@
+use async_trait::async_trait;
+use chrono::TimeZone;
 use std::io;
 use std::io::{BufWriter, Error, Write};
 use std::sync::Arc;
-
-use async_trait::async_trait;
-use chrono::TimeZone;
 use tokio::sync::mpsc::{Receiver, Sender};
 use tokio::sync::Mutex;
 
@@ -11,9 +10,10 @@ use crate::kinesis::models::{PanicError, RecordResult, ShardProcessorADT};
 
 pub mod console;
 
-#[derive(Clone)]
+#[derive(Clone, Default)]
 pub struct SinkConfig {
     max_messages: Option<u32>,
+    no_color: bool,
     print_key: bool,
     print_shardid: bool,
     print_timestamp: bool,
@@ -31,6 +31,22 @@ where
     W: Write + Send,
 {
     fn offer(&mut self) -> BufWriter<W>;
+
+    fn write_date(&self, date: &str) -> String {
+        date.to_string()
+    }
+
+    fn write_shard_id(&self, shard_id: &str) -> String {
+        shard_id.to_string()
+    }
+
+    fn write_key(&self, key: &str) -> String {
+        key.to_string()
+    }
+
+    fn write_delimiter(&self, delimiter: &str) -> String {
+        delimiter.to_string()
+    }
 }
 
 #[async_trait]
@@ -187,7 +203,10 @@ where
         if self.get_config().print_delimiter {
             writeln!(
                 handle,
-                "------------------------------------------------------------------------"
+                "{}",
+                self.write_delimiter(
+                    "------------------------------------------------------------------------"
+                )
             )?
         }
         Ok(())
@@ -199,13 +218,19 @@ where
             .to_string();
 
         let data = if self.get_config().print_key {
-            format!("{} {}", record_result.sequence_id, data)
+            let key = record_result.sequence_id.to_string();
+            let key = self.write_key(&key);
+
+            format!("{} {}", key, data)
         } else {
             data
         };
 
         let data = if self.get_config().print_shardid {
-            format!("{} {}", record_result.shard_id, data)
+            let shard_id = record_result.shard_id.to_string();
+            let shard_id = self.write_shard_id(&shard_id);
+
+            format!("{} {}", shard_id, data)
         } else {
             data
         };
@@ -215,7 +240,10 @@ where
                 .timestamp_opt(record_result.datetime.secs(), 0)
                 .unwrap();
 
-            format!("{} {}", date.format("%+"), data)
+            let date = date.format("%+").to_string();
+            let date = self.write_date(&date);
+
+            format!("{} {}", date, data)
         } else {
             data
         }

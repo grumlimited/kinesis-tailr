@@ -30,17 +30,25 @@ struct Opt {
     #[structopt(short, long)]
     stream_name: String,
 
-    /// Shard ID to tail from
+    /// Endpoint URL to use
     #[structopt(long)]
-    shard_id: Option<String>,
+    endpoint_url: Option<String>,
+
+    /// Start datetime position to tail from. ISO 8601 format.
+    #[structopt(long)]
+    from_datetime: Option<String>,
 
     /// Maximum number of messages to retrieve
     #[structopt(long)]
     max_messages: Option<u32>,
 
-    /// Start datetime position to tail from. ISO 8601 format.
+    /// Disable color output
     #[structopt(long)]
-    from_datetime: Option<String>,
+    no_color: bool,
+
+    /// Print a delimiter between each payload
+    #[structopt(long)]
+    print_delimiter: bool,
 
     /// Print the partition key
     #[structopt(long)]
@@ -54,13 +62,9 @@ struct Opt {
     #[structopt(long)]
     print_timestamp: bool,
 
-    /// Print a delimiter between each payload
+    /// Shard ID to tail from
     #[structopt(long)]
-    print_delimiter: bool,
-
-    /// Endpoint URL to use
-    #[structopt(long)]
-    endpoint_url: Option<String>,
+    shard_id: Option<String>,
 
     /// Display additional information
     #[structopt(short, long)]
@@ -74,6 +78,7 @@ async fn main() -> Result<(), io::Error> {
         region,
         verbose,
         max_messages,
+        no_color,
         print_key,
         print_shardid: print_shard,
         print_timestamp,
@@ -148,6 +153,7 @@ async fn main() -> Result<(), io::Error> {
 
     ConsoleSink::new(
         max_messages,
+        no_color,
         print_key,
         print_shard,
         print_timestamp,
