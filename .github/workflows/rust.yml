@@ -52,7 +52,6 @@ jobs:
           command: test
         env:
           RUST_BACKTRACE: 1
-          CARGO_TERM_COLOR: always
 
       - name: Formatting
         uses: actions-rs/cargo@v1

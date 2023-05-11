@@ -243,7 +243,7 @@ where
             let date = date.format("%+").to_string();
             let date = self.write_date(&date);
 
-            format!("{} {}", date, data).to_string()
+            format!("{} {}", date, data)
         } else {
             data
         }
