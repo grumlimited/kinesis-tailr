@@ -186,8 +186,8 @@ where
         tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
         rx_records: Receiver<Result<ShardProcessorADT, PanicError>>,
     ) -> io::Result<()> {
-        let r = &mut self.output();
-        self.run_inner(tx_records, rx_records, r).await
+        let output = &mut self.output();
+        self.run_inner(tx_records, rx_records, output).await
     }
 
     fn handle_termination(&self, tx_records: Sender<Result<ShardProcessorADT, PanicError>>) {
