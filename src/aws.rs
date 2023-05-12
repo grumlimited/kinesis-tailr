@@ -134,10 +134,9 @@ pub mod client {
         let shared_config = {
             let inner = aws_config::from_env().region(region_provider);
 
-            let inner = if endpoint_url.is_some() {
-                inner.endpoint_url(endpoint_url.unwrap().as_str())
-            } else {
-                inner
+            let inner = match endpoint_url {
+                Some(endpoint_url) => inner.endpoint_url(endpoint_url.as_str()),
+                None => inner,
             };
 
             inner
