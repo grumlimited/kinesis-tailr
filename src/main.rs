@@ -168,11 +168,10 @@ mod cli_helpers {
         from.map(|f| chrono::Utc.datetime_from_str(f, "%+").unwrap())
     }
 
-    pub fn divide_shards(source: &[String]) -> Vec<Vec<String>> {
-        let mut dest: Vec<Vec<String>> = Vec::new();
-        let mut current_buffer: Vec<String> = Vec::new();
+    pub fn divide_shards<T: Clone>(source: &[T], group_size: u32) -> Vec<Vec<T>> {
+        let mut dest: Vec<Vec<T>> = Vec::new();
+        let mut current_buffer: Vec<T> = Vec::new();
 
-        let group_size = 2;
         let mut i = 0;
         for s in source {
             if i < group_size {
@@ -226,7 +225,7 @@ mod tests {
         ];
 
         assert_eq!(
-            divide_shards(&source),
+            divide_shards::<String>(&source, 2),
             vec![
                 vec!["a".to_string(), "b".to_string()],
                 vec!["c".to_string(), "d".to_string()],
@@ -235,10 +234,13 @@ mod tests {
         );
 
         assert_eq!(
-            divide_shards(&vec!["e".to_string()]),
+            divide_shards::<String>(&vec!["e".to_string()], 2),
             vec![vec!["e".to_string()],]
         );
 
-        assert_eq!(divide_shards(&vec![]), vec![] as Vec<Vec<String>>);
+        assert_eq!(
+            divide_shards::<String>(&vec![], 2),
+            vec![] as Vec<Vec<String>>
+        );
     }
 }
