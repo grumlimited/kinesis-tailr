@@ -9,7 +9,7 @@ use kinesis::helpers::get_shards;
 use kinesis::models::*;
 
 use crate::aws::client::*;
-use crate::cli_helpers::{divide_shards, parse_date, print_runtime};
+use crate::cli_helpers::{divide_shards, parse_date, print_runtime, reset_signal_pipe_handler};
 use crate::sink::console::ConsoleSink;
 use crate::sink::Sink;
 
@@ -72,6 +72,8 @@ struct Opt {
 
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {
+    reset_signal_pipe_handler().expect("TODO: panic message");
+
     let opt = Opt::parse();
 
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("warn"));
@@ -133,7 +135,7 @@ async fn main() -> Result<(), io::Error> {
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?
     }
 
-    console.await.unwrap();
+    console.await.unwrap_or(());
 
     Ok(())
 }
@@ -142,6 +144,7 @@ mod cli_helpers {
     use aws_sdk_kinesis::meta::PKG_VERSION;
     use chrono::{DateTime, TimeZone, Utc};
     use log::info;
+    use std::io::Error;
 
     use crate::Opt;
 
@@ -202,6 +205,22 @@ mod cli_helpers {
         }
 
         dest
+    }
+
+    pub fn reset_signal_pipe_handler() -> Result<(), Error> {
+        // https://github.com/rust-lang/rust/issues/46016
+        // Long story short: handle SIGPIPE (ie broken pipe) on Unix systems gracefully.
+        #[cfg(target_family = "unix")]
+        {
+            use nix::sys::signal;
+
+            unsafe {
+                signal::signal(signal::Signal::SIGPIPE, signal::SigHandler::SigDfl)
+                    .map_err(Error::from)?;
+            }
+        }
+
+        Ok(())
     }
 }
 

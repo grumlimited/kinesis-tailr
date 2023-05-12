@@ -28,7 +28,7 @@ pub trait Configurable {
 #[async_trait]
 pub trait SinkOutput<W>
 where
-    W: Write + Send,
+    W: Write,
 {
     fn output(&mut self) -> BufWriter<W>;
 
@@ -52,8 +52,8 @@ where
 #[async_trait]
 pub trait Sink<T, W>
 where
-    W: Write + Send,
-    T: SinkOutput<W> + Configurable + Send + Sync,
+    W: Write,
+    T: SinkOutput<W>,
 {
     async fn run_inner(
         &mut self,
@@ -88,7 +88,7 @@ where
             .map(|record_result| self.format_record(record_result))
             .collect()
     }
-    fn print_termination_message(
+    fn termination_message_and_exit(
         &self,
         handle: &mut BufWriter<W>,
         count: u32,
@@ -123,7 +123,11 @@ where
                         match self.get_config().max_messages {
                             Some(max_messages) => {
                                 if *lock >= max_messages {
-                                    self.print_termination_message(handle, *lock, &mut rx_records)?;
+                                    self.termination_message_and_exit(
+                                        handle,
+                                        *lock,
+                                        &mut rx_records,
+                                    )?;
                                 }
 
                                 let remaining = if *lock < max_messages {
@@ -161,7 +165,7 @@ where
                     ShardProcessorADT::Termination => {
                         let messages_processed = *count.lock().await;
 
-                        self.print_termination_message(
+                        self.termination_message_and_exit(
                             handle,
                             messages_processed,
                             &mut rx_records,
@@ -184,25 +188,6 @@ where
     ) -> io::Result<()> {
         let r = &mut self.output();
         self.run_inner(tx_records, rx_records, r).await
-    }
-
-    fn print_termination_message(
-        &self,
-        handle: &mut BufWriter<W>,
-        count: u32,
-        rx_records: &mut Receiver<Result<ShardProcessorADT, PanicError>>,
-    ) -> io::Result<()> {
-        handle.flush()?;
-
-        writeln!(io::stderr(), "{}", self.format_nb_messages(count))?;
-
-        rx_records.close();
-
-        if self.get_config().exit_after_termination {
-            std::process::exit(0)
-        }
-
-        Ok(())
     }
 
     fn handle_termination(&self, tx_records: Sender<Result<ShardProcessorADT, PanicError>>) {
@@ -267,6 +252,25 @@ where
         } else {
             data
         }
+    }
+
+    fn termination_message_and_exit(
+        &self,
+        handle: &mut BufWriter<W>,
+        count: u32,
+        rx_records: &mut Receiver<Result<ShardProcessorADT, PanicError>>,
+    ) -> io::Result<()> {
+        handle.flush()?;
+
+        writeln!(io::stderr(), "{}", self.format_nb_messages(count))?;
+
+        rx_records.close();
+
+        if self.get_config().exit_after_termination {
+            std::process::exit(0)
+        }
+
+        Ok(())
     }
 }
 
