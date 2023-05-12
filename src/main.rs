@@ -117,8 +117,8 @@ async fn main() -> Result<(), io::Error> {
         }
     });
 
-    let rr = divide_shards(&selected_shards, 500);
-    for shard_id in &rr {
+    let shard_groups = divide_shards(&selected_shards, 500);
+    for shard_id in &shard_groups {
         let shard_processor = kinesis::helpers::new(
             client.clone(),
             opt.stream_name.clone(),
