@@ -169,6 +169,10 @@ mod cli_helpers {
     }
 
     pub fn divide_shards<T: Clone>(source: &[T], group_size: u32) -> Vec<Vec<T>> {
+        if group_size == 0 {
+            return vec![];
+        }
+
         let mut dest: Vec<Vec<T>> = Vec::new();
         let mut current_buffer: Vec<T> = Vec::new();
 
@@ -240,6 +244,33 @@ mod tests {
 
         assert_eq!(
             divide_shards::<String>(&vec![], 2),
+            vec![] as Vec<Vec<String>>
+        );
+
+        assert_eq!(
+            divide_shards::<String>(&source, 5),
+            vec![vec![
+                "a".to_string(),
+                "b".to_string(),
+                "c".to_string(),
+                "d".to_string(),
+                "e".to_string()
+            ],]
+        );
+
+        assert_eq!(
+            divide_shards::<String>(&source, 1),
+            vec![
+                vec!["a".to_string()],
+                vec!["b".to_string()],
+                vec!["c".to_string()],
+                vec!["d".to_string()],
+                vec!["e".to_string()],
+            ]
+        );
+
+        assert_eq!(
+            divide_shards::<String>(&source, 0),
             vec![] as Vec<Vec<String>>
         );
     }
