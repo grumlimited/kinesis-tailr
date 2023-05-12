@@ -8,7 +8,7 @@ use tokio::sync::mpsc;
 
 use crate::aws::client::*;
 
-use crate::cli_helpers::parse_date;
+use crate::cli_helpers::{divide_shards, parse_date};
 use crate::sink::console::ConsoleSink;
 use crate::sink::Sink;
 use kinesis::helpers::get_shards;
@@ -136,29 +136,40 @@ async fn main() -> Result<(), io::Error> {
         }
     }
 
-    let shard_processor = kinesis::helpers::new(
-        client.clone(),
-        stream_name.clone(),
-        selected_shards,
-        from_datetime,
-        tx_records.clone(),
-    );
-
-    shard_processor
-        .run()
+    let t = tx_records.clone();
+    let console = tokio::spawn(async move {
+        ConsoleSink::new(
+            max_messages,
+            no_color,
+            print_key,
+            print_shard,
+            print_timestamp,
+            print_delimiter,
+        )
+        .run(t, rx_records)
         .await
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+        .unwrap();
+    });
 
-    ConsoleSink::new(
-        max_messages,
-        no_color,
-        print_key,
-        print_shard,
-        print_timestamp,
-        print_delimiter,
-    )
-    .run(tx_records, rx_records)
-    .await
+    let rr = divide_shards(&selected_shards, 500);
+    for shard_id in &rr {
+        let shard_processor = kinesis::helpers::new(
+            client.clone(),
+            stream_name.clone(),
+            shard_id.clone(),
+            from_datetime,
+            tx_records.clone(),
+        );
+
+        shard_processor
+            .run()
+            .await
+            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?
+    }
+
+    console.await.unwrap();
+
+    Ok(())
 }
 
 mod cli_helpers {
