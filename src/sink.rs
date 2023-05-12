@@ -30,7 +30,7 @@ pub trait SinkOutput<W>
 where
     W: Write + Send,
 {
-    fn offer(&mut self) -> BufWriter<W>;
+    fn output(&mut self) -> BufWriter<W>;
 
     fn write_date(&self, date: &str) -> String {
         date.to_string()
@@ -181,7 +181,7 @@ where
         tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
         rx_records: Receiver<Result<ShardProcessorADT, PanicError>>,
     ) -> io::Result<()> {
-        let r = &mut self.offer();
+        let r = &mut self.output();
         self.run_inner(tx_records, rx_records, r).await
     }
 

@@ -130,7 +130,7 @@ pub struct StringSink {
 }
 
 impl SinkOutput<Vec<u8>> for StringSink {
-    fn offer(&mut self) -> BufWriter<Vec<u8>> {
+    fn output(&mut self) -> BufWriter<Vec<u8>> {
         unimplemented!()
     }
 }
