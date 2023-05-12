@@ -158,8 +158,14 @@ where
                     ShardProcessorADT::Termination => {
                         let messages_processed = *count.lock().await;
 
-                        writeln!(handle, "{}", self.format_nb_messages(messages_processed))?;
                         handle.flush()?;
+
+                        writeln!(
+                            io::stderr(),
+                            "{}",
+                            self.format_nb_messages(messages_processed)
+                        )?;
+
                         rx_records.close();
 
                         if self.get_config().exit_after_termination {
