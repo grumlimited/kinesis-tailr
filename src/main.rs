@@ -1,18 +1,17 @@
 #![allow(clippy::result_large_err)]
 
-use aws_sdk_kinesis::{config::Region, meta::PKG_VERSION};
-use clap::Parser;
-use log::info;
 use std::io;
+
+use clap::Parser;
 use tokio::sync::mpsc;
 
-use crate::aws::client::*;
-
-use crate::cli_helpers::{divide_shards, parse_date};
-use crate::sink::console::ConsoleSink;
-use crate::sink::Sink;
 use kinesis::helpers::get_shards;
 use kinesis::models::*;
+
+use crate::aws::client::*;
+use crate::cli_helpers::{divide_shards, parse_date, print_runtime};
+use crate::sink::console::ConsoleSink;
+use crate::sink::Sink;
 
 mod iterator;
 mod kinesis;
@@ -73,49 +72,24 @@ struct Opt {
 
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {
-    let Opt {
-        stream_name,
-        region,
-        verbose,
-        max_messages,
-        no_color,
-        print_key,
-        print_shardid: print_shard,
-        print_timestamp,
-        print_delimiter,
-        from_datetime: from,
-        shard_id,
-        endpoint_url,
-    } = Opt::parse();
+    let opt = Opt::parse();
 
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
 
-    let from_datetime = parse_date(from.as_deref());
-    let client = create_client(region, endpoint_url).await;
-
-    if verbose {
-        info!("Kinesis client version: {}", PKG_VERSION);
-        info!(
-            "Region:                 {}",
-            client.get_region().unwrap_or(&Region::new("us-east-1"))
-        );
-        info!("Stream name:            {}", &stream_name);
-        from_datetime.iter().for_each(|f| {
-            info!("From:                   {}", &f.format("%+"));
-        });
-    }
+    let from_datetime = parse_date(opt.from_datetime.as_deref());
+    let client = create_client(opt.region.clone(), opt.endpoint_url.clone()).await;
 
     let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(1000);
 
-    let shards = get_shards(&client, &stream_name)
+    let shards = get_shards(&client, &opt.stream_name)
         .await
-        .unwrap_or_else(|_| panic!("Could not describe shards for stream {}", stream_name));
+        .unwrap_or_else(|_| panic!("Could not describe shards for stream {}", opt.stream_name));
 
-    let selected_shards = if let Some(shard_id) = &shard_id {
+    let selected_shards: Vec<String> = if let Some(shard_id) = &opt.shard_id {
         if !shards.contains(shard_id) {
             panic!(
                 "Shard {} does not exist in stream {}",
-                shard_id, stream_name
+                shard_id, opt.stream_name
             );
         }
         vec![shard_id.clone()]
@@ -123,30 +97,19 @@ async fn main() -> Result<(), io::Error> {
         shards
     };
 
-    if verbose {
-        let is_filtered = if shard_id.is_some() {
-            " (filtered)"
-        } else {
-            ""
-        };
-        info!("{}{}", "Shards", is_filtered);
-
-        for shard_id in &selected_shards {
-            info!("{}{}", std::char::from_u32(0x3009).unwrap(), shard_id) // 0x3009 is '〉'
-        }
-    }
+    print_runtime(&opt, &selected_shards);
 
     let console = tokio::spawn({
         let tx_records = tx_records.clone();
 
         async move {
             ConsoleSink::new(
-                max_messages,
-                no_color,
-                print_key,
-                print_shard,
-                print_timestamp,
-                print_delimiter,
+                opt.max_messages,
+                opt.no_color,
+                opt.print_key,
+                opt.print_shardid,
+                opt.print_timestamp,
+                opt.print_delimiter,
             )
             .run(tx_records, rx_records)
             .await
@@ -158,7 +121,7 @@ async fn main() -> Result<(), io::Error> {
     for shard_id in &rr {
         let shard_processor = kinesis::helpers::new(
             client.clone(),
-            stream_name.clone(),
+            opt.stream_name.clone(),
             shard_id.clone(),
             from_datetime,
             tx_records.clone(),
@@ -176,7 +139,36 @@ async fn main() -> Result<(), io::Error> {
 }
 
 mod cli_helpers {
+    use aws_sdk_kinesis::meta::PKG_VERSION;
     use chrono::{DateTime, TimeZone, Utc};
+    use log::info;
+
+    use crate::Opt;
+
+    pub(crate) fn print_runtime(opt: &Opt, selected_shards: &Vec<String>) {
+        if opt.verbose {
+            info!("Kinesis client version: {}", PKG_VERSION);
+            info!(
+                "Region:                 {}",
+                opt.region.as_ref().unwrap_or(&"us-east-1".to_owned())
+            );
+            info!("Stream name:            {}", &opt.stream_name);
+            opt.from_datetime.iter().for_each(|f| {
+                info!("From:                   {}", f);
+            });
+
+            let is_filtered = if opt.shard_id.is_some() {
+                " (filtered)"
+            } else {
+                ""
+            };
+            info!(
+                "Shards:                 {}{}",
+                selected_shards.len(),
+                is_filtered
+            );
+        }
+    }
 
     pub fn parse_date(from: Option<&str>) -> Option<DateTime<Utc>> {
         from.map(|f| chrono::Utc.datetime_from_str(f, "%+").unwrap())
