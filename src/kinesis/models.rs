@@ -60,7 +60,7 @@ impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorLatest<K> {
         self.config.clone()
     }
 
-    async fn get_iterator(&self, shard_id: String) -> Result<GetShardIteratorOutput, Error> {
+    async fn get_iterator(&self, shard_id: &str) -> Result<GetShardIteratorOutput, Error> {
         get_latest_iterator(self.clone(), shard_id).await
     }
 }
@@ -71,9 +71,9 @@ impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorAtTimestamp<K> {
         self.config.clone()
     }
 
-    async fn get_iterator(&self, shard_id: String) -> Result<GetShardIteratorOutput, Error> {
+    async fn get_iterator(&self, shard_id: &str) -> Result<GetShardIteratorOutput, Error> {
         at_timestamp(&self.config.client, &self.from_datetime)
-            .iterator(&self.config.stream, &shard_id)
+            .iterator(&self.config.stream, shard_id)
             .await
     }
 }

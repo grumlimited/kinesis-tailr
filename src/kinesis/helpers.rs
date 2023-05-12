@@ -45,20 +45,20 @@ pub fn new(
 
 pub async fn get_latest_iterator<T, K: KinesisClient>(
     iterator_provider: T,
-    shard_id: String,
+    shard_id: &str,
 ) -> Result<GetShardIteratorOutput, Error>
 where
     T: IteratorProvider<K>,
 {
     latest(&iterator_provider.get_config().client)
-        .iterator(&iterator_provider.get_config().stream, &shard_id)
+        .iterator(&iterator_provider.get_config().stream, shard_id)
         .await
 }
 
 pub async fn get_iterator_since<T, K: KinesisClient>(
     iterator_provider: T,
     starting_sequence_number: &str,
-    shard_id: String,
+    shard_id: &str,
 ) -> Result<GetShardIteratorOutput, Error>
 where
     T: IteratorProvider<K>,
@@ -67,7 +67,7 @@ where
         &iterator_provider.get_config().client,
         starting_sequence_number,
     )
-    .iterator(&iterator_provider.get_config().stream, &shard_id)
+    .iterator(&iterator_provider.get_config().stream, shard_id)
     .await
 }
 
@@ -83,7 +83,7 @@ pub async fn handle_iterator_refresh<T, K: KinesisClient>(
             let resp = get_iterator_since(
                 iterator_provider,
                 &last_sequence_id,
-                shard_iterator_progress.shard_id.clone(),
+                &shard_iterator_progress.shard_id,
             )
             .await
             .unwrap();
@@ -93,10 +93,9 @@ pub async fn handle_iterator_refresh<T, K: KinesisClient>(
             )
         }
         None => {
-            let resp =
-                get_latest_iterator(iterator_provider, shard_iterator_progress.shard_id.clone())
-                    .await
-                    .unwrap();
+            let resp = get_latest_iterator(iterator_provider, &shard_iterator_progress.shard_id)
+                .await
+                .unwrap();
             (None, resp.shard_iterator().map(|v| v.into()))
         }
     };
