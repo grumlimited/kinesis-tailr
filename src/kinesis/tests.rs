@@ -27,7 +27,7 @@ async fn produced_record_is_processed() {
         config: ShardProcessorConfig {
             client,
             stream: "test".to_string(),
-            shard_id: "shardId-000000000000".to_string(),
+            shard_ids: vec!["shardId-000000000000".to_string()],
             tx_records,
         },
     };

@@ -8,7 +8,7 @@ use tokio::sync::mpsc;
 
 use crate::aws::client::*;
 
-use crate::cli_helpers::parse_date;
+use crate::cli_helpers::{divide_shards, parse_date};
 use crate::sink::console::ConsoleSink;
 use crate::sink::Sink;
 use kinesis::helpers::get_shards;
@@ -91,7 +91,7 @@ async fn main() -> Result<(), io::Error> {
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
 
     let from_datetime = parse_date(from.as_deref());
-    let client = aws::client::create_client(region, endpoint_url).await;
+    let client = create_client(region, endpoint_url).await;
 
     if verbose {
         info!("Kinesis client version: {}", PKG_VERSION);
@@ -105,7 +105,7 @@ async fn main() -> Result<(), io::Error> {
         });
     }
 
-    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(500);
+    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(1000);
 
     let shards = get_shards(&client, &stream_name)
         .await
@@ -136,7 +136,26 @@ async fn main() -> Result<(), io::Error> {
         }
     }
 
-    for shard_id in &selected_shards {
+    let console = tokio::spawn({
+        let tx_records = tx_records.clone();
+
+        async move {
+            ConsoleSink::new(
+                max_messages,
+                no_color,
+                print_key,
+                print_shard,
+                print_timestamp,
+                print_delimiter,
+            )
+            .run(tx_records, rx_records)
+            .await
+            .unwrap();
+        }
+    });
+
+    let rr = divide_shards(&selected_shards, 500);
+    for shard_id in &rr {
         let shard_processor = kinesis::helpers::new(
             client.clone(),
             stream_name.clone(),
@@ -151,16 +170,9 @@ async fn main() -> Result<(), io::Error> {
             .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?
     }
 
-    ConsoleSink::new(
-        max_messages,
-        no_color,
-        print_key,
-        print_shard,
-        print_timestamp,
-        print_delimiter,
-    )
-    .run(tx_records, rx_records)
-    .await
+    console.await.unwrap();
+
+    Ok(())
 }
 
 mod cli_helpers {
@@ -168,6 +180,36 @@ mod cli_helpers {
 
     pub fn parse_date(from: Option<&str>) -> Option<DateTime<Utc>> {
         from.map(|f| chrono::Utc.datetime_from_str(f, "%+").unwrap())
+    }
+
+    pub fn divide_shards<T: Clone>(source: &[T], group_size: u32) -> Vec<Vec<T>> {
+        if group_size == 0 {
+            return vec![];
+        }
+
+        let mut dest: Vec<Vec<T>> = Vec::new();
+        let mut current_buffer: Vec<T> = Vec::new();
+
+        let mut i = 0;
+        for s in source {
+            if i < group_size {
+                current_buffer.push(s.clone());
+                i += 1;
+            } else {
+                dest.push(current_buffer.clone());
+                current_buffer.clear();
+
+                current_buffer.push(s.clone());
+
+                i = 1;
+            }
+        }
+
+        if !current_buffer.is_empty() {
+            dest.push(current_buffer.clone());
+        }
+
+        dest
     }
 }
 
@@ -188,5 +230,62 @@ mod tests {
     fn parse_date_test_fail() {
         let invalid_date = "xxx";
         parse_date(Some(invalid_date));
+    }
+
+    #[test]
+    fn divide() {
+        let source = vec![
+            "a".to_string(),
+            "b".to_string(),
+            "c".to_string(),
+            "d".to_string(),
+            "e".to_string(),
+        ];
+
+        assert_eq!(
+            divide_shards::<String>(&source, 2),
+            vec![
+                vec!["a".to_string(), "b".to_string()],
+                vec!["c".to_string(), "d".to_string()],
+                vec!["e".to_string()],
+            ]
+        );
+
+        assert_eq!(
+            divide_shards::<String>(&vec!["e".to_string()], 2),
+            vec![vec!["e".to_string()],]
+        );
+
+        assert_eq!(
+            divide_shards::<String>(&vec![], 2),
+            vec![] as Vec<Vec<String>>
+        );
+
+        assert_eq!(
+            divide_shards::<String>(&source, 5),
+            vec![vec![
+                "a".to_string(),
+                "b".to_string(),
+                "c".to_string(),
+                "d".to_string(),
+                "e".to_string()
+            ],]
+        );
+
+        assert_eq!(
+            divide_shards::<String>(&source, 1),
+            vec![
+                vec!["a".to_string()],
+                vec!["b".to_string()],
+                vec!["c".to_string()],
+                vec!["d".to_string()],
+                vec!["e".to_string()],
+            ]
+        );
+
+        assert_eq!(
+            divide_shards::<String>(&source, 0),
+            vec![] as Vec<Vec<String>>
+        );
     }
 }

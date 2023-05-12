@@ -24,7 +24,7 @@ fn format_nb_messages_ok() {
 
 #[test]
 fn format_outputs() {
-    let console = ConsoleSink {
+    let _console = ConsoleSink {
         config: Default::default(),
     };
 

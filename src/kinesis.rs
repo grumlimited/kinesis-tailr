@@ -14,7 +14,7 @@ pub mod models;
 pub trait IteratorProvider<K: KinesisClient>: Send + Sync + Clone + 'static {
     fn get_config(&self) -> ShardProcessorConfig<K>;
 
-    async fn get_iterator(&self) -> Result<GetShardIteratorOutput, Error>;
+    async fn get_iterator(&self, shard_id: &str) -> Result<GetShardIteratorOutput, Error>;
 }
 
 #[async_trait]
@@ -25,38 +25,21 @@ where
 {
     async fn run(&self) -> Result<(), Error> {
         let (tx_shard_iterator_progress, mut rx_shard_iterator_progress) =
-            mpsc::channel::<ShardIteratorProgress>(100);
+            mpsc::channel::<ShardIteratorProgress>(1000); // ie 1000 shards seeding
 
         {
             let cloned_self = self.clone();
             let tx_shard_iterator_progress = tx_shard_iterator_progress.clone();
             tokio::spawn(async move {
-                #[allow(unused_assignments)]
-                let mut current_get_records_result = ShardIteratorProgress {
-                    last_sequence_id: None,
-                    next_shard_iterator: None,
-                };
-
-                let current_get_records_result_ref = &mut current_get_records_result;
-
                 while let Some(res) = rx_shard_iterator_progress.recv().await {
                     let res_clone = res.clone();
-
-                    if res_clone.last_sequence_id.is_some() {
-                        current_get_records_result_ref.last_sequence_id =
-                            res_clone.last_sequence_id;
-                    };
-
-                    if res_clone.next_shard_iterator.is_some() {
-                        current_get_records_result_ref.next_shard_iterator =
-                            res_clone.next_shard_iterator;
-                    };
 
                     match res.next_shard_iterator {
                         Some(shard_iterator) => {
                             let result = cloned_self
                                 .publish_records_shard(
                                     &shard_iterator,
+                                    res.shard_id.clone(),
                                     tx_shard_iterator_progress.clone(),
                                 )
                                 .await;
@@ -66,7 +49,7 @@ where
                                     Error::ExpiredIteratorException(inner) => {
                                         debug!("ExpiredIteratorException: {}", inner);
                                         helpers::handle_iterator_refresh(
-                                            current_get_records_result_ref.clone(),
+                                            res_clone.clone(),
                                             cloned_self.clone(),
                                             tx_shard_iterator_progress.clone(),
                                         )
@@ -76,7 +59,7 @@ where
                                         debug!("ProvisionedThroughputExceededException: {}", inner);
                                         sleep(Duration::from_secs(10)).await;
                                         helpers::handle_iterator_refresh(
-                                            current_get_records_result_ref.clone(),
+                                            res_clone.clone(),
                                             cloned_self.clone(),
                                             tx_shard_iterator_progress.clone(),
                                         )
@@ -111,15 +94,22 @@ where
             });
         }
 
-        let resp = self.get_iterator().await?;
-        let shard_iterator = resp.shard_iterator().map(|s| s.into());
-        tx_shard_iterator_progress
-            .send(ShardIteratorProgress {
-                last_sequence_id: None,
-                next_shard_iterator: shard_iterator,
-            })
-            .await
-            .unwrap();
+        for shard_id in self.get_config().shard_ids {
+            let tx_shard_iterator_progress = tx_shard_iterator_progress.clone();
+            let resp = self.get_iterator(&shard_id).await.unwrap();
+            let shard_iterator: Option<String> = resp.shard_iterator().map(|s| s.into());
+            tx_shard_iterator_progress
+                .clone()
+                .send(ShardIteratorProgress {
+                    shard_id: shard_id.to_string(),
+                    last_sequence_id: None,
+                    next_shard_iterator: shard_iterator,
+                })
+                .await
+                .unwrap();
+        }
+
+        debug!("Seeded {} shards", self.get_config().shard_ids.len());
 
         Ok(())
     }
@@ -127,6 +117,7 @@ where
     async fn publish_records_shard(
         &self,
         shard_iterator: &str,
+        shard_id: String,
         tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
     ) -> Result<(), Error> {
         let resp = self.get_config().client.get_records(shard_iterator).await?;
@@ -142,7 +133,7 @@ where
                 let datetime = *record.approximate_arrival_timestamp().unwrap();
 
                 RecordResult {
-                    shard_id: self.get_config().shard_id,
+                    shard_id: shard_id.clone(),
                     sequence_id: record.sequence_number().unwrap().into(),
                     datetime,
                     data: data.into(),
@@ -154,7 +145,7 @@ where
             debug!(
                 "Received {} records from {}",
                 record_results.len(),
-                self.get_config().shard_id
+                shard_id.clone()
             );
             self.get_config()
                 .tx_records
@@ -170,6 +161,7 @@ where
             .map(|s| s.into());
 
         let results = ShardIteratorProgress {
+            shard_id: shard_id.clone(),
             last_sequence_id,
             next_shard_iterator: next_shard_iterator.map(|s| s.into()),
         };
