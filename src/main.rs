@@ -105,7 +105,7 @@ async fn main() -> Result<(), io::Error> {
         });
     }
 
-    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(500);
+    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(50000);
 
     let shards = get_shards(&client, &stream_name)
         .await
@@ -136,20 +136,35 @@ async fn main() -> Result<(), io::Error> {
         }
     }
 
-    for shard_id in &selected_shards {
-        let shard_processor = kinesis::helpers::new(
-            client.clone(),
-            stream_name.clone(),
-            shard_id.clone(),
-            from_datetime,
-            tx_records.clone(),
-        );
+    // let shard_ids = vec![shard_id.clone()];
+    let shard_processor = kinesis::helpers::new(
+        client.clone(),
+        stream_name.clone(),
+        selected_shards,
+        from_datetime,
+        tx_records.clone(),
+    );
 
-        shard_processor
-            .run()
-            .await
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?
-    }
+    shard_processor
+        .run()
+        .await
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
+
+    // for shard_id in &selected_shards {
+    //     let shard_ids = vec![shard_id.clone()];
+    //     let shard_processor = kinesis::helpers::new(
+    //         client.clone(),
+    //         stream_name.clone(),
+    //         shard_ids,
+    //         from_datetime,
+    //         tx_records.clone(),
+    //     );
+    //
+    //     shard_processor
+    //         .run()
+    //         .await
+    //         .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?
+    // }
 
     ConsoleSink::new(
         max_messages,

@@ -12,6 +12,7 @@ use tokio::sync::mpsc::Sender;
 
 #[derive(Debug, Clone)]
 pub struct ShardIteratorProgress {
+    pub(crate) shard_id: String,
     pub(crate) last_sequence_id: Option<String>,
     pub(crate) next_shard_iterator: Option<String>,
 }
@@ -38,7 +39,7 @@ pub struct RecordResult {
 pub struct ShardProcessorConfig<K: KinesisClient> {
     pub client: K,
     pub stream: String,
-    pub shard_id: String,
+    pub shard_ids: Vec<String>,
     pub tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
 }
 
@@ -59,8 +60,8 @@ impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorLatest<K> {
         self.config.clone()
     }
 
-    async fn get_iterator(&self) -> Result<GetShardIteratorOutput, Error> {
-        get_latest_iterator(self.clone()).await
+    async fn get_iterator(&self, shard_id: String) -> Result<GetShardIteratorOutput, Error> {
+        get_latest_iterator(self.clone(), shard_id).await
     }
 }
 
@@ -70,9 +71,9 @@ impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorAtTimestamp<K> {
         self.config.clone()
     }
 
-    async fn get_iterator(&self) -> Result<GetShardIteratorOutput, Error> {
+    async fn get_iterator(&self, shard_id: String) -> Result<GetShardIteratorOutput, Error> {
         at_timestamp(&self.config.client, &self.from_datetime)
-            .iterator(&self.config.stream, &self.config.shard_id)
+            .iterator(&self.config.stream, &shard_id)
             .await
     }
 }
@@ -84,6 +85,7 @@ pub trait ShardProcessor<K: KinesisClient>: Send + Sync {
     async fn publish_records_shard(
         &self,
         shard_iterator: &str,
+        shard_id: String,
         tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
     ) -> Result<(), Error>;
 }
