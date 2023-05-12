@@ -6,7 +6,6 @@ use aws_sdk_kinesis::Error;
 use log::{debug, error};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
-use tokio::task::JoinSet;
 use tokio::time::{sleep, Duration};
 pub mod helpers;
 pub mod models;
@@ -26,7 +25,7 @@ where
 {
     async fn run(&self) -> Result<(), Error> {
         let (tx_shard_iterator_progress, mut rx_shard_iterator_progress) =
-            mpsc::channel::<ShardIteratorProgress>(100);
+            mpsc::channel::<ShardIteratorProgress>(1000); // ie 1000 shards seeding
 
         {
             let cloned_self = self.clone();
@@ -95,10 +94,7 @@ where
             });
         }
 
-        let r = self.get_config().shard_ids.clone();
-
-        for shard_id in r {
-            debug!("Seeding shard iterator for {}", shard_id);
+        for shard_id in self.get_config().shard_ids {
             let tx_shard_iterator_progress = tx_shard_iterator_progress.clone();
             let resp = self.get_iterator(shard_id.clone()).await.unwrap();
             let shard_iterator: Option<String> = resp.shard_iterator().map(|s| s.into());
@@ -113,49 +109,7 @@ where
                 .unwrap();
         }
 
-        // let seeds = r.map(|shard_id| {
-        //     let tx_shard_iterator_progress = tx_shard_iterator_progress.clone();
-        //
-        //     async move {
-        //         debug!("Seeding shard iterator for {}", shard_id);
-        //         let resp = self.get_iterator(shard_id.clone()).await.unwrap();
-        //         let shard_iterator: Option<String> = resp.shard_iterator().map(|s| s.into());
-        //         tx_shard_iterator_progress
-        //             .clone()
-        //             .send(ShardIteratorProgress {
-        //                 shard_id: shard_id.to_string(),
-        //                 last_sequence_id: None,
-        //                 next_shard_iterator: shard_iterator,
-        //             })
-        //             .await
-        //             .unwrap();
-        //     }
-        // });
-        //
-        // let mut set = JoinSet::new();
-        // for seed in seeds {
-        //     set.spawn(seed);
-        // }
-        //
-        // while let Some(res) = set.join_next().await {
-        //     let _idx = res.unwrap();
-        // }
-
-        // let ee = ee.iter();
-        // let ee = ee.as_slice();
-        // let ee = ee[0].clone();
-        // let dd = ee.clone();
-        //
-        // let resp = self.get_iterator(ee).await?;
-        // let shard_iterator = resp.shard_iterator().map(|s| s.into());
-        // tx_shard_iterator_progress
-        //     .send(ShardIteratorProgress {
-        //         shard_id: dd.clone(),
-        //         last_sequence_id: None,
-        //         next_shard_iterator: shard_iterator,
-        //     })
-        //     .await
-        //     .unwrap();
+        debug!("Seeded {} shards", self.get_config().shard_ids.len());
 
         Ok(())
     }
