@@ -105,7 +105,7 @@ async fn main() -> Result<(), io::Error> {
         });
     }
 
-    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(50000);
+    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(1000);
 
     let shards = get_shards(&client, &stream_name)
         .await
