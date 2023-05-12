@@ -91,7 +91,7 @@ async fn main() -> Result<(), io::Error> {
     env_logger::init_from_env(env_logger::Env::default().default_filter_or("info"));
 
     let from_datetime = parse_date(from.as_deref());
-    let client = aws::client::create_client(region, endpoint_url).await;
+    let client = create_client(region, endpoint_url).await;
 
     if verbose {
         info!("Kinesis client version: {}", PKG_VERSION);
@@ -136,19 +136,22 @@ async fn main() -> Result<(), io::Error> {
         }
     }
 
-    let t = tx_records.clone();
-    let console = tokio::spawn(async move {
-        ConsoleSink::new(
-            max_messages,
-            no_color,
-            print_key,
-            print_shard,
-            print_timestamp,
-            print_delimiter,
-        )
-        .run(t, rx_records)
-        .await
-        .unwrap();
+    let console = tokio::spawn({
+        let tx_records = tx_records.clone();
+
+        async move {
+            ConsoleSink::new(
+                max_messages,
+                no_color,
+                print_key,
+                print_shard,
+                print_timestamp,
+                print_delimiter,
+            )
+            .run(tx_records, rx_records)
+            .await
+            .unwrap();
+        }
     });
 
     let rr = divide_shards(&selected_shards, 500);
