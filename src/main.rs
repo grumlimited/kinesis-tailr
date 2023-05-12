@@ -136,7 +136,6 @@ async fn main() -> Result<(), io::Error> {
         }
     }
 
-    // let shard_ids = vec![shard_id.clone()];
     let shard_processor = kinesis::helpers::new(
         client.clone(),
         stream_name.clone(),
@@ -149,22 +148,6 @@ async fn main() -> Result<(), io::Error> {
         .run()
         .await
         .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?;
-
-    // for shard_id in &selected_shards {
-    //     let shard_ids = vec![shard_id.clone()];
-    //     let shard_processor = kinesis::helpers::new(
-    //         client.clone(),
-    //         stream_name.clone(),
-    //         shard_ids,
-    //         from_datetime,
-    //         tx_records.clone(),
-    //     );
-    //
-    //     shard_processor
-    //         .run()
-    //         .await
-    //         .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?
-    // }
 
     ConsoleSink::new(
         max_messages,
