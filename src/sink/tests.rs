@@ -75,7 +75,7 @@ async fn expect_zero_messages_processed() {
     let bytes = handle.into_inner().unwrap();
     let string = String::from_utf8(bytes).unwrap();
 
-    assert_eq!(string, "0 message processed\n");
+    assert_eq!(string, "");
 }
 
 #[tokio::test]
@@ -113,7 +113,7 @@ async fn expect_split() {
     let bytes = handle.into_inner().unwrap();
     let string = String::from_utf8(bytes).unwrap();
 
-    assert_eq!(string, "payload\n1 message processed\n");
+    assert_eq!(string, "payload\n");
 }
 
 fn get_string_sink(max_messages: Option<u32>) -> StringSink {
