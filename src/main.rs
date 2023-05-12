@@ -167,6 +167,33 @@ mod cli_helpers {
     pub fn parse_date(from: Option<&str>) -> Option<DateTime<Utc>> {
         from.map(|f| chrono::Utc.datetime_from_str(f, "%+").unwrap())
     }
+
+    pub fn divide_shards(source: &[String]) -> Vec<Vec<String>> {
+        let mut dest: Vec<Vec<String>> = Vec::new();
+        let mut current_buffer: Vec<String> = Vec::new();
+
+        let group_size = 2;
+        let mut i = 0;
+        for s in source {
+            if i < group_size {
+                current_buffer.push(s.clone());
+                i += 1;
+            } else {
+                dest.push(current_buffer.clone());
+                current_buffer.clear();
+
+                current_buffer.push(s.clone());
+
+                i = 1;
+            }
+        }
+
+        if !current_buffer.is_empty() {
+            dest.push(current_buffer.clone());
+        }
+
+        dest
+    }
 }
 
 #[cfg(test)]
@@ -186,5 +213,32 @@ mod tests {
     fn parse_date_test_fail() {
         let invalid_date = "xxx";
         parse_date(Some(invalid_date));
+    }
+
+    #[test]
+    fn divide() {
+        let source = vec![
+            "a".to_string(),
+            "b".to_string(),
+            "c".to_string(),
+            "d".to_string(),
+            "e".to_string(),
+        ];
+
+        assert_eq!(
+            divide_shards(&source),
+            vec![
+                vec!["a".to_string(), "b".to_string()],
+                vec!["c".to_string(), "d".to_string()],
+                vec!["e".to_string()],
+            ]
+        );
+
+        assert_eq!(
+            divide_shards(&vec!["e".to_string()]),
+            vec![vec!["e".to_string()],]
+        );
+
+        assert_eq!(divide_shards(&vec![]), vec![] as Vec<Vec<String>>);
     }
 }
