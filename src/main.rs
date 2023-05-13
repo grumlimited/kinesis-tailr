@@ -76,7 +76,9 @@ async fn main() -> Result<(), io::Error> {
 
     let opt = Opt::parse();
 
-    env_logger::init_from_env(env_logger::Env::default().default_filter_or("warn"));
+    env_logger::init_from_env(
+        env_logger::Env::default().default_filter_or("WARN,kinesis_tailr=INFO"),
+    );
 
     let from_datetime = parse_date(opt.from_datetime.as_deref());
     let client = create_client(opt.region.clone(), opt.endpoint_url.clone()).await;
