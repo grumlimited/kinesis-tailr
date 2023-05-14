@@ -56,7 +56,7 @@ pub struct Opt {
 }
 
 pub(crate) fn selected_shards<'a>(
-    shards: &'a mut [String],
+    shards: &'a [String],
     stream_name: &str,
     shard_id: &Option<String>,
 ) -> Vec<&'a String> {
@@ -84,7 +84,7 @@ pub(crate) fn set_log_level() {
     );
 }
 
-pub(crate) fn print_runtime(opt: &Opt, selected_shards: &Vec<String>) {
+pub(crate) fn print_runtime(opt: &Opt, selected_shards: &Vec<&String>) {
     if opt.verbose {
         info!("Kinesis client version: {}", PKG_VERSION);
         info!(

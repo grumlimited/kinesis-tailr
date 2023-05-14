@@ -35,17 +35,8 @@ async fn main() -> Result<(), io::Error> {
         .await
         .unwrap_or_else(|_| panic!("Could not describe shards for stream {}", opt.stream_name));
 
-    let selected_shards: Vec<String> = if let Some(shard_id) = &opt.shard_id {
-        if !shards.contains(shard_id) {
-            panic!(
-                "Shard {} does not exist in stream {}",
-                shard_id, opt.stream_name
-            );
-        }
-        vec![shard_id.clone()]
-    } else {
-        shards
-    };
+    let selected_shards =
+        cli_helpers::selected_shards(&shards.as_slice(), &opt.stream_name, &opt.shard_id);
 
     print_runtime(&opt, &selected_shards);
 
@@ -67,12 +58,17 @@ async fn main() -> Result<(), io::Error> {
         }
     });
 
-    let shard_groups = divide_shards(&selected_shards, 500);
-    for shard_id in &shard_groups {
+    let shard_groups = divide_shards(&selected_shards, 100);
+    for shard_ids in &shard_groups {
+        let shard_ids = shard_ids
+            .iter()
+            .map(|shard_id| shard_id.to_string())
+            .collect::<Vec<_>>();
+
         let shard_processor = kinesis::helpers::new(
             client.clone(),
             opt.stream_name.clone(),
-            shard_id.clone(),
+            shard_ids,
             from_datetime,
             tx_records.clone(),
         );
