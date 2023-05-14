@@ -1,8 +1,9 @@
 #![allow(clippy::result_large_err)]
 
 use std::io;
+use std::sync::Arc;
 
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, Semaphore};
 
 use crate::aws::client::*;
 use crate::cli_helpers::*;
@@ -11,7 +12,6 @@ use crate::sink::Sink;
 use clap::Parser;
 use kinesis::helpers::get_shards;
 use kinesis::models::*;
-use log::debug;
 use tokio::task::JoinSet;
 
 mod iterator;
@@ -59,42 +59,42 @@ async fn main() -> Result<(), io::Error> {
         }
     });
 
-    let stream_name = opt.stream_name.clone();
+    let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
 
-    let group_size = approx_group_size(selected_shards.len(), 5);
-    let shard_groups = divide_shards(&selected_shards, group_size);
+    let shard_processors = {
+        let selected_shards = selected_shards
+            .iter()
+            .map(|s| (*s).clone())
+            .collect::<Vec<_>>();
 
-    debug!("Spawning {} threads", shard_groups.len());
+        selected_shards
+            .iter()
+            .map(|shard_id| {
+                let tx_records = tx_records.clone();
+                let client = client.clone();
+                let stream_name = opt.stream_name.clone();
+                let shard_id = shard_id.clone();
+                let semaphore = semaphore.clone();
 
-    let shard_processors = shard_groups
-        .iter()
-        .map(|shard_ids| {
-            let tx_records = tx_records.clone();
-            let client = client.clone();
-            let stream_name = stream_name.clone();
-            let shard_ids = shard_ids
-                .clone()
-                .iter()
-                .map(|shard_id| shard_id.to_string())
-                .collect();
+                tokio::spawn(async move {
+                    let shard_processor = kinesis::helpers::new(
+                        client.clone(),
+                        stream_name,
+                        shard_id.clone(),
+                        from_datetime,
+                        semaphore,
+                        tx_records.clone(),
+                    );
 
-            async move {
-                let shard_processor = kinesis::helpers::new(
-                    client.clone(),
-                    stream_name,
-                    shard_ids,
-                    from_datetime,
-                    tx_records.clone(),
-                );
-
-                shard_processor
-                    .run()
-                    .await
-                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
-                    .unwrap();
-            }
-        })
-        .collect::<Vec<_>>();
+                    shard_processor
+                        .run()
+                        .await
+                        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+                        .unwrap();
+                })
+            })
+            .collect::<Vec<_>>()
+    };
 
     let mut shard_processors_handle = JoinSet::new();
 

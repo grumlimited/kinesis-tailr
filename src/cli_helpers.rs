@@ -113,43 +113,6 @@ pub fn parse_date(from: Option<&str>) -> Option<DateTime<Utc>> {
     from.map(|f| chrono::Utc.datetime_from_str(f, "%+").unwrap())
 }
 
-/*
-* Given a number of shards, and a target number of groups, return the approximate size of each group.
-*/
-pub fn approx_group_size(nb_shards: usize, target_nb_groups: usize) -> usize {
-    (nb_shards as f32 / target_nb_groups as f32).ceil() as usize
-}
-
-pub fn divide_shards<T: Clone>(source: &[T], group_size: usize) -> Vec<Vec<T>> {
-    if group_size == 0 {
-        return vec![];
-    }
-
-    let mut dest: Vec<Vec<T>> = Vec::new();
-    let mut current_buffer: Vec<T> = Vec::new();
-
-    let mut i = 0;
-    for s in source {
-        if i < group_size {
-            current_buffer.push(s.clone());
-            i += 1;
-        } else {
-            dest.push(current_buffer.clone());
-            current_buffer.clear();
-
-            current_buffer.push(s.clone());
-
-            i = 1;
-        }
-    }
-
-    if !current_buffer.is_empty() {
-        dest.push(current_buffer.clone());
-    }
-
-    dest
-}
-
 pub fn reset_signal_pipe_handler() -> Result<(), Error> {
     // https://github.com/rust-lang/rust/issues/46016
     // Long story short: handle SIGPIPE (ie. broken pipe) on Unix systems gracefully.
@@ -183,71 +146,6 @@ mod tests {
     fn parse_date_test_fail() {
         let invalid_date = "xxx";
         parse_date(Some(invalid_date));
-    }
-
-    #[test]
-    fn approx_group_size_ok() {
-        assert_eq!(approx_group_size(16, 4), 4);
-        assert_eq!(approx_group_size(128, 4), 32);
-        assert_eq!(approx_group_size(127, 4), 32);
-        assert_eq!(approx_group_size(129, 4), 33);
-    }
-
-    #[test]
-    fn divide_shards_ok() {
-        let source = vec![
-            "a".to_string(),
-            "b".to_string(),
-            "c".to_string(),
-            "d".to_string(),
-            "e".to_string(),
-        ];
-
-        assert_eq!(
-            divide_shards::<String>(&source, 2),
-            vec![
-                vec!["a".to_string(), "b".to_string()],
-                vec!["c".to_string(), "d".to_string()],
-                vec!["e".to_string()],
-            ]
-        );
-
-        assert_eq!(
-            divide_shards::<String>(&vec!["e".to_string()], 2),
-            vec![vec!["e".to_string()],]
-        );
-
-        assert_eq!(
-            divide_shards::<String>(&vec![], 2),
-            vec![] as Vec<Vec<String>>
-        );
-
-        assert_eq!(
-            divide_shards::<String>(&source, 5),
-            vec![vec![
-                "a".to_string(),
-                "b".to_string(),
-                "c".to_string(),
-                "d".to_string(),
-                "e".to_string()
-            ],]
-        );
-
-        assert_eq!(
-            divide_shards::<String>(&source, 1),
-            vec![
-                vec!["a".to_string()],
-                vec!["b".to_string()],
-                vec!["c".to_string()],
-                vec!["d".to_string()],
-                vec!["e".to_string()],
-            ]
-        );
-
-        assert_eq!(
-            divide_shards::<String>(&source, 0),
-            vec![] as Vec<Vec<String>>
-        );
     }
 
     #[test]
