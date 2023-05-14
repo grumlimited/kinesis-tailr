@@ -29,7 +29,7 @@ clippy :
 install : release
 	mkdir -p $(bindir)
 
-	sudo $(INSTALL_PROGRAM) -m 0755 target/release/$(NAME) $(bindir)/$(NAME)
+	sudo $(INSTALL_PROGRAM) -m 0755 target/release/$(NAME) $(bindir)/$(NAME)-2
 
 # Remove all files
 clean-all : clean

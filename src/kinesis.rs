@@ -96,6 +96,12 @@ where
             });
         }
 
+        self.seed_shards(tx_shard_iterator_progress).await;
+
+        Ok(())
+    }
+
+    async fn seed_shards(&self, tx_shard_iterator_progress: Sender<ShardIteratorProgress>) {
         for shard_id in self.get_config().shard_ids {
             let tx_shard_iterator_progress = tx_shard_iterator_progress.clone();
             let resp = self.get_iterator(&shard_id).await.unwrap();
@@ -112,8 +118,7 @@ where
         }
 
         debug!("Seeded {} shards", self.get_config().shard_ids.len());
-
-        Ok(())
+        todo!()
     }
 
     async fn publish_records_shard(
