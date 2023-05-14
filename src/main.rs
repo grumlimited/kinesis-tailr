@@ -76,7 +76,7 @@ async fn main() -> Result<(), io::Error> {
         let shard_ids = shard_ids
             .iter()
             .map(|shard_id| shard_id.to_string())
-            .collect::<Vec<_>>();
+            .collect();
 
         let shard_processor = kinesis::helpers::new(
             client.clone(),

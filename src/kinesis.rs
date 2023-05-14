@@ -120,6 +120,12 @@ where
         }
     }
 
+    /**
+    * Publish records from a shard iterator.
+
+    * Because shards are multiplexed per ShardProcessor, we need to keep
+    * track of the shard_id for each shard_iterator.
+    */
     async fn publish_records_shard(
         &self,
         shard_iterator: &str,
@@ -145,7 +151,7 @@ where
                     data: data.into(),
                 }
             })
-            .collect::<Vec<RecordResult>>();
+            .collect::<Vec<_>>();
 
         if !record_results.is_empty() {
             debug!(

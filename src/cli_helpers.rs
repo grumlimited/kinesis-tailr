@@ -75,7 +75,7 @@ pub(crate) fn selected_shards<'a>(
             Some(shard_id) => shard_id == *s,
             None => true,
         })
-        .collect::<Vec<_>>()
+        .collect()
 }
 
 pub(crate) fn set_log_level() {
