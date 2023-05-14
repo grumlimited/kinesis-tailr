@@ -1,12 +1,11 @@
 use crate::aws::client::KinesisClient;
 use crate::kinesis::models::*;
-use crate::MAX_NB_SHARDS_PER_THREAD;
 use async_trait::async_trait;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::Error;
 use log::{debug, error};
 use tokio::sync::mpsc;
-use tokio::sync::mpsc::Sender;
+use tokio::sync::mpsc::UnboundedSender;
 use tokio::time::{sleep, Duration};
 
 pub mod helpers;
@@ -27,7 +26,7 @@ where
 {
     async fn run(&self) -> Result<(), Error> {
         let (tx_shard_iterator_progress, mut rx_shard_iterator_progress) =
-            mpsc::channel::<ShardIteratorProgress>(MAX_NB_SHARDS_PER_THREAD);
+            mpsc::unbounded_channel::<ShardIteratorProgress>();
 
         {
             let cloned_self = self.clone();
@@ -101,7 +100,10 @@ where
         Ok(())
     }
 
-    async fn seed_shards(&self, tx_shard_iterator_progress: Sender<ShardIteratorProgress>) {
+    async fn seed_shards(
+        &self,
+        tx_shard_iterator_progress: UnboundedSender<ShardIteratorProgress>,
+    ) {
         debug!("Seeding {} shards", self.get_config().shard_ids.len());
 
         for shard_id in self.get_config().shard_ids {
@@ -115,7 +117,6 @@ where
                     last_sequence_id: None,
                     next_shard_iterator: shard_iterator,
                 })
-                .await
                 .unwrap();
         }
     }
@@ -130,7 +131,7 @@ where
         &self,
         shard_iterator: &str,
         shard_id: String,
-        tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
+        tx_shard_iterator_progress: UnboundedSender<ShardIteratorProgress>,
     ) -> Result<(), Error> {
         let resp = self.get_config().client.get_records(shard_iterator).await?;
 
@@ -178,7 +179,7 @@ where
             next_shard_iterator: next_shard_iterator.map(|s| s.into()),
         };
 
-        tx_shard_iterator_progress.send(results).await.unwrap();
+        tx_shard_iterator_progress.send(results).unwrap();
 
         Ok(())
     }
