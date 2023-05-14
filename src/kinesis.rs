@@ -1,6 +1,6 @@
 use crate::aws::client::KinesisClient;
 use crate::kinesis::models::*;
-use crate::NB_SHARDS_PER_THREAD;
+use crate::MAX_NB_SHARDS_PER_THREAD;
 use async_trait::async_trait;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::Error;
@@ -27,7 +27,7 @@ where
 {
     async fn run(&self) -> Result<(), Error> {
         let (tx_shard_iterator_progress, mut rx_shard_iterator_progress) =
-            mpsc::channel::<ShardIteratorProgress>(NB_SHARDS_PER_THREAD);
+            mpsc::channel::<ShardIteratorProgress>(MAX_NB_SHARDS_PER_THREAD);
 
         {
             let cloned_self = self.clone();

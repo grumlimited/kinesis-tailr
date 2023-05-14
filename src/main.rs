@@ -31,7 +31,7 @@ mod cli_helpers;
  * 100 is chosen because the maximum number of shards, depending on the region, is between 200 and 500.
  * Therefore 100 means 5 threads, which should be a good default between concurrent connections and "responsiveness".
  */
-pub const NB_SHARDS_PER_THREAD: usize = 100;
+pub const MAX_NB_SHARDS_PER_THREAD: usize = 100;
 
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {
@@ -73,7 +73,11 @@ async fn main() -> Result<(), io::Error> {
 
     let stream_name = opt.stream_name.clone();
 
-    let shard_groups = divide_shards(&selected_shards, NB_SHARDS_PER_THREAD);
+    let group_size = approx_group_size(selected_shards.len(), 5);
+    let shard_groups = divide_shards(&selected_shards, group_size);
+
+    shard_groups.iter().for_each(|g| println!("{:?}", g));
+
     debug!("Spawning {} threads", shard_groups.len());
 
     let shard_processors = shard_groups

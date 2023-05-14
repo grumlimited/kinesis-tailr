@@ -113,6 +113,13 @@ pub fn parse_date(from: Option<&str>) -> Option<DateTime<Utc>> {
     from.map(|f| chrono::Utc.datetime_from_str(f, "%+").unwrap())
 }
 
+/*
+* Given a number of shards, and a target number of groups, return the approximate size of each group.
+*/
+pub fn approx_group_size(nb_shards: usize, target_nb_groups: usize) -> usize {
+    (nb_shards as f32 / target_nb_groups as f32).ceil() as usize
+}
+
 pub fn divide_shards<T: Clone>(source: &[T], group_size: usize) -> Vec<Vec<T>> {
     if group_size == 0 {
         return vec![];
@@ -179,7 +186,15 @@ mod tests {
     }
 
     #[test]
-    fn divide() {
+    fn approx_group_size_ok() {
+        assert_eq!(approx_group_size(16, 4), 4);
+        assert_eq!(approx_group_size(128, 4), 32);
+        assert_eq!(approx_group_size(127, 4), 32);
+        assert_eq!(approx_group_size(129, 4), 33);
+    }
+
+    #[test]
+    fn divide_shards_ok() {
         let source = vec![
             "a".to_string(),
             "b".to_string(),
