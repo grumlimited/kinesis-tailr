@@ -25,6 +25,9 @@ mod cli_helpers;
  * The more shards per thread:  
  * - the less threads are needed, but the more messages are buffered in memory,
  * - the fewer concurrent AWS calls.
+ *
+ * 100 is chosen because the maximum number of shards, depending on the region, is between 200 and 500.
+ * Therefore 100 means 5 threads, which should be a good default between concurrent connections and "responsiveness".
  */
 pub const NB_SHARDS_PER_THREAD: usize = 100;
 
