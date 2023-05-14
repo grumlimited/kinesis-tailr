@@ -4,7 +4,7 @@ use aws_sdk_kinesis::Error;
 use chrono::Utc;
 use log::debug;
 use std::sync::Arc;
-use tokio::sync::mpsc::{Sender, UnboundedSender};
+use tokio::sync::mpsc::Sender;
 use tokio::sync::Semaphore;
 
 use crate::iterator::at_sequence;
@@ -79,7 +79,7 @@ where
 pub async fn handle_iterator_refresh<T, K: KinesisClient>(
     shard_iterator_progress: ShardIteratorProgress,
     iterator_provider: T,
-    tx_shard_iterator_progress: UnboundedSender<ShardIteratorProgress>,
+    tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
 ) where
     T: IteratorProvider<K>,
 {
@@ -116,6 +116,7 @@ pub async fn handle_iterator_refresh<T, K: KinesisClient>(
             last_sequence_id: sequence_id,
             next_shard_iterator: iterator,
         })
+        .await
         .unwrap();
 }
 

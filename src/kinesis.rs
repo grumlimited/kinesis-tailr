@@ -5,7 +5,7 @@ use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::Error;
 use log::{debug, error};
 use tokio::sync::mpsc;
-use tokio::sync::mpsc::UnboundedSender;
+use tokio::sync::mpsc::Sender;
 use tokio::time::{sleep, Duration};
 
 pub mod helpers;
@@ -26,7 +26,7 @@ where
 {
     async fn run(&self) -> Result<(), Error> {
         let (tx_shard_iterator_progress, mut rx_shard_iterator_progress) =
-            mpsc::unbounded_channel::<ShardIteratorProgress>();
+            mpsc::channel::<ShardIteratorProgress>(1);
 
         self.seed_shards(tx_shard_iterator_progress.clone()).await;
 
@@ -105,10 +105,7 @@ where
         Ok(())
     }
 
-    async fn seed_shards(
-        &self,
-        tx_shard_iterator_progress: UnboundedSender<ShardIteratorProgress>,
-    ) {
+    async fn seed_shards(&self, tx_shard_iterator_progress: Sender<ShardIteratorProgress>) {
         let permit = self
             .get_config()
             .semaphore
@@ -132,6 +129,7 @@ where
                 last_sequence_id: None,
                 next_shard_iterator: shard_iterator,
             })
+            .await
             .unwrap();
 
         drop(permit);
@@ -147,7 +145,7 @@ where
         &self,
         shard_iterator: &str,
         shard_id: String,
-        tx_shard_iterator_progress: UnboundedSender<ShardIteratorProgress>,
+        tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
     ) -> Result<(), Error> {
         let resp = self.get_config().client.get_records(shard_iterator).await?;
 
@@ -195,7 +193,7 @@ where
             next_shard_iterator: next_shard_iterator.map(|s| s.into()),
         };
 
-        tx_shard_iterator_progress.send(results).unwrap();
+        tx_shard_iterator_progress.send(results).await.unwrap();
 
         Ok(())
     }

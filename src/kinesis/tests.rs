@@ -22,7 +22,7 @@ async fn seed_shards_test() {
     let (tx_records, _) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(10);
 
     let (tx_shard_iterator_progress, mut rx_shard_iterator_progress) =
-        mpsc::unbounded_channel::<ShardIteratorProgress>();
+        mpsc::channel::<ShardIteratorProgress>(1);
 
     let client = TestKinesisClient {
         region: Some(Region::new("us-east-1")),

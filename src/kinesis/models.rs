@@ -9,7 +9,7 @@ use aws_sdk_kinesis::Error;
 use chrono::Utc;
 use std::fmt::Debug;
 use std::sync::Arc;
-use tokio::sync::mpsc::{Sender, UnboundedSender};
+use tokio::sync::mpsc::Sender;
 use tokio::sync::Semaphore;
 
 #[derive(Debug, Clone)]
@@ -85,12 +85,12 @@ impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorAtTimestamp<K> {
 pub trait ShardProcessor<K: KinesisClient>: Send + Sync {
     async fn run(&self) -> Result<(), Error>;
 
-    async fn seed_shards(&self, tx_shard_iterator_progress: UnboundedSender<ShardIteratorProgress>);
+    async fn seed_shards(&self, tx_shard_iterator_progress: Sender<ShardIteratorProgress>);
 
     async fn publish_records_shard(
         &self,
         shard_iterator: &str,
         shard_id: String,
-        tx_shard_iterator_progress: UnboundedSender<ShardIteratorProgress>,
+        tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
     ) -> Result<(), Error>;
 }
