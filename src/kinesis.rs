@@ -102,6 +102,8 @@ where
     }
 
     async fn seed_shards(&self, tx_shard_iterator_progress: Sender<ShardIteratorProgress>) {
+        debug!("Seeding {} shards", self.get_config().shard_ids.len());
+
         for shard_id in self.get_config().shard_ids {
             let tx_shard_iterator_progress = tx_shard_iterator_progress.clone();
             let resp = self.get_iterator(&shard_id).await.unwrap();
@@ -116,9 +118,6 @@ where
                 .await
                 .unwrap();
         }
-
-        debug!("Seeded {} shards", self.get_config().shard_ids.len());
-        todo!()
     }
 
     async fn publish_records_shard(
