@@ -11,6 +11,7 @@ use crate::sink::Sink;
 use clap::Parser;
 use kinesis::helpers::get_shards;
 use kinesis::models::*;
+use log::debug;
 
 mod iterator;
 mod kinesis;
@@ -70,6 +71,7 @@ async fn main() -> Result<(), io::Error> {
     });
 
     let shard_groups = divide_shards(&selected_shards, NB_SHARDS_PER_THREAD);
+    debug!("Spawning {} threads", shard_groups.len());
     for shard_ids in &shard_groups {
         let shard_ids = shard_ids
             .iter()
