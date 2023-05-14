@@ -12,6 +12,7 @@ use clap::Parser;
 use kinesis::helpers::get_shards;
 use kinesis::models::*;
 use log::debug;
+use tokio::task::JoinSet;
 
 mod iterator;
 mod kinesis;
@@ -70,26 +71,45 @@ async fn main() -> Result<(), io::Error> {
         }
     });
 
+    let stream_name = opt.stream_name.clone();
+
     let shard_groups = divide_shards(&selected_shards, NB_SHARDS_PER_THREAD);
     debug!("Spawning {} threads", shard_groups.len());
-    for shard_ids in &shard_groups {
-        let shard_ids = shard_ids
-            .iter()
-            .map(|shard_id| shard_id.to_string())
-            .collect();
 
-        let shard_processor = kinesis::helpers::new(
-            client.clone(),
-            opt.stream_name.clone(),
-            shard_ids,
-            from_datetime,
-            tx_records.clone(),
-        );
+    let shard_processors = shard_groups
+        .iter()
+        .map(|shard_ids| {
+            let tx_records = tx_records.clone();
+            let client = client.clone();
+            let stream_name = stream_name.clone();
+            let shard_ids = shard_ids
+                .clone()
+                .iter()
+                .map(|shard_id| shard_id.to_string())
+                .collect();
 
-        shard_processor
-            .run()
-            .await
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?
+            async move {
+                let shard_processor = kinesis::helpers::new(
+                    client.clone(),
+                    stream_name,
+                    shard_ids,
+                    from_datetime,
+                    tx_records.clone(),
+                );
+
+                shard_processor
+                    .run()
+                    .await
+                    .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+                    .unwrap();
+            }
+        })
+        .collect::<Vec<_>>();
+
+    let mut shard_processors_handle = JoinSet::new();
+
+    for shard_processor in shard_processors {
+        shard_processors_handle.spawn(shard_processor);
     }
 
     console.await.unwrap_or(());

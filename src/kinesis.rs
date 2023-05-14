@@ -68,7 +68,7 @@ where
                                         .await;
                                     }
                                     e => {
-                                        error!("ExpiredIteratorException: {}", e);
+                                        error!("Error: {}", e);
                                         cloned_self
                                             .get_config()
                                             .tx_records
