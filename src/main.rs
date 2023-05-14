@@ -112,7 +112,7 @@ async fn main() -> Result<(), io::Error> {
         shard_processors_handle.spawn(shard_processor);
     }
 
-    console.await.unwrap_or(());
+    console.await.unwrap();
 
     Ok(())
 }
