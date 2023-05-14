@@ -1,6 +1,7 @@
 use crate::aws::client::KinesisClient;
 use crate::kinesis::models::{
-    PanicError, ShardProcessor, ShardProcessorADT, ShardProcessorConfig, ShardProcessorLatest,
+    PanicError, ShardIteratorProgress, ShardProcessor, ShardProcessorADT, ShardProcessorConfig,
+    ShardProcessorLatest,
 };
 use async_trait::async_trait;
 use aws_sdk_kinesis::config::Region;
@@ -14,6 +15,38 @@ use chrono::Utc;
 use std::time::Duration;
 use tokio::sync::mpsc;
 use tokio::time::sleep;
+
+#[tokio::test]
+async fn seed_shards_test() {
+    let (tx_records, _) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(10);
+
+    let (tx_shard_iterator_progress, mut rx_shard_iterator_progress) =
+        mpsc::channel::<ShardIteratorProgress>(10);
+
+    let client = TestKinesisClient {
+        region: Some(Region::new("us-east-1")),
+    };
+
+    let processor = ShardProcessorLatest {
+        config: ShardProcessorConfig {
+            client,
+            stream: "test".to_string(),
+            shard_ids: vec!["shardId-000000000000".to_string()],
+            tx_records,
+        },
+    };
+
+    processor.seed_shards(tx_shard_iterator_progress).await;
+
+    let shard_iterator_progress = rx_shard_iterator_progress.recv().await.unwrap();
+
+    assert_eq!(shard_iterator_progress.shard_id, "shardId-000000000000");
+    assert_eq!(
+        shard_iterator_progress.next_shard_iterator,
+        Some("shard_iterator".to_string())
+    );
+    assert_eq!(shard_iterator_progress.last_sequence_id, None);
+}
 
 #[tokio::test]
 async fn produced_record_is_processed() {

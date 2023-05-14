@@ -1,5 +1,6 @@
 use crate::aws::client::KinesisClient;
 use crate::kinesis::models::*;
+use crate::NB_SHARDS_PER_THREAD;
 use async_trait::async_trait;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::Error;
@@ -7,6 +8,7 @@ use log::{debug, error};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{sleep, Duration};
+
 pub mod helpers;
 pub mod models;
 
@@ -25,7 +27,7 @@ where
 {
     async fn run(&self) -> Result<(), Error> {
         let (tx_shard_iterator_progress, mut rx_shard_iterator_progress) =
-            mpsc::channel::<ShardIteratorProgress>(1000); // ie 1000 shards seeding
+            mpsc::channel::<ShardIteratorProgress>(NB_SHARDS_PER_THREAD);
 
         {
             let cloned_self = self.clone();
@@ -94,6 +96,14 @@ where
             });
         }
 
+        self.seed_shards(tx_shard_iterator_progress).await;
+
+        Ok(())
+    }
+
+    async fn seed_shards(&self, tx_shard_iterator_progress: Sender<ShardIteratorProgress>) {
+        debug!("Seeding {} shards", self.get_config().shard_ids.len());
+
         for shard_id in self.get_config().shard_ids {
             let tx_shard_iterator_progress = tx_shard_iterator_progress.clone();
             let resp = self.get_iterator(&shard_id).await.unwrap();
@@ -108,12 +118,14 @@ where
                 .await
                 .unwrap();
         }
-
-        debug!("Seeded {} shards", self.get_config().shard_ids.len());
-
-        Ok(())
     }
 
+    /**
+    * Publish records from a shard iterator.
+
+    * Because shards are multiplexed per ShardProcessor, we need to keep
+    * track of the shard_id for each shard_iterator.
+    */
     async fn publish_records_shard(
         &self,
         shard_iterator: &str,
@@ -139,7 +151,7 @@ where
                     data: data.into(),
                 }
             })
-            .collect::<Vec<RecordResult>>();
+            .collect::<Vec<_>>();
 
         if !record_results.is_empty() {
             debug!(
