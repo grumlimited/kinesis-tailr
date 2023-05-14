@@ -2,16 +2,17 @@
 
 use std::io;
 
-use clap::Parser;
 use tokio::sync::mpsc;
 
-use kinesis::helpers::get_shards;
-use kinesis::models::*;
-
 use crate::aws::client::*;
-use crate::cli_helpers::{divide_shards, parse_date, print_runtime, reset_signal_pipe_handler};
+use crate::cli_helpers::{
+    divide_shards, parse_date, print_runtime, reset_signal_pipe_handler, Opt,
+};
 use crate::sink::console::ConsoleSink;
 use crate::sink::Sink;
+use clap::Parser;
+use kinesis::helpers::get_shards;
+use kinesis::models::*;
 
 mod iterator;
 mod kinesis;
@@ -19,57 +20,6 @@ mod sink;
 
 mod aws;
 mod cli_helpers;
-
-#[derive(Debug, Parser)]
-struct Opt {
-    /// AWS Region
-    #[structopt(short, long)]
-    region: Option<String>,
-
-    /// Name of the stream
-    #[structopt(short, long)]
-    stream_name: String,
-
-    /// Endpoint URL to use
-    #[structopt(long)]
-    endpoint_url: Option<String>,
-
-    /// Start datetime position to tail from. ISO 8601 format.
-    #[structopt(long)]
-    from_datetime: Option<String>,
-
-    /// Maximum number of messages to retrieve
-    #[structopt(long)]
-    max_messages: Option<u32>,
-
-    /// Disable color output
-    #[structopt(long)]
-    no_color: bool,
-
-    /// Print a delimiter between each payload
-    #[structopt(long)]
-    print_delimiter: bool,
-
-    /// Print the partition key
-    #[structopt(long)]
-    print_key: bool,
-
-    /// Print the shard ID
-    #[structopt(long)]
-    print_shardid: bool,
-
-    /// Print timestamps
-    #[structopt(long)]
-    print_timestamp: bool,
-
-    /// Shard ID to tail from
-    #[structopt(long)]
-    shard_id: Option<String>,
-
-    /// Display additional information
-    #[structopt(short, long)]
-    verbose: bool,
-}
 
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {
