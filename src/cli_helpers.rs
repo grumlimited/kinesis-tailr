@@ -113,7 +113,7 @@ pub fn parse_date(from: Option<&str>) -> Option<DateTime<Utc>> {
     from.map(|f| chrono::Utc.datetime_from_str(f, "%+").unwrap())
 }
 
-pub fn divide_shards<T: Clone>(source: &[T], group_size: u32) -> Vec<Vec<T>> {
+pub fn divide_shards<T: Clone>(source: &[T], group_size: usize) -> Vec<Vec<T>> {
     if group_size == 0 {
         return vec![];
     }

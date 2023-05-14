@@ -1,5 +1,6 @@
 use crate::aws::client::KinesisClient;
 use crate::kinesis::models::*;
+use crate::NB_SHARDS_PER_THREAD;
 use async_trait::async_trait;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::Error;
@@ -7,6 +8,7 @@ use log::{debug, error};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{sleep, Duration};
+
 pub mod helpers;
 pub mod models;
 
@@ -25,7 +27,7 @@ where
 {
     async fn run(&self) -> Result<(), Error> {
         let (tx_shard_iterator_progress, mut rx_shard_iterator_progress) =
-            mpsc::channel::<ShardIteratorProgress>(1000); // ie 1000 shards seeding
+            mpsc::channel::<ShardIteratorProgress>(NB_SHARDS_PER_THREAD);
 
         {
             let cloned_self = self.clone();

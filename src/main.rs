@@ -26,7 +26,7 @@ mod cli_helpers;
  * - the less threads are needed, but the more messages are buffered in memory,
  * - the fewer concurrent AWS calls.
  */
-pub const NB_SHARDS_PER_THREAD: u32 = 100;
+pub const NB_SHARDS_PER_THREAD: usize = 100;
 
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {
