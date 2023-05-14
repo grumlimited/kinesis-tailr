@@ -19,6 +19,15 @@ mod sink;
 mod aws;
 mod cli_helpers;
 
+/**
+ * Number of shards to process per thread.
+ * This is a tradeoff between the number of threads and the number of shards to process.
+ * The more shards per thread:  
+ * - the less threads are needed, but the more messages are buffered in memory,
+ * - the fewer concurrent AWS calls.
+ */
+pub const NB_SHARDS_PER_THREAD: u32 = 100;
+
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {
     reset_signal_pipe_handler().expect("TODO: panic message");
@@ -58,7 +67,7 @@ async fn main() -> Result<(), io::Error> {
         }
     });
 
-    let shard_groups = divide_shards(&selected_shards, 100);
+    let shard_groups = divide_shards(&selected_shards, NB_SHARDS_PER_THREAD);
     for shard_ids in &shard_groups {
         let shard_ids = shard_ids
             .iter()
