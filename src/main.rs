@@ -5,9 +5,7 @@ use std::io;
 use tokio::sync::mpsc;
 
 use crate::aws::client::*;
-use crate::cli_helpers::{
-    divide_shards, parse_date, print_runtime, reset_signal_pipe_handler, Opt,
-};
+use crate::cli_helpers::*;
 use crate::sink::console::ConsoleSink;
 use crate::sink::Sink;
 use clap::Parser;
@@ -24,12 +22,9 @@ mod cli_helpers;
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {
     reset_signal_pipe_handler().expect("TODO: panic message");
+    set_log_level();
 
     let opt = Opt::parse();
-
-    env_logger::init_from_env(
-        env_logger::Env::default().default_filter_or("WARN,kinesis_tailr=INFO"),
-    );
 
     let from_datetime = parse_date(opt.from_datetime.as_deref());
     let client = create_client(opt.region.clone(), opt.endpoint_url.clone()).await;

@@ -55,6 +55,35 @@ pub struct Opt {
     pub verbose: bool,
 }
 
+pub(crate) fn selected_shards<'a>(
+    shards: &'a mut [String],
+    stream_name: &str,
+    shard_id: &Option<String>,
+) -> Vec<&'a String> {
+    if let Some(shard_id) = shard_id {
+        if !shards.contains(shard_id) {
+            panic!(
+                "Shard {} does not exist in stream {}",
+                shard_id, stream_name
+            );
+        }
+    };
+
+    shards
+        .iter()
+        .filter(|s| match shard_id.as_ref() {
+            Some(shard_id) => shard_id == *s,
+            None => true,
+        })
+        .collect::<Vec<_>>()
+}
+
+pub(crate) fn set_log_level() {
+    env_logger::init_from_env(
+        env_logger::Env::default().default_filter_or("WARN,kinesis_tailr=INFO"),
+    );
+}
+
 pub(crate) fn print_runtime(opt: &Opt, selected_shards: &Vec<String>) {
     if opt.verbose {
         info!("Kinesis client version: {}", PKG_VERSION);
@@ -203,6 +232,42 @@ mod tests {
         assert_eq!(
             divide_shards::<String>(&source, 0),
             vec![] as Vec<Vec<String>>
+        );
+    }
+
+    #[test]
+    fn selected_shards_ok() {
+        let mut shards = vec!["a".to_string(), "b".to_string(), "c".to_string()];
+
+        assert_eq!(
+            selected_shards(&mut shards, "stream", &None),
+            vec!["a", "b", "c"]
+        );
+
+        assert_eq!(
+            selected_shards(&mut shards, "stream", &Some("a".to_string())),
+            vec!["a"]
+        );
+
+        assert_eq!(
+            selected_shards(&mut shards, "stream", &Some("b".to_string())),
+            vec!["b"]
+        );
+
+        assert_eq!(
+            selected_shards(&mut shards, "stream", &Some("c".to_string())),
+            vec!["c"]
+        );
+    }
+
+    #[test]
+    #[should_panic]
+    fn selected_shards_panic() {
+        let mut shards = vec!["a".to_string(), "b".to_string(), "c".to_string()];
+
+        assert_eq!(
+            selected_shards(&mut shards, "stream", &Some("d".to_string())),
+            vec![] as Vec<&str>
         );
     }
 }
