@@ -42,12 +42,11 @@ async fn main() -> Result<(), io::Error> {
 
     print_runtime(&opt, &selected_shards);
 
-    let handle = match opt.output_file {
-        Some(file) => tokio::spawn({
-            let tx_records = tx_records.clone();
-
-            async move {
-                FileSink::new(
+    let handle = tokio::spawn({
+        let tx_records = tx_records.clone();
+        async move {
+            match opt.output_file {
+                Some(file) => FileSink::new(
                     opt.max_messages,
                     opt.no_color,
                     opt.print_key,
@@ -58,14 +57,8 @@ async fn main() -> Result<(), io::Error> {
                 )
                 .run(tx_records, rx_records)
                 .await
-                .unwrap()
-            }
-        }),
-        None => tokio::spawn({
-            let tx_records = tx_records.clone();
-
-            async move {
-                ConsoleSink::new(
+                .unwrap(),
+                None => ConsoleSink::new(
                     opt.max_messages,
                     opt.no_color,
                     opt.print_key,
@@ -75,10 +68,10 @@ async fn main() -> Result<(), io::Error> {
                 )
                 .run(tx_records, rx_records)
                 .await
-                .unwrap();
+                .unwrap(),
             }
-        }),
-    };
+        }
+    });
 
     let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(opt.concurrent));
 
