@@ -276,4 +276,7 @@ where
 }
 
 #[cfg(test)]
-mod tests;
+mod console_tests;
+
+#[cfg(test)]
+mod file_tests;
