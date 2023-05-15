@@ -50,6 +50,11 @@ pub struct Opt {
     #[structopt(long)]
     pub shard_id: Option<String>,
 
+    /// Concurrent number of shards to tail
+    #[structopt(short, long)]
+    #[clap(default_value_t = 10)]
+    pub concurrent: usize,
+
     /// Display additional information
     #[structopt(short, long)]
     pub verbose: bool,

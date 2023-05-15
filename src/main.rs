@@ -59,7 +59,7 @@ async fn main() -> Result<(), io::Error> {
         }
     });
 
-    let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
+    let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(opt.concurrent));
 
     let shard_processors = {
         let selected_shards = selected_shards
