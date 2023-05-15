@@ -9,6 +9,7 @@ use tokio::sync::Mutex;
 use crate::kinesis::models::{PanicError, RecordResult, ShardProcessorADT};
 
 pub mod console;
+pub mod file;
 
 #[derive(Clone, Default)]
 pub struct SinkConfig {
@@ -275,4 +276,7 @@ where
 }
 
 #[cfg(test)]
-mod tests;
+mod console_tests;
+
+#[cfg(test)]
+mod file_tests;

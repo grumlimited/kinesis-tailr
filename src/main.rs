@@ -8,6 +8,7 @@ use tokio::sync::{mpsc, Semaphore};
 use crate::aws::client::*;
 use crate::cli_helpers::*;
 use crate::sink::console::ConsoleSink;
+use crate::sink::file::FileSink;
 use crate::sink::Sink;
 use clap::Parser;
 use kinesis::helpers::get_shards;
@@ -41,31 +42,48 @@ async fn main() -> Result<(), io::Error> {
 
     print_runtime(&opt, &selected_shards);
 
-    let console = tokio::spawn({
+    let handle = tokio::spawn({
         let tx_records = tx_records.clone();
-
         async move {
-            ConsoleSink::new(
-                opt.max_messages,
-                opt.no_color,
-                opt.print_key,
-                opt.print_shardid,
-                opt.print_timestamp,
-                opt.print_delimiter,
-            )
-            .run(tx_records, rx_records)
-            .await
-            .unwrap();
+            match opt.output_file {
+                Some(file) => {
+                    // file::check_path(&file).await?;
+
+                    FileSink::new(
+                        opt.max_messages,
+                        opt.no_color,
+                        opt.print_key,
+                        opt.print_shardid,
+                        opt.print_timestamp,
+                        opt.print_delimiter,
+                        file,
+                    )
+                    .run(tx_records, rx_records)
+                    .await
+                }
+                None => {
+                    ConsoleSink::new(
+                        opt.max_messages,
+                        opt.no_color,
+                        opt.print_key,
+                        opt.print_shardid,
+                        opt.print_timestamp,
+                        opt.print_delimiter,
+                    )
+                    .run(tx_records, rx_records)
+                    .await
+                }
+            }
         }
     });
-
-    let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(opt.concurrent));
 
     let shard_processors = {
         let selected_shards = selected_shards
             .iter()
             .map(|s| (*s).clone())
             .collect::<Vec<_>>();
+
+        let semaphore = Arc::new(Semaphore::new(opt.concurrent));
 
         selected_shards
             .iter()
@@ -86,11 +104,7 @@ async fn main() -> Result<(), io::Error> {
                         tx_records.clone(),
                     );
 
-                    shard_processor
-                        .run()
-                        .await
-                        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
-                        .unwrap();
+                    shard_processor.run().await.unwrap();
                 })
             })
             .collect::<Vec<_>>()
@@ -102,7 +116,5 @@ async fn main() -> Result<(), io::Error> {
         shard_processors_handle.spawn(shard_processor);
     }
 
-    console.await.unwrap();
-
-    Ok(())
+    handle.await?
 }
