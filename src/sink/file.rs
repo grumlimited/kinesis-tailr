@@ -1,6 +1,7 @@
 use std::fs::File;
-use std::io::BufWriter;
-use std::path::PathBuf;
+use std::io;
+use std::io::{BufWriter, ErrorKind};
+use std::path::{Path, PathBuf};
 
 use crate::sink::{Configurable, SinkConfig, SinkOutput};
 
@@ -45,4 +46,23 @@ impl SinkOutput<File> for FileSink {
         let file = File::create(&self.file).unwrap();
         BufWriter::new(file)
     }
+}
+
+async fn check_path<P: AsRef<Path>>(path: P) -> io::Result<()> {
+    async move {
+        if path.as_ref().exists() {
+            Err(io::Error::new(
+                ErrorKind::AlreadyExists,
+                format!("{} already exists.", path.as_ref().display()),
+            ))
+        } else if path.as_ref().is_dir() {
+            Err(io::Error::new(
+                ErrorKind::AlreadyExists,
+                format!("{} is a directory.", path.as_ref().display()),
+            ))
+        } else {
+            Ok(())
+        }
+    }
+    .await
 }
