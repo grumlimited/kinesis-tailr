@@ -50,6 +50,10 @@ pub struct Opt {
     #[structopt(long)]
     pub shard_id: Option<String>,
 
+    /// Output file to write to
+    #[structopt(long, short)]
+    pub output_file: Option<String>,
+
     /// Concurrent number of shards to tail
     #[structopt(short, long)]
     #[clap(default_value_t = 10)]

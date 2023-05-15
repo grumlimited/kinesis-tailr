@@ -8,6 +8,7 @@ use tokio::sync::{mpsc, Semaphore};
 use crate::aws::client::*;
 use crate::cli_helpers::*;
 use crate::sink::console::ConsoleSink;
+use crate::sink::file::FileSink;
 use crate::sink::Sink;
 use clap::Parser;
 use kinesis::helpers::get_shards;
@@ -41,23 +42,43 @@ async fn main() -> Result<(), io::Error> {
 
     print_runtime(&opt, &selected_shards);
 
-    let console = tokio::spawn({
-        let tx_records = tx_records.clone();
+    let handle = match opt.output_file {
+        Some(file) => tokio::spawn({
+            let tx_records = tx_records.clone();
 
-        async move {
-            ConsoleSink::new(
-                opt.max_messages,
-                opt.no_color,
-                opt.print_key,
-                opt.print_shardid,
-                opt.print_timestamp,
-                opt.print_delimiter,
-            )
-            .run(tx_records, rx_records)
-            .await
-            .unwrap();
-        }
-    });
+            async move {
+                FileSink::new(
+                    opt.max_messages,
+                    opt.no_color,
+                    opt.print_key,
+                    opt.print_shardid,
+                    opt.print_timestamp,
+                    opt.print_delimiter,
+                    file,
+                )
+                .run(tx_records, rx_records)
+                .await
+                .unwrap()
+            }
+        }),
+        None => tokio::spawn({
+            let tx_records = tx_records.clone();
+
+            async move {
+                ConsoleSink::new(
+                    opt.max_messages,
+                    opt.no_color,
+                    opt.print_key,
+                    opt.print_shardid,
+                    opt.print_timestamp,
+                    opt.print_delimiter,
+                )
+                .run(tx_records, rx_records)
+                .await
+                .unwrap();
+            }
+        }),
+    };
 
     let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(opt.concurrent));
 
@@ -102,7 +123,7 @@ async fn main() -> Result<(), io::Error> {
         shard_processors_handle.spawn(shard_processor);
     }
 
-    console.await.unwrap();
+    handle.await.unwrap();
 
     Ok(())
 }
