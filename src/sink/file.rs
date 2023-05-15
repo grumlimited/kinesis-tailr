@@ -1,7 +1,7 @@
 use std::fs::File;
 use std::io;
-use std::io::{BufWriter, ErrorKind};
-use std::path::{Path, PathBuf};
+use std::io::BufWriter;
+use std::path::PathBuf;
 
 use crate::sink::{Configurable, SinkConfig, SinkOutput};
 
@@ -43,21 +43,14 @@ impl Configurable for FileSink {
 
 impl SinkOutput<File> for FileSink {
     fn output(&mut self) -> BufWriter<File> {
-        let file = File::create(&self.file).unwrap();
+        let file = File::create(&self.file)
+            .map_err(|e| {
+                io::Error::new(
+                    e.kind(),
+                    format!("Could not write to file {}", self.file.display()),
+                )
+            })
+            .unwrap();
         BufWriter::new(file)
     }
-}
-
-pub async fn check_path<P: AsRef<Path>>(path: P) -> io::Result<()> {
-    async move {
-        if path.as_ref().exists() {
-            Err(io::Error::new(
-                ErrorKind::AlreadyExists,
-                format!("{} already exists.", path.as_ref().display()),
-            ))
-        } else {
-            Ok(())
-        }
-    }
-    .await
 }

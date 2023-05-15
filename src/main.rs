@@ -9,7 +9,7 @@ use crate::aws::client::*;
 use crate::cli_helpers::*;
 use crate::sink::console::ConsoleSink;
 use crate::sink::file::FileSink;
-use crate::sink::{file, Sink};
+use crate::sink::Sink;
 use clap::Parser;
 use kinesis::helpers::get_shards;
 use kinesis::models::*;
@@ -47,7 +47,7 @@ async fn main() -> Result<(), io::Error> {
         async move {
             match opt.output_file {
                 Some(file) => {
-                    file::check_path(&file).await?;
+                    // file::check_path(&file).await?;
 
                     FileSink::new(
                         opt.max_messages,
