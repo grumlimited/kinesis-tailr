@@ -48,17 +48,12 @@ impl SinkOutput<File> for FileSink {
     }
 }
 
-async fn check_path<P: AsRef<Path>>(path: P) -> io::Result<()> {
+pub async fn check_path<P: AsRef<Path>>(path: P) -> io::Result<()> {
     async move {
         if path.as_ref().exists() {
             Err(io::Error::new(
                 ErrorKind::AlreadyExists,
                 format!("{} already exists.", path.as_ref().display()),
-            ))
-        } else if path.as_ref().is_dir() {
-            Err(io::Error::new(
-                ErrorKind::AlreadyExists,
-                format!("{} is a directory.", path.as_ref().display()),
             ))
         } else {
             Ok(())

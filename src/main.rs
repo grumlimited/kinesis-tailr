@@ -9,7 +9,7 @@ use crate::aws::client::*;
 use crate::cli_helpers::*;
 use crate::sink::console::ConsoleSink;
 use crate::sink::file::FileSink;
-use crate::sink::Sink;
+use crate::sink::{file, Sink};
 use clap::Parser;
 use kinesis::helpers::get_shards;
 use kinesis::models::*;
@@ -46,29 +46,33 @@ async fn main() -> Result<(), io::Error> {
         let tx_records = tx_records.clone();
         async move {
             match opt.output_file {
-                Some(file) => FileSink::new(
-                    opt.max_messages,
-                    opt.no_color,
-                    opt.print_key,
-                    opt.print_shardid,
-                    opt.print_timestamp,
-                    opt.print_delimiter,
-                    file,
-                )
-                .run(tx_records, rx_records)
-                .await
-                .unwrap(),
-                None => ConsoleSink::new(
-                    opt.max_messages,
-                    opt.no_color,
-                    opt.print_key,
-                    opt.print_shardid,
-                    opt.print_timestamp,
-                    opt.print_delimiter,
-                )
-                .run(tx_records, rx_records)
-                .await
-                .unwrap(),
+                Some(file) => {
+                    file::check_path(&file).await?;
+
+                    FileSink::new(
+                        opt.max_messages,
+                        opt.no_color,
+                        opt.print_key,
+                        opt.print_shardid,
+                        opt.print_timestamp,
+                        opt.print_delimiter,
+                        file,
+                    )
+                    .run(tx_records, rx_records)
+                    .await
+                }
+                None => {
+                    ConsoleSink::new(
+                        opt.max_messages,
+                        opt.no_color,
+                        opt.print_key,
+                        opt.print_shardid,
+                        opt.print_timestamp,
+                        opt.print_delimiter,
+                    )
+                    .run(tx_records, rx_records)
+                    .await
+                }
             }
         }
     });
@@ -116,7 +120,5 @@ async fn main() -> Result<(), io::Error> {
         shard_processors_handle.spawn(shard_processor);
     }
 
-    handle.await.unwrap();
-
-    Ok(())
+    handle.await?
 }
