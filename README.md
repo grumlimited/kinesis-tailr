@@ -69,7 +69,11 @@ Specific logging for `kinesis-tailr` can be turned on with:
 
     kinesis-tailr --stream-name mystream
 
-    [2023-05-10T21:56:11Z DEBUG kinesis_tailr::kinesis] Received 2 records from shardId-000000000036
-    [2023-05-10T21:56:11Z DEBUG kinesis_tailr::kinesis] Received 1 records from shardId-000000000043
-    [2023-05-10T21:56:11Z DEBUG kinesis_tailr::kinesis] Received 1 records from shardId-000000000037
+    [2023-05-15T22:22:28Z DEBUG kinesis_tailr::kinesis] Received 191 records from shardId-000000000048 (02:16:04 behind)
+    [2023-05-15T22:22:29Z DEBUG kinesis_tailr::kinesis] Received 87 records from shardId-000000000041 (02:18:28 behind)
+    [2023-05-15T22:22:29Z DEBUG kinesis_tailr::kinesis] Received 222 records from shardId-000000000037 (02:16:48 behind)
+    [2023-05-15T22:22:29Z DEBUG kinesis_tailr::kinesis] Received 52 records from shardId-000000000040 (02:18:36 behind)
+    [2023-05-15T22:22:29Z DEBUG kinesis_tailr::kinesis] Received 82 records from shardId-000000000045 (02:20:30 behind)
+    [2023-05-15T22:22:29Z DEBUG kinesis_tailr::kinesis] Received 100 records from shardId-000000000042 (02:16:57 behind)
+    [2023-05-15T22:22:29Z DEBUG kinesis_tailr::kinesis] Received 144 records from shardId-000000000047 (02:18:54 behind)
     [...]

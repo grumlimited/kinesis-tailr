@@ -3,7 +3,9 @@ use crate::kinesis::models::*;
 use async_trait::async_trait;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::Error;
-use log::{debug, error};
+use hhmmss::Hhmmss;
+use log::Level::Debug;
+use log::{debug, error, log_enabled};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{sleep, Duration};
@@ -169,11 +171,20 @@ where
             .collect::<Vec<_>>();
 
         if !record_results.is_empty() {
-            debug!(
-                "Received {} records from {}",
-                record_results.len(),
-                shard_id.clone()
-            );
+            if log_enabled!(Debug) {
+                let behind = match resp.millis_behind_latest() {
+                    Some(behind) => std::time::Duration::from_millis(behind as u64).hhmmss(),
+                    None => "n/a".to_string(),
+                };
+
+                debug!(
+                    "Received {} records from {} ({} behind)",
+                    record_results.len(),
+                    shard_id.clone(),
+                    behind
+                );
+            }
+
             self.get_config()
                 .tx_records
                 .send(Ok(ShardProcessorADT::Progress(record_results)))
