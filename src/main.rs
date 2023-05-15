@@ -77,13 +77,13 @@ async fn main() -> Result<(), io::Error> {
         }
     });
 
-    let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(opt.concurrent));
-
     let shard_processors = {
         let selected_shards = selected_shards
             .iter()
             .map(|s| (*s).clone())
             .collect::<Vec<_>>();
+
+        let semaphore = Arc::new(Semaphore::new(opt.concurrent));
 
         selected_shards
             .iter()
@@ -104,11 +104,7 @@ async fn main() -> Result<(), io::Error> {
                         tx_records.clone(),
                     );
 
-                    shard_processor
-                        .run()
-                        .await
-                        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
-                        .unwrap();
+                    shard_processor.run().await.unwrap();
                 })
             })
             .collect::<Vec<_>>()
