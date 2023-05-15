@@ -8,7 +8,7 @@ use std::path::PathBuf;
 use tokio::sync::mpsc;
 
 #[tokio::test]
-async fn xxx() {
+async fn file_sink_ok() {
     let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(1);
 
     let tx_records_clone = tx_records.clone();
