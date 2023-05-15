@@ -12,8 +12,9 @@ use aws_sdk_kinesis::primitives::{Blob, DateTime};
 use aws_sdk_kinesis::types::{Record, Shard};
 use aws_sdk_kinesis::Error;
 use chrono::Utc;
+use std::sync::Arc;
 use std::time::Duration;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, Semaphore};
 use tokio::time::sleep;
 
 #[tokio::test]
@@ -21,17 +22,20 @@ async fn seed_shards_test() {
     let (tx_records, _) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(10);
 
     let (tx_shard_iterator_progress, mut rx_shard_iterator_progress) =
-        mpsc::channel::<ShardIteratorProgress>(10);
+        mpsc::channel::<ShardIteratorProgress>(1);
 
     let client = TestKinesisClient {
         region: Some(Region::new("us-east-1")),
     };
 
+    let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
+
     let processor = ShardProcessorLatest {
         config: ShardProcessorConfig {
             client,
             stream: "test".to_string(),
-            shard_ids: vec!["shardId-000000000000".to_string()],
+            shard_id: "shardId-000000000000".to_string(),
+            semaphore,
             tx_records,
         },
     };
@@ -56,11 +60,14 @@ async fn produced_record_is_processed() {
         region: Some(Region::new("us-east-1")),
     };
 
+    let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
+
     let processor = ShardProcessorLatest {
         config: ShardProcessorConfig {
             client,
             stream: "test".to_string(),
-            shard_ids: vec!["shardId-000000000000".to_string()],
+            shard_id: "shardId-000000000000".to_string(),
+            semaphore,
             tx_records,
         },
     };

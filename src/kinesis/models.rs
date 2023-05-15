@@ -8,7 +8,9 @@ use aws_sdk_kinesis::primitives::DateTime;
 use aws_sdk_kinesis::Error;
 use chrono::Utc;
 use std::fmt::Debug;
+use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
+use tokio::sync::Semaphore;
 
 #[derive(Debug, Clone)]
 pub struct ShardIteratorProgress {
@@ -39,7 +41,8 @@ pub struct RecordResult {
 pub struct ShardProcessorConfig<K: KinesisClient> {
     pub client: K,
     pub stream: String,
-    pub shard_ids: Vec<String>,
+    pub shard_id: String,
+    pub semaphore: Arc<Semaphore>,
     pub tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
 }
 

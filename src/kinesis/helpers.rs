@@ -3,7 +3,9 @@ use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::Error;
 use chrono::Utc;
 use log::debug;
+use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
+use tokio::sync::Semaphore;
 
 use crate::iterator::at_sequence;
 use crate::iterator::latest;
@@ -16,18 +18,20 @@ use crate::kinesis::{IteratorProvider, ShardIteratorProgress};
 pub fn new(
     client: AwsKinesisClient,
     stream: String,
-    shard_ids: Vec<String>,
+    shard_id: String,
     from_datetime: Option<chrono::DateTime<Utc>>,
+    semaphore: Arc<Semaphore>,
     tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
 ) -> Box<dyn ShardProcessor<AwsKinesisClient> + Send + Sync> {
-    debug!("Creating ShardProcessor with {} shards", shard_ids.len());
+    debug!("Creating ShardProcessor with shard {}", shard_id);
 
     match from_datetime {
         Some(from_datetime) => Box::new(ShardProcessorAtTimestamp {
             config: ShardProcessorConfig {
                 client,
                 stream,
-                shard_ids,
+                shard_id,
+                semaphore,
                 tx_records,
             },
             from_datetime,
@@ -36,7 +40,8 @@ pub fn new(
             config: ShardProcessorConfig {
                 client,
                 stream,
-                shard_ids,
+                shard_id,
+                semaphore,
                 tx_records,
             },
         }),

@@ -35,6 +35,7 @@ Installs a single binary to `/usr/bin/kinesis-tailr`.
         --print-shardid                      Print the shard ID
         --print-timestamp                    Print timestamps
         --shard-id <SHARD_ID>                Shard ID to tail from
+        -c, --concurrent <CONCURRENT>        Concurrent number of shards to tail [default: 10]
         -v, --verbose                        Display additional information
         -h, --help                           Print help
 

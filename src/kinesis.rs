@@ -1,6 +1,5 @@
 use crate::aws::client::KinesisClient;
 use crate::kinesis::models::*;
-use crate::NB_SHARDS_PER_THREAD;
 use async_trait::async_trait;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::Error;
@@ -27,13 +26,18 @@ where
 {
     async fn run(&self) -> Result<(), Error> {
         let (tx_shard_iterator_progress, mut rx_shard_iterator_progress) =
-            mpsc::channel::<ShardIteratorProgress>(NB_SHARDS_PER_THREAD);
+            mpsc::channel::<ShardIteratorProgress>(1);
 
-        {
+        self.seed_shards(tx_shard_iterator_progress.clone()).await;
+
+        tokio::spawn({
             let cloned_self = self.clone();
             let tx_shard_iterator_progress = tx_shard_iterator_progress.clone();
-            tokio::spawn(async move {
+            let semaphore = self.get_config().semaphore;
+            async move {
                 while let Some(res) = rx_shard_iterator_progress.recv().await {
+                    let permit = semaphore.clone().acquire_owned().await.unwrap();
+
                     let res_clone = res.clone();
 
                     match res.next_shard_iterator {
@@ -68,7 +72,7 @@ where
                                         .await;
                                     }
                                     e => {
-                                        error!("ExpiredIteratorException: {}", e);
+                                        error!("Error: {}", e);
                                         cloned_self
                                             .get_config()
                                             .tx_records
@@ -92,32 +96,43 @@ where
                                 .expect("");
                         }
                     };
-                }
-            });
-        }
 
-        self.seed_shards(tx_shard_iterator_progress).await;
+                    drop(permit);
+                }
+            }
+        });
 
         Ok(())
     }
 
     async fn seed_shards(&self, tx_shard_iterator_progress: Sender<ShardIteratorProgress>) {
-        debug!("Seeding {} shards", self.get_config().shard_ids.len());
+        let permit = self
+            .get_config()
+            .semaphore
+            .clone()
+            .acquire_owned()
+            .await
+            .unwrap();
 
-        for shard_id in self.get_config().shard_ids {
-            let tx_shard_iterator_progress = tx_shard_iterator_progress.clone();
-            let resp = self.get_iterator(&shard_id).await.unwrap();
-            let shard_iterator: Option<String> = resp.shard_iterator().map(|s| s.into());
-            tx_shard_iterator_progress
-                .clone()
-                .send(ShardIteratorProgress {
-                    shard_id: shard_id.to_string(),
-                    last_sequence_id: None,
-                    next_shard_iterator: shard_iterator,
-                })
-                .await
-                .unwrap();
-        }
+        debug!("Seeding shard {}", self.get_config().shard_id);
+
+        let tx_shard_iterator_progress = tx_shard_iterator_progress.clone();
+        let resp = self
+            .get_iterator(&self.get_config().shard_id)
+            .await
+            .unwrap();
+        let shard_iterator: Option<String> = resp.shard_iterator().map(|s| s.into());
+        tx_shard_iterator_progress
+            .clone()
+            .send(ShardIteratorProgress {
+                shard_id: self.get_config().shard_id,
+                last_sequence_id: None,
+                next_shard_iterator: shard_iterator,
+            })
+            .await
+            .unwrap();
+
+        drop(permit);
     }
 
     /**

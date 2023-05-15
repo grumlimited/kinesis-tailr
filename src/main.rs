@@ -1,8 +1,9 @@
 #![allow(clippy::result_large_err)]
 
 use std::io;
+use std::sync::Arc;
 
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, Semaphore};
 
 use crate::aws::client::*;
 use crate::cli_helpers::*;
@@ -11,7 +12,7 @@ use crate::sink::Sink;
 use clap::Parser;
 use kinesis::helpers::get_shards;
 use kinesis::models::*;
-use log::debug;
+use tokio::task::JoinSet;
 
 mod iterator;
 mod kinesis;
@@ -19,18 +20,6 @@ mod sink;
 
 mod aws;
 mod cli_helpers;
-
-/**
- * Number of shards to process per thread.
- * This is a tradeoff between the number of threads and the number of shards to process.
- * The more shards per thread:  
- * - the less threads are needed, but the more messages are buffered in memory,
- * - the fewer concurrent AWS calls.
- *
- * 100 is chosen because the maximum number of shards, depending on the region, is between 200 and 500.
- * Therefore 100 means 5 threads, which should be a good default between concurrent connections and "responsiveness".
- */
-pub const NB_SHARDS_PER_THREAD: usize = 100;
 
 #[tokio::main]
 async fn main() -> Result<(), io::Error> {
@@ -70,29 +59,50 @@ async fn main() -> Result<(), io::Error> {
         }
     });
 
-    let shard_groups = divide_shards(&selected_shards, NB_SHARDS_PER_THREAD);
-    debug!("Spawning {} threads", shard_groups.len());
-    for shard_ids in &shard_groups {
-        let shard_ids = shard_ids
+    let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(opt.concurrent));
+
+    let shard_processors = {
+        let selected_shards = selected_shards
             .iter()
-            .map(|shard_id| shard_id.to_string())
-            .collect();
+            .map(|s| (*s).clone())
+            .collect::<Vec<_>>();
 
-        let shard_processor = kinesis::helpers::new(
-            client.clone(),
-            opt.stream_name.clone(),
-            shard_ids,
-            from_datetime,
-            tx_records.clone(),
-        );
+        selected_shards
+            .iter()
+            .map(|shard_id| {
+                let tx_records = tx_records.clone();
+                let client = client.clone();
+                let stream_name = opt.stream_name.clone();
+                let shard_id = shard_id.clone();
+                let semaphore = semaphore.clone();
 
-        shard_processor
-            .run()
-            .await
-            .map_err(|e| io::Error::new(io::ErrorKind::Other, e))?
+                tokio::spawn(async move {
+                    let shard_processor = kinesis::helpers::new(
+                        client.clone(),
+                        stream_name,
+                        shard_id.clone(),
+                        from_datetime,
+                        semaphore,
+                        tx_records.clone(),
+                    );
+
+                    shard_processor
+                        .run()
+                        .await
+                        .map_err(|e| io::Error::new(io::ErrorKind::Other, e))
+                        .unwrap();
+                })
+            })
+            .collect::<Vec<_>>()
+    };
+
+    let mut shard_processors_handle = JoinSet::new();
+
+    for shard_processor in shard_processors {
+        shard_processors_handle.spawn(shard_processor);
     }
 
-    console.await.unwrap_or(());
+    console.await.unwrap();
 
     Ok(())
 }
