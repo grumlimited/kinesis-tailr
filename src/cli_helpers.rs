@@ -75,7 +75,7 @@ pub(crate) fn selected_shards<'a>(
             .iter()
             .filter(|s| shard_ids.contains(s))
             .collect::<Vec<_>>(),
-        None => shards.iter().filter(|_| true).collect::<Vec<_>>(),
+        None => shards.iter().map(|e| e).collect::<Vec<_>>(),
     };
 
     if filtered.is_empty() {
