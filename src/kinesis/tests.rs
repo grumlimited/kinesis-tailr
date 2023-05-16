@@ -1,7 +1,7 @@
 use crate::aws::client::KinesisClient;
 use crate::kinesis::models::{
-    PanicError, ShardIteratorProgress, ShardProcessor, ShardProcessorADT, ShardProcessorConfig,
-    ShardProcessorLatest,
+    PanicError, ShardIteratorProgress, ShardProcessor, ShardProcessorADT,
+    ShardProcessorAtTimestamp, ShardProcessorConfig, ShardProcessorLatest,
 };
 use async_trait::async_trait;
 use aws_sdk_kinesis::config::Region;
@@ -9,9 +9,11 @@ use aws_sdk_kinesis::operation::get_records::GetRecordsOutput;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::operation::list_shards::ListShardsOutput;
 use aws_sdk_kinesis::primitives::{Blob, DateTime};
+use aws_sdk_kinesis::types::error::InvalidArgumentException;
 use aws_sdk_kinesis::types::{Record, Shard};
 use aws_sdk_kinesis::Error;
 use chrono::Utc;
+use std::ops::Add;
 use std::sync::Arc;
 use std::time::Duration;
 use tokio::sync::{mpsc, Semaphore};
@@ -50,6 +52,31 @@ async fn seed_shards_test() {
         Some("shard_iterator".to_string())
     );
     assert_eq!(shard_iterator_progress.last_sequence_id, None);
+}
+
+#[tokio::test]
+#[should_panic]
+async fn seed_shards_test_timestamp_in_future() {
+    let (tx_records, _) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(10);
+
+    let (tx_shard_iterator_progress, _) = mpsc::channel::<ShardIteratorProgress>(1);
+
+    let client = TestTimestampInFutureKinesisClient {};
+
+    let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
+
+    let processor = ShardProcessorAtTimestamp {
+        config: ShardProcessorConfig {
+            client,
+            stream: "test".to_string(),
+            shard_id: "shardId-000000000000".to_string(),
+            semaphore,
+            tx_records,
+        },
+        from_datetime: Utc::now().add(chrono::Duration::days(1)),
+    };
+
+    processor.seed_shards(tx_shard_iterator_progress).await;
 }
 
 #[tokio::test]
@@ -165,5 +192,53 @@ impl KinesisClient for TestKinesisClient {
 
     fn get_region(&self) -> Option<&Region> {
         self.region.as_ref()
+    }
+}
+
+#[derive(Clone, Debug)]
+pub struct TestTimestampInFutureKinesisClient {}
+
+#[async_trait]
+impl KinesisClient for TestTimestampInFutureKinesisClient {
+    async fn list_shards(&self, _stream: &str) -> Result<ListShardsOutput, Error> {
+        unimplemented!()
+    }
+
+    async fn get_records(&self, _shard_iterator: &str) -> Result<GetRecordsOutput, Error> {
+        unimplemented!()
+    }
+
+    async fn get_shard_iterator_at_timestamp(
+        &self,
+        _stream: &str,
+        _shard_id: &str,
+        _timestamp: &chrono::DateTime<Utc>,
+    ) -> Result<GetShardIteratorOutput, Error> {
+        Err(Error::InvalidArgumentException(
+            InvalidArgumentException::builder()
+                .message("Timestamp is in future")
+                .build(),
+        ))
+    }
+
+    async fn get_shard_iterator_at_sequence(
+        &self,
+        _stream: &str,
+        _shard_id: &str,
+        _starting_sequence_number: &str,
+    ) -> Result<GetShardIteratorOutput, Error> {
+        unimplemented!()
+    }
+
+    async fn get_shard_iterator_latest(
+        &self,
+        _stream: &str,
+        _shard_id: &str,
+    ) -> Result<GetShardIteratorOutput, Error> {
+        unimplemented!()
+    }
+
+    fn get_region(&self) -> Option<&Region> {
+        unimplemented!()
     }
 }

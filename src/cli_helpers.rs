@@ -2,6 +2,7 @@ use aws_sdk_kinesis::meta::PKG_VERSION;
 use chrono::{DateTime, TimeZone, Utc};
 use clap::Parser;
 use log::info;
+use std::io;
 use std::io::Error;
 
 #[derive(Debug, Parser)]
@@ -48,7 +49,7 @@ pub struct Opt {
 
     /// Shard ID to tail from
     #[structopt(long)]
-    pub shard_id: Option<String>,
+    pub shard_id: Option<Vec<String>>,
 
     /// Output file to write to
     #[structopt(long, short)]
@@ -67,24 +68,25 @@ pub struct Opt {
 pub(crate) fn selected_shards<'a>(
     shards: &'a [String],
     stream_name: &str,
-    shard_id: &Option<String>,
-) -> Vec<&'a String> {
-    if let Some(shard_id) = shard_id {
-        if !shards.contains(shard_id) {
-            panic!(
-                "Shard {} does not exist in stream {}",
-                shard_id, stream_name
-            );
-        }
+    shard_ids: &Option<Vec<String>>,
+) -> io::Result<Vec<&'a str>> {
+    let filtered = match shard_ids {
+        Some(shard_ids) => shards
+            .iter()
+            .filter(|s| shard_ids.contains(s))
+            .map(|e| e.as_str())
+            .collect::<Vec<_>>(),
+        None => shards.iter().map(|e| e.as_str()).collect::<Vec<_>>(),
     };
 
-    shards
-        .iter()
-        .filter(|s| match shard_id.as_ref() {
-            Some(shard_id) => shard_id == *s,
-            None => true,
-        })
-        .collect()
+    if filtered.is_empty() {
+        Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("No shards found for stream {}", stream_name),
+        ))
+    } else {
+        Ok(filtered)
+    }
 }
 
 pub(crate) fn set_log_level() {
@@ -93,7 +95,7 @@ pub(crate) fn set_log_level() {
     );
 }
 
-pub(crate) fn print_runtime(opt: &Opt, selected_shards: &Vec<&String>) {
+pub(crate) fn print_runtime(opt: &Opt, selected_shards: &[&str]) {
     if opt.verbose {
         info!("Kinesis client version: {}", PKG_VERSION);
         info!(
@@ -159,25 +161,25 @@ mod tests {
 
     #[test]
     fn selected_shards_ok() {
-        let mut shards = vec!["a".to_string(), "b".to_string(), "c".to_string()];
+        let shards = vec!["a".to_string(), "b".to_string(), "c".to_string()];
 
         assert_eq!(
-            selected_shards(&mut shards, "stream", &None),
+            selected_shards(shards.as_slice(), "stream", &None).unwrap(),
             vec!["a", "b", "c"]
         );
 
         assert_eq!(
-            selected_shards(&mut shards, "stream", &Some("a".to_string())),
+            selected_shards(shards.as_slice(), "stream", &Some(vec!["a".to_string()])).unwrap(),
             vec!["a"]
         );
 
         assert_eq!(
-            selected_shards(&mut shards, "stream", &Some("b".to_string())),
+            selected_shards(&shards.as_slice(), "stream", &Some(vec!["b".to_string()])).unwrap(),
             vec!["b"]
         );
 
         assert_eq!(
-            selected_shards(&mut shards, "stream", &Some("c".to_string())),
+            selected_shards(shards.as_slice(), "stream", &Some(vec!["c".to_string()])).unwrap(),
             vec!["c"]
         );
     }
@@ -185,10 +187,10 @@ mod tests {
     #[test]
     #[should_panic]
     fn selected_shards_panic() {
-        let mut shards = vec!["a".to_string(), "b".to_string(), "c".to_string()];
+        let shards = vec!["a".to_string(), "b".to_string(), "c".to_string()];
 
         assert_eq!(
-            selected_shards(&mut shards, "stream", &Some("d".to_string())),
+            selected_shards(shards.as_slice(), "stream", &Some(vec!["d".to_string()])).unwrap(),
             vec![] as Vec<&str>
         );
     }

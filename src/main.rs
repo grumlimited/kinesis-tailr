@@ -38,7 +38,7 @@ async fn main() -> Result<(), io::Error> {
         .await
         .unwrap_or_else(|_| panic!("Could not describe shards for stream {}", opt.stream_name));
 
-    let selected_shards = selected_shards(shards.as_slice(), &opt.stream_name, &opt.shard_id);
+    let selected_shards = selected_shards(&shards, &opt.stream_name, &opt.shard_id)?;
 
     print_runtime(&opt, &selected_shards);
 
@@ -80,7 +80,7 @@ async fn main() -> Result<(), io::Error> {
     let shard_processors = {
         let selected_shards = selected_shards
             .iter()
-            .map(|s| (*s).clone())
+            .map(|s| String::from(*s))
             .collect::<Vec<_>>();
 
         let semaphore = Arc::new(Semaphore::new(opt.concurrent));
@@ -98,7 +98,7 @@ async fn main() -> Result<(), io::Error> {
                     let shard_processor = kinesis::helpers::new(
                         client.clone(),
                         stream_name,
-                        shard_id.clone(),
+                        shard_id,
                         from_datetime,
                         semaphore,
                         tx_records.clone(),

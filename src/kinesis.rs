@@ -79,7 +79,7 @@ where
                                             .get_config()
                                             .tx_records
                                             .send(Err(PanicError {
-                                                message: format!("{:?}", e),
+                                                message: e.to_string(),
                                             }))
                                             .await
                                             .expect("Could not send error to tx_records");
@@ -119,20 +119,30 @@ where
         debug!("Seeding shard {}", self.get_config().shard_id);
 
         let tx_shard_iterator_progress = tx_shard_iterator_progress.clone();
-        let resp = self
-            .get_iterator(&self.get_config().shard_id)
-            .await
-            .unwrap();
-        let shard_iterator: Option<String> = resp.shard_iterator().map(|s| s.into());
-        tx_shard_iterator_progress
-            .clone()
-            .send(ShardIteratorProgress {
-                shard_id: self.get_config().shard_id,
-                last_sequence_id: None,
-                next_shard_iterator: shard_iterator,
-            })
-            .await
-            .unwrap();
+
+        match self.get_iterator(&self.get_config().shard_id).await {
+            Ok(resp) => {
+                let shard_iterator: Option<String> = resp.shard_iterator().map(|s| s.into());
+                tx_shard_iterator_progress
+                    .clone()
+                    .send(ShardIteratorProgress {
+                        shard_id: self.get_config().shard_id,
+                        last_sequence_id: None,
+                        next_shard_iterator: shard_iterator,
+                    })
+                    .await
+                    .unwrap();
+            }
+            Err(e) => {
+                self.get_config()
+                    .tx_records
+                    .send(Err(PanicError {
+                        message: e.to_string(),
+                    }))
+                    .await
+                    .expect("Could not send error to tx_records");
+            }
+        }
 
         drop(permit);
     }

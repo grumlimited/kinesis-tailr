@@ -174,7 +174,7 @@ where
                     }
                 },
                 Err(e) => {
-                    panic!("Error: {:?}", e);
+                    panic!("Error: {}", e.message);
                 }
             }
         }

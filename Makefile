@@ -9,7 +9,7 @@ INSTALL=install
 INSTALL_PROGRAM=$(INSTALL)
 
 # Directories into which to install the various files
-bindir=$(DESTDIR)$(PREFIX)/bin
+localbindir=$(DESTDIR)$(PREFIX)/local/bin
 sharedir=$(DESTDIR)$(PREFIX)/share
 
 # These targets have no associated build files.
@@ -27,9 +27,9 @@ clippy :
 	cargo clippy
 
 install : release
-	mkdir -p $(bindir)
+	mkdir -p $(localbindir)
 
-	sudo $(INSTALL_PROGRAM) -m 0755 target/release/$(NAME) $(bindir)/$(NAME)
+	sudo $(INSTALL_PROGRAM) -m 0755 target/release/$(NAME) $(localbindir)/$(NAME)
 
 # Remove all files
 clean-all : clean
