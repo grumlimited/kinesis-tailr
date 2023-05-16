@@ -79,7 +79,7 @@ where
                                             .get_config()
                                             .tx_records
                                             .send(Err(PanicError {
-                                                message: format!("{}", e.to_string()),
+                                                message: e.to_string(),
                                             }))
                                             .await
                                             .expect("Could not send error to tx_records");
@@ -137,7 +137,7 @@ where
                 self.get_config()
                     .tx_records
                     .send(Err(PanicError {
-                        message: format!("{}", e.to_string()),
+                        message: e.to_string(),
                     }))
                     .await
                     .expect("Could not send error to tx_records");
