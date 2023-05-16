@@ -2,9 +2,7 @@ use async_trait::async_trait;
 use chrono::TimeZone;
 use std::io;
 use std::io::{BufWriter, Error, Write};
-use std::sync::Arc;
 use tokio::sync::mpsc::{Receiver, Sender};
-use tokio::sync::Mutex;
 
 use crate::kinesis::models::{PanicError, RecordResult, ShardProcessorADT};
 
@@ -111,60 +109,52 @@ where
     ) -> io::Result<()> {
         self.delimiter(handle).unwrap();
 
-        let count = Arc::new(Mutex::new(0));
+        let mut count = 0;
 
         self.handle_termination(tx_records.clone());
 
         while let Some(res) = rx_records.recv().await {
             match res {
                 Ok(adt) => match adt {
-                    ShardProcessorADT::Progress(res) => {
-                        let mut lock = count.lock().await;
-
-                        match self.get_config().max_messages {
-                            Some(max_messages) => {
-                                if *lock >= max_messages {
-                                    self.termination_message_and_exit(
-                                        handle,
-                                        *lock,
-                                        &mut rx_records,
-                                    )?;
-                                }
-
-                                let remaining = if *lock < max_messages {
-                                    max_messages - *lock
-                                } else {
-                                    0
-                                };
-
-                                if remaining > 0 && !res.is_empty() {
-                                    let split_at = std::cmp::min(remaining as usize, res.len());
-                                    *lock += split_at as u32;
-
-                                    let split = res.split_at(split_at);
-                                    let to_display = split.0;
-
-                                    let data = self.format_records(to_display);
-
-                                    data.iter().for_each(|data| {
-                                        writeln!(handle, "{}", data).unwrap();
-                                        self.delimiter(handle).unwrap();
-                                    });
-                                }
+                    ShardProcessorADT::Progress(res) => match self.get_config().max_messages {
+                        Some(max_messages) => {
+                            if count >= max_messages {
+                                self.termination_message_and_exit(handle, count, &mut rx_records)?;
                             }
-                            None => {
-                                let data = self.format_records(res.as_slice());
 
-                                *lock += data.len() as u32;
+                            let remaining = if count < max_messages {
+                                max_messages - count
+                            } else {
+                                0
+                            };
+
+                            if remaining > 0 && !res.is_empty() {
+                                let split_at = std::cmp::min(remaining as usize, res.len());
+                                count += split_at as u32;
+
+                                let split = res.split_at(split_at);
+                                let to_display = split.0;
+
+                                let data = self.format_records(to_display);
+
                                 data.iter().for_each(|data| {
                                     writeln!(handle, "{}", data).unwrap();
-                                    self.delimiter(handle).unwrap()
+                                    self.delimiter(handle).unwrap();
                                 });
                             }
                         }
-                    }
+                        None => {
+                            let data = self.format_records(res.as_slice());
+
+                            count += data.len() as u32;
+                            data.iter().for_each(|data| {
+                                writeln!(handle, "{}", data).unwrap();
+                                self.delimiter(handle).unwrap()
+                            });
+                        }
+                    },
                     ShardProcessorADT::Termination => {
-                        let messages_processed = *count.lock().await;
+                        let messages_processed = count;
 
                         self.termination_message_and_exit(
                             handle,
