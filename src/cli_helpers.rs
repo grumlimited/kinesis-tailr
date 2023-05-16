@@ -48,7 +48,7 @@ pub struct Opt {
 
     /// Shard ID to tail from
     #[structopt(long)]
-    pub shard_id: Option<String>,
+    pub shard_id: Option<Vec<String>>,
 
     /// Output file to write to
     #[structopt(long, short)]
@@ -65,26 +65,17 @@ pub struct Opt {
 }
 
 pub(crate) fn selected_shards<'a>(
-    shards: &'a [String],
-    stream_name: &str,
-    shard_id: &Option<String>,
+    shards: &'a Vec<String>,
+    _stream_name: &str,
+    shard_ids: &Option<Vec<String>>,
 ) -> Vec<&'a String> {
-    if let Some(shard_id) = shard_id {
-        if !shards.contains(shard_id) {
-            panic!(
-                "Shard {} does not exist in stream {}",
-                shard_id, stream_name
-            );
-        }
-    };
-
-    shards
-        .iter()
-        .filter(|s| match shard_id.as_ref() {
-            Some(shard_id) => shard_id == *s,
-            None => true,
-        })
-        .collect()
+    match shard_ids {
+        Some(shard_ids) => shards
+            .iter()
+            .filter(|s| shard_ids.contains(s))
+            .collect::<Vec<_>>(),
+        None => shards.iter().filter(|_| true).collect::<Vec<_>>(),
+    }
 }
 
 pub(crate) fn set_log_level() {

@@ -38,7 +38,7 @@ async fn main() -> Result<(), io::Error> {
         .await
         .unwrap_or_else(|_| panic!("Could not describe shards for stream {}", opt.stream_name));
 
-    let selected_shards = selected_shards(shards.as_slice(), &opt.stream_name, &opt.shard_id);
+    let selected_shards: Vec<&String> = selected_shards(&shards, &opt.stream_name, &opt.shard_id);
 
     print_runtime(&opt, &selected_shards);
 
