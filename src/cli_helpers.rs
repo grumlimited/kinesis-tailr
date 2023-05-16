@@ -65,15 +65,22 @@ pub struct Opt {
 }
 
 pub(crate) fn selected_shards<'a>(
-    shards: &'a Vec<String>,
-    _stream_name: &str,
+    shards: &'a [String],
+    stream_name: &str,
     shard_ids: &Option<Vec<String>>,
 ) -> Vec<&'a String> {
     match shard_ids {
-        Some(shard_ids) => shards
-            .iter()
-            .filter(|s| shard_ids.contains(s))
-            .collect::<Vec<_>>(),
+        Some(shard_ids) => {
+            let filtered = shards
+                .iter()
+                .filter(|s| shard_ids.contains(s))
+                .collect::<Vec<_>>();
+
+            if filtered.is_empty() {
+                panic!("No shards found for stream {}", stream_name)
+            }
+            filtered
+        }
         None => shards.iter().filter(|_| true).collect::<Vec<_>>(),
     }
 }
