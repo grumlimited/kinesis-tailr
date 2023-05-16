@@ -69,13 +69,14 @@ pub(crate) fn selected_shards<'a>(
     shards: &'a [String],
     stream_name: &str,
     shard_ids: &Option<Vec<String>>,
-) -> io::Result<Vec<&'a String>> {
+) -> io::Result<Vec<&'a str>> {
     let filtered = match shard_ids {
         Some(shard_ids) => shards
             .iter()
             .filter(|s| shard_ids.contains(s))
+            .map(|e| e.as_str())
             .collect::<Vec<_>>(),
-        None => shards.iter().map(|e| e).collect::<Vec<_>>(),
+        None => shards.iter().map(|e| e.as_str()).collect::<Vec<_>>(),
     };
 
     if filtered.is_empty() {
@@ -94,7 +95,7 @@ pub(crate) fn set_log_level() {
     );
 }
 
-pub(crate) fn print_runtime(opt: &Opt, selected_shards: &Vec<&String>) {
+pub(crate) fn print_runtime(opt: &Opt, selected_shards: &[&str]) {
     if opt.verbose {
         info!("Kinesis client version: {}", PKG_VERSION);
         info!(
