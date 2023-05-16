@@ -2,6 +2,7 @@ use aws_sdk_kinesis::meta::PKG_VERSION;
 use chrono::{DateTime, TimeZone, Utc};
 use clap::Parser;
 use log::info;
+use std::io;
 use std::io::Error;
 
 #[derive(Debug, Parser)]
@@ -68,20 +69,22 @@ pub(crate) fn selected_shards<'a>(
     shards: &'a [String],
     stream_name: &str,
     shard_ids: &Option<Vec<String>>,
-) -> Vec<&'a String> {
-    match shard_ids {
-        Some(shard_ids) => {
-            let filtered = shards
-                .iter()
-                .filter(|s| shard_ids.contains(s))
-                .collect::<Vec<_>>();
-
-            if filtered.is_empty() {
-                panic!("No shards found for stream {}", stream_name)
-            }
-            filtered
-        }
+) -> io::Result<Vec<&'a String>> {
+    let filtered = match shard_ids {
+        Some(shard_ids) => shards
+            .iter()
+            .filter(|s| shard_ids.contains(s))
+            .collect::<Vec<_>>(),
         None => shards.iter().filter(|_| true).collect::<Vec<_>>(),
+    };
+
+    if filtered.is_empty() {
+        Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("No shards found for stream {}", stream_name),
+        ))
+    } else {
+        Ok(filtered)
     }
 }
 
