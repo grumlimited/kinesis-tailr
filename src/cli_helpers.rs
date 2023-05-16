@@ -161,25 +161,25 @@ mod tests {
 
     #[test]
     fn selected_shards_ok() {
-        let mut shards = vec!["a".to_string(), "b".to_string(), "c".to_string()];
+        let shards = vec!["a".to_string(), "b".to_string(), "c".to_string()];
 
         assert_eq!(
-            selected_shards(&mut shards, "stream", &None),
+            selected_shards(shards.as_slice(), "stream", &None).unwrap(),
             vec!["a", "b", "c"]
         );
 
         assert_eq!(
-            selected_shards(&mut shards, "stream", &Some("a".to_string())),
+            selected_shards(shards.as_slice(), "stream", &Some(vec!["a".to_string()])).unwrap(),
             vec!["a"]
         );
 
         assert_eq!(
-            selected_shards(&mut shards, "stream", &Some("b".to_string())),
+            selected_shards(&shards.as_slice(), "stream", &Some(vec!["b".to_string()])).unwrap(),
             vec!["b"]
         );
 
         assert_eq!(
-            selected_shards(&mut shards, "stream", &Some("c".to_string())),
+            selected_shards(shards.as_slice(), "stream", &Some(vec!["c".to_string()])).unwrap(),
             vec!["c"]
         );
     }
@@ -187,10 +187,10 @@ mod tests {
     #[test]
     #[should_panic]
     fn selected_shards_panic() {
-        let mut shards = vec!["a".to_string(), "b".to_string(), "c".to_string()];
+        let shards = vec!["a".to_string(), "b".to_string(), "c".to_string()];
 
         assert_eq!(
-            selected_shards(&mut shards, "stream", &Some("d".to_string())),
+            selected_shards(shards.as_slice(), "stream", &Some(vec!["d".to_string()])).unwrap(),
             vec![] as Vec<&str>
         );
     }
