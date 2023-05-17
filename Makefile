@@ -10,6 +10,7 @@ INSTALL_PROGRAM=$(INSTALL)
 
 # Directories into which to install the various files
 localbindir=$(DESTDIR)$(PREFIX)/local/bin
+bindir=$(DESTDIR)$(PREFIX)/bin
 sharedir=$(DESTDIR)$(PREFIX)/share
 
 # These targets have no associated build files.
@@ -27,6 +28,11 @@ clippy :
 	cargo clippy
 
 install : release
+	mkdir -p $(bindir)
+
+	sudo $(INSTALL_PROGRAM) -m 0755 target/release/$(NAME) $(bindir)/$(NAME)
+
+install-local : release
 	mkdir -p $(localbindir)
 
 	sudo $(INSTALL_PROGRAM) -m 0755 target/release/$(NAME) $(localbindir)/$(NAME)
@@ -40,7 +46,7 @@ clean :
 	rm -rf target/*
 
 uninstall :
-	rm -f $(bindir)/$(NAME)
+	rm -f $(localbindir)/$(NAME)
 
 debian-pkg : install
 	mkdir -p $(DESTDIR)/DEBIAN
