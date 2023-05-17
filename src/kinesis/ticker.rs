@@ -45,7 +45,7 @@ impl Ticker {
     pub async fn print_timings(&mut self, counts: Arc<Mutex<HashMap<String, Option<i64>>>>) {
         tokio::spawn({
             async move {
-                let delay = Duration::from_secs(3);
+                let delay = Duration::from_secs(30);
                 let counts = counts.clone();
 
                 loop {
@@ -53,9 +53,10 @@ impl Ticker {
                         let counts = counts.lock().await;
                         let counts: &HashMap<String, Option<i64>> = counts.deref();
 
-                        let v = Self::sort_counts(counts);
+                        let sorted = Self::sort_counts(counts);
 
-                        for entry in counts.iter() {
+                        let mut behind_count = 0;
+                        for entry in sorted.iter() {
                             let shard_id = entry.0;
                             let millis_behind_latest = entry.1;
 
@@ -64,11 +65,15 @@ impl Ticker {
                                 None => "n/a".to_string(),
                             };
 
-                            info!("{}: {}", shard_id, behind);
+                            if behind != "00:00:00" {
+                                info!("{}: {}", shard_id, behind);
+                                behind_count += 1;
+                            }
                         }
 
                         if !counts.is_empty() {
-                            info!("---------------------------------------------------")
+                            info!("{} shards behind", behind_count);
+                            info!("------------------------------")
                         }
                     }
                     sleep(delay).await;
@@ -77,16 +82,32 @@ impl Ticker {
         });
     }
 
-    fn sort_counts(counts: &HashMap<String, Option<i64>>) -> Vec<(String, Option<i64>)> {
-        todo!()
+    fn sort_counts(counts: &HashMap<String, Option<i64>>) -> Vec<(&String, &Option<i64>)> {
+        let mut vec1 = Vec::from_iter(counts.iter());
+
+        vec1.sort_by_key(|pair| pair.1);
+        vec1
     }
 }
 
 #[cfg(test)]
 mod tests {
+    use crate::kinesis::ticker::Ticker;
+    use std::collections::HashMap;
 
     #[test]
     fn sort_counts_ok() {
-        todo!()
+        let mut counts = HashMap::new();
+
+        counts.insert("shard-2".to_string(), Some(100));
+        counts.insert("shard-1".to_string(), Some(200));
+
+        assert_eq!(
+            Ticker::sort_counts(&counts),
+            vec![
+                (&"shard-2".to_string(), &Some(100_i64)),
+                (&"shard-1".to_string(), &Some(200_i64)),
+            ]
+        );
     }
 }
