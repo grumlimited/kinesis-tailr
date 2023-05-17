@@ -32,9 +32,9 @@ Installs a single binary to `/usr/bin/kinesis-tailr`.
         --no-color                           Disable color output
         --print-delimiter                    Print a delimiter between each payload
         --print-key                          Print the partition key
-        --print-shardid                      Print the shard ID
+        --print-shard-id                     Print the shard ID
         --print-timestamp                    Print timestamps
-        --shard-id <SHARD_ID>                Shard ID to tail from
+        --shard-id <SHARD_ID>                Shard ID to tail from. Repeat option for each shard ID to filter on
         -o, --output-file <OUTPUT_FILE>      Output file to write to
         -c, --concurrent <CONCURRENT>        Concurrent number of shards to tail [default: 10]
         -v, --verbose                        Display additional information
@@ -65,15 +65,23 @@ General logging level for debugging can be turned on with:
 
 Specific logging for `kinesis-tailr` can be turned on with:
 
+    export RUST_LOG="WARN,kinesis_tailr=INFO"
+
+    kinesis-tailr --stream-name mystream --from-datetime '2023-05-17T19:00:00Z' -o output.json
+
+    [2023-05-17T20:37:35Z INFO  kinesis_tailr::kinesis::ticker] shardId-000000001119: 00:31:23
+    [2023-05-17T20:37:35Z INFO  kinesis_tailr::kinesis::ticker] shardId-000000001144: 00:31:27
+    [2023-05-17T20:37:35Z INFO  kinesis_tailr::kinesis::ticker] shardId-000000001085: 00:31:31
+    [2023-05-17T20:37:35Z INFO  kinesis_tailr::kinesis::ticker] shardId-000000001118: 00:32:33
+    [2023-05-17T20:37:35Z INFO  kinesis_tailr::kinesis::ticker] shardId-000000001156: 00:40:21
+    [2023-05-17T20:37:35Z INFO  kinesis_tailr::kinesis::ticker] shardId-000000001122: 00:41:46
+    [2023-05-17T20:37:35Z INFO  kinesis_tailr::kinesis::ticker] 10 shards behind
+    [...]
+
+It is recommended to use `-o output.json` to write the output to a file, as the output can be quite verbose. This can then be inspected with `jq` or similar.
+
+Moreover, it also frees the console output for informational messages. Use
+
     export RUST_LOG="WARN,kinesis_tailr=DEBUG"
 
-    kinesis-tailr --stream-name mystream
-
-    [2023-05-15T22:22:28Z DEBUG kinesis_tailr::kinesis] Received 191 records from shardId-000000000048 (02:16:04 behind)
-    [2023-05-15T22:22:29Z DEBUG kinesis_tailr::kinesis] Received 87 records from shardId-000000000041 (02:18:28 behind)
-    [2023-05-15T22:22:29Z DEBUG kinesis_tailr::kinesis] Received 222 records from shardId-000000000037 (02:16:48 behind)
-    [2023-05-15T22:22:29Z DEBUG kinesis_tailr::kinesis] Received 52 records from shardId-000000000040 (02:18:36 behind)
-    [2023-05-15T22:22:29Z DEBUG kinesis_tailr::kinesis] Received 82 records from shardId-000000000045 (02:20:30 behind)
-    [2023-05-15T22:22:29Z DEBUG kinesis_tailr::kinesis] Received 100 records from shardId-000000000042 (02:16:57 behind)
-    [2023-05-15T22:22:29Z DEBUG kinesis_tailr::kinesis] Received 144 records from shardId-000000000047 (02:18:54 behind)
-    [...]
+for more debugging information.

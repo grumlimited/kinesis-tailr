@@ -1,8 +1,8 @@
 #![allow(clippy::result_large_err)]
 
+use kinesis::ticker::{Ticker, TickerUpdate};
 use std::io;
 use std::sync::Arc;
-
 use tokio::sync::{mpsc, Semaphore};
 
 use crate::aws::client::*;
@@ -47,13 +47,11 @@ async fn main() -> Result<(), io::Error> {
         async move {
             match opt.output_file {
                 Some(file) => {
-                    // file::check_path(&file).await?;
-
                     FileSink::new(
                         opt.max_messages,
                         opt.no_color,
                         opt.print_key,
-                        opt.print_shardid,
+                        opt.print_shard_id,
                         opt.print_timestamp,
                         opt.print_delimiter,
                         file,
@@ -66,7 +64,7 @@ async fn main() -> Result<(), io::Error> {
                         opt.max_messages,
                         opt.no_color,
                         opt.print_key,
-                        opt.print_shardid,
+                        opt.print_shard_id,
                         opt.print_timestamp,
                         opt.print_delimiter,
                     )
@@ -85,9 +83,20 @@ async fn main() -> Result<(), io::Error> {
 
         let semaphore = Arc::new(Semaphore::new(opt.concurrent));
 
+        let (tx_ticker_updates, rx_ticker_updates) = mpsc::channel::<TickerUpdate>(1000);
+
+        tokio::spawn({
+            let mut ticker: Ticker = Ticker::new(rx_ticker_updates);
+
+            async move {
+                ticker.run().await;
+            }
+        });
+
         selected_shards
             .iter()
             .map(|shard_id| {
+                let tx_ticker_updates = tx_ticker_updates.clone();
                 let tx_records = tx_records.clone();
                 let client = client.clone();
                 let stream_name = opt.stream_name.clone();
@@ -102,6 +111,7 @@ async fn main() -> Result<(), io::Error> {
                         from_datetime,
                         semaphore,
                         tx_records.clone(),
+                        tx_ticker_updates.clone(),
                     );
 
                     shard_processor.run().await.unwrap();

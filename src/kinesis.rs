@@ -1,17 +1,17 @@
 use crate::aws::client::KinesisClient;
 use crate::kinesis::models::*;
+use crate::kinesis::ticker::TickerUpdate;
 use async_trait::async_trait;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::Error;
-use hhmmss::Hhmmss;
-use log::Level::Debug;
-use log::{debug, error, log_enabled};
+use log::{debug, error};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{sleep, Duration};
 
 pub mod helpers;
 pub mod models;
+pub mod ticker;
 
 #[async_trait]
 pub trait IteratorProvider<K: KinesisClient>: Send + Sync + Clone + 'static {
@@ -28,13 +28,14 @@ where
 {
     async fn run(&self) -> Result<(), Error> {
         let (tx_shard_iterator_progress, mut rx_shard_iterator_progress) =
-            mpsc::channel::<ShardIteratorProgress>(1);
+            mpsc::channel::<ShardIteratorProgress>(5);
 
         self.seed_shards(tx_shard_iterator_progress.clone()).await;
 
         tokio::spawn({
             let cloned_self = self.clone();
             let tx_shard_iterator_progress = tx_shard_iterator_progress.clone();
+            let tx_ticker_updates = self.get_config().tx_ticker_updates;
             let semaphore = self.get_config().semaphore;
             async move {
                 while let Some(res) = rx_shard_iterator_progress.recv().await {
@@ -48,6 +49,7 @@ where
                                 .publish_records_shard(
                                     &shard_iterator,
                                     res.shard_id.clone(),
+                                    tx_ticker_updates.clone(),
                                     tx_shard_iterator_progress.clone(),
                                 )
                                 .await;
@@ -157,6 +159,7 @@ where
         &self,
         shard_iterator: &str,
         shard_id: String,
+        tx_ticker_updates: Sender<TickerUpdate>,
         tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
     ) -> Result<(), Error> {
         let resp = self.get_config().client.get_records(shard_iterator).await?;
@@ -180,26 +183,20 @@ where
             })
             .collect::<Vec<_>>();
 
+        tx_ticker_updates
+            .send(TickerUpdate {
+                shard_id: shard_id.clone(),
+                millis_behind_latest: resp.millis_behind_latest(),
+            })
+            .await
+            .expect("Could not send TickerUpdate to tx_ticker_updates");
+
         if !record_results.is_empty() {
-            if log_enabled!(Debug) {
-                let behind = match resp.millis_behind_latest() {
-                    Some(behind) => std::time::Duration::from_millis(behind as u64).hhmmss(),
-                    None => "n/a".to_string(),
-                };
-
-                debug!(
-                    "Received {} records from {} ({} behind)",
-                    record_results.len(),
-                    shard_id.clone(),
-                    behind
-                );
-            }
-
             self.get_config()
                 .tx_records
                 .send(Ok(ShardProcessorADT::Progress(record_results)))
                 .await
-                .expect("Could not sent records to tx_records");
+                .expect("Could not send records to tx_records");
         }
 
         let last_sequence_id: Option<String> = resp
