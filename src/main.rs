@@ -51,7 +51,7 @@ async fn main() -> Result<(), io::Error> {
                         opt.max_messages,
                         opt.no_color,
                         opt.print_key,
-                        opt.print_shardid,
+                        opt.print_shard_id,
                         opt.print_timestamp,
                         opt.print_delimiter,
                         file,
@@ -64,7 +64,7 @@ async fn main() -> Result<(), io::Error> {
                         opt.max_messages,
                         opt.no_color,
                         opt.print_key,
-                        opt.print_shardid,
+                        opt.print_shard_id,
                         opt.print_timestamp,
                         opt.print_delimiter,
                     )

@@ -39,15 +39,15 @@ pub struct Opt {
     #[structopt(long)]
     pub print_key: bool,
 
-    /// Print the shard ID
+    /// Print the shard ID.
     #[structopt(long)]
-    pub print_shardid: bool,
+    pub print_shard_id: bool,
 
     /// Print timestamps
     #[structopt(long)]
     pub print_timestamp: bool,
 
-    /// Shard ID to tail from
+    /// Shard ID to tail from. Repeat option for each shard ID to filter on
     #[structopt(long)]
     pub shard_id: Option<Vec<String>>,
 
