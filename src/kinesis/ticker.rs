@@ -27,11 +27,25 @@ impl Ticker {
     }
 
     pub async fn run(&mut self) {
-        tokio::spawn({
+        let counts: Arc<Mutex<HashMap<String, Option<i64>>>> = self.counts.clone();
+        self.print_timings(counts).await;
+
+        {
             let counts = self.counts.clone();
 
+            while let Some(res) = self.rx_ticker_updates.recv().await {
+                let mut counts = counts.lock().await;
+                let counts = counts.deref_mut();
+
+                counts.insert(res.shard_id.clone(), res.millis_behind_latest);
+            }
+        }
+    }
+
+    pub async fn print_timings(&mut self, counts: Arc<Mutex<HashMap<String, Option<i64>>>>) {
+        tokio::spawn({
             async move {
-                let delay = Duration::from_secs(30);
+                let delay = Duration::from_secs(3);
                 let counts = counts.clone();
 
                 loop {
@@ -59,16 +73,5 @@ impl Ticker {
                 }
             }
         });
-
-        {
-            let counts = self.counts.clone();
-
-            while let Some(res) = self.rx_ticker_updates.recv().await {
-                let mut counts = counts.lock().await;
-                let counts = counts.deref_mut();
-
-                counts.insert(res.shard_id.clone(), res.millis_behind_latest);
-            }
-        }
     }
 }
