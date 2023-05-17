@@ -13,6 +13,7 @@ use crate::kinesis::models::{
     PanicError, ShardProcessor, ShardProcessorADT, ShardProcessorAtTimestamp, ShardProcessorConfig,
     ShardProcessorLatest,
 };
+use crate::kinesis::ticker::TickerUpdate;
 use crate::kinesis::{IteratorProvider, ShardIteratorProgress};
 
 pub fn new(
@@ -22,6 +23,7 @@ pub fn new(
     from_datetime: Option<chrono::DateTime<Utc>>,
     semaphore: Arc<Semaphore>,
     tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
+    tx_ticker_updates: Sender<TickerUpdate>,
 ) -> Box<dyn ShardProcessor<AwsKinesisClient> + Send + Sync> {
     debug!("Creating ShardProcessor with shard {}", shard_id);
 
@@ -33,6 +35,7 @@ pub fn new(
                 shard_id,
                 semaphore,
                 tx_records,
+                tx_ticker_updates,
             },
             from_datetime,
         }),
@@ -43,6 +46,7 @@ pub fn new(
                 shard_id,
                 semaphore,
                 tx_records,
+                tx_ticker_updates,
             },
         }),
     }

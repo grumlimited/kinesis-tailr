@@ -1,6 +1,7 @@
 use crate::aws::client::KinesisClient;
 use crate::iterator::at_timestamp;
 use crate::kinesis::helpers::get_latest_iterator;
+use crate::kinesis::ticker::TickerUpdate;
 use crate::kinesis::IteratorProvider;
 use async_trait::async_trait;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
@@ -44,6 +45,7 @@ pub struct ShardProcessorConfig<K: KinesisClient> {
     pub shard_id: String,
     pub semaphore: Arc<Semaphore>,
     pub tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
+    pub tx_ticker_updates: Sender<TickerUpdate>,
 }
 
 #[derive(Clone)]
@@ -91,6 +93,7 @@ pub trait ShardProcessor<K: KinesisClient>: Send + Sync {
         &self,
         shard_iterator: &str,
         shard_id: String,
+        tx_ticker: Sender<TickerUpdate>,
         tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
     ) -> Result<(), Error>;
 }
