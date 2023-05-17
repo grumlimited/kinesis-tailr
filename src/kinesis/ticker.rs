@@ -51,7 +51,9 @@ impl Ticker {
                 loop {
                     {
                         let counts = counts.lock().await;
-                        let counts = counts.deref();
+                        let counts: &HashMap<String, Option<i64>> = counts.deref();
+
+                        let v = Self::sort_counts(counts);
 
                         for entry in counts.iter() {
                             let shard_id = entry.0;
@@ -73,5 +75,18 @@ impl Ticker {
                 }
             }
         });
+    }
+
+    fn sort_counts(counts: &HashMap<String, Option<i64>>) -> Vec<(String, Option<i64>)> {
+        todo!()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+
+    #[test]
+    fn sort_counts_ok() {
+        todo!()
     }
 }

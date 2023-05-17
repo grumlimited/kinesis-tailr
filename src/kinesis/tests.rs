@@ -3,6 +3,7 @@ use crate::kinesis::models::{
     PanicError, ShardIteratorProgress, ShardProcessor, ShardProcessorADT,
     ShardProcessorAtTimestamp, ShardProcessorConfig, ShardProcessorLatest,
 };
+use crate::kinesis::ticker::TickerUpdate;
 use async_trait::async_trait;
 use aws_sdk_kinesis::config::Region;
 use aws_sdk_kinesis::operation::get_records::GetRecordsOutput;
@@ -22,6 +23,7 @@ use tokio::time::sleep;
 #[tokio::test]
 async fn seed_shards_test() {
     let (tx_records, _) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(10);
+    let (tx_ticker_updates, _) = mpsc::channel::<TickerUpdate>(10);
 
     let (tx_shard_iterator_progress, mut rx_shard_iterator_progress) =
         mpsc::channel::<ShardIteratorProgress>(1);
@@ -39,6 +41,7 @@ async fn seed_shards_test() {
             shard_id: "shardId-000000000000".to_string(),
             semaphore,
             tx_records,
+            tx_ticker_updates,
         },
     };
 
@@ -58,6 +61,7 @@ async fn seed_shards_test() {
 #[should_panic]
 async fn seed_shards_test_timestamp_in_future() {
     let (tx_records, _) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(10);
+    let (tx_ticker_updates, _) = mpsc::channel::<TickerUpdate>(10);
 
     let (tx_shard_iterator_progress, _) = mpsc::channel::<ShardIteratorProgress>(1);
 
@@ -72,6 +76,7 @@ async fn seed_shards_test_timestamp_in_future() {
             shard_id: "shardId-000000000000".to_string(),
             semaphore,
             tx_records,
+            tx_ticker_updates,
         },
         from_datetime: Utc::now().add(chrono::Duration::days(1)),
     };
@@ -82,6 +87,7 @@ async fn seed_shards_test_timestamp_in_future() {
 #[tokio::test]
 async fn produced_record_is_processed() {
     let (tx_records, mut rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(10);
+    let (tx_ticker_updates, _) = mpsc::channel::<TickerUpdate>(10);
 
     let client = TestKinesisClient {
         region: Some(Region::new("us-east-1")),
@@ -96,6 +102,7 @@ async fn produced_record_is_processed() {
             shard_id: "shardId-000000000000".to_string(),
             semaphore,
             tx_records,
+            tx_ticker_updates,
         },
     };
 
