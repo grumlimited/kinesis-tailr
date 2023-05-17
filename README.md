@@ -4,18 +4,22 @@ A simple tool to tail a Kinesis stream built with Rust.
 
 # Installation
 
-## Requirements
+### Requirements
 
 * `rustc`
 * `make`
 
-## From source
+### From source
 
 ```bash
 make install-local
 ```
 
 Installs a single binary to `/usr/local/bin/kinesis-tailr`.
+
+### Releases
+
+The [release page](https://github.com/grumlimited/kinesis-tailr/releases) provides packages for Debian and CentOS and Arch Linux.
 
 # Usage
 
