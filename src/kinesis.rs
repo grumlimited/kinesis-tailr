@@ -4,7 +4,6 @@ use crate::kinesis::ticker::TickerUpdate;
 use async_trait::async_trait;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::Error;
-use hhmmss::Hhmmss;
 use log::Level::Info;
 use log::{debug, error, log_enabled};
 use tokio::sync::mpsc;
@@ -185,17 +184,17 @@ where
             })
             .collect::<Vec<_>>();
 
-        if !record_results.is_empty() {
-            if log_enabled!(Info) {
-                tx_ticker_updates
-                    .send(TickerUpdate {
-                        shard_id: shard_id.clone(),
-                        millis_behind_latest: resp.millis_behind_latest(),
-                    })
-                    .await
-                    .expect("Could not send TickerUpdate to tx_ticker_updates");
-            }
+        if log_enabled!(Info) {
+            tx_ticker_updates
+                .send(TickerUpdate {
+                    shard_id: shard_id.clone(),
+                    millis_behind_latest: resp.millis_behind_latest(),
+                })
+                .await
+                .expect("Could not send TickerUpdate to tx_ticker_updates");
+        }
 
+        if !record_results.is_empty() {
             self.get_config()
                 .tx_records
                 .send(Ok(ShardProcessorADT::Progress(record_results)))

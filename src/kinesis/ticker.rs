@@ -1,11 +1,11 @@
-use log::{debug, info};
+use hhmmss::Hhmmss;
+use log::info;
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
 use std::sync::Arc;
-use std::thread;
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::Mutex;
-use tokio::time;
+use tokio::time::{sleep, Duration};
 
 #[derive(Debug, Clone)]
 pub struct TickerUpdate {
@@ -31,14 +31,31 @@ impl Ticker {
             let counts = self.counts.clone();
 
             async move {
-                let delay = time::Duration::from_secs(1);
+                let delay = Duration::from_secs(30);
                 let counts = counts.clone();
 
                 loop {
-                    let counts = counts.lock().await;
-                    let counts = counts.deref();
-                    info!("{:?}", counts);
-                    thread::sleep(delay);
+                    {
+                        let counts = counts.lock().await;
+                        let counts = counts.deref();
+
+                        for entry in counts.iter() {
+                            let shard_id = entry.0;
+                            let millis_behind_latest = entry.1;
+
+                            let behind = match millis_behind_latest {
+                                Some(behind) => Duration::from_millis(*behind as u64).hhmmss(),
+                                None => "n/a".to_string(),
+                            };
+
+                            info!("{}: {}", shard_id, behind);
+                        }
+
+                        if !counts.is_empty() {
+                            info!("---------------------------------------------------")
+                        }
+                    }
+                    sleep(delay).await;
                 }
             }
         });
