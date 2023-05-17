@@ -87,7 +87,7 @@ async fn seed_shards_test_timestamp_in_future() {
 #[tokio::test]
 async fn produced_record_is_processed() {
     let (tx_records, mut rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(10);
-    let (tx_ticker_updates, _) = mpsc::channel::<TickerUpdate>(10);
+    let (tx_ticker_updates, mut rx_ticker_updates) = mpsc::channel::<TickerUpdate>(10);
 
     let client = TestKinesisClient {
         region: Some(Region::new("us-east-1")),
@@ -113,6 +113,16 @@ async fn produced_record_is_processed() {
     let mut closed_resources = false;
     let mut count = 0;
 
+    let ticker_update = rx_ticker_updates.recv().await.unwrap();
+    println!("{:?}", ticker_update);
+    assert_eq!(
+        ticker_update,
+        TickerUpdate {
+            shard_id: "shardId-000000000000".to_string(),
+            millis_behind_latest: Some(1000)
+        }
+    );
+
     while let Some(res) = rx_records.recv().await {
         if !done_processing {
             match res {
@@ -135,7 +145,7 @@ async fn produced_record_is_processed() {
         }
     }
 
-    assert_eq!(count, 1)
+    assert_eq!(count, 1);
 }
 
 #[derive(Clone, Debug)]
@@ -162,6 +172,7 @@ impl KinesisClient for TestKinesisClient {
         Ok(GetRecordsOutput::builder()
             .records(record)
             .next_shard_iterator("shard_iterator2".to_string())
+            .millis_behind_latest(1000)
             .build())
     }
 

@@ -7,7 +7,7 @@ use tokio::sync::mpsc::Receiver;
 use tokio::sync::Mutex;
 use tokio::time::{sleep, Duration};
 
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct TickerUpdate {
     pub shard_id: String,
     pub millis_behind_latest: Option<i64>,
