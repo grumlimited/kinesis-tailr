@@ -80,7 +80,7 @@ Specific logging for `kinesis-tailr` can be turned on with:
 
 It is recommended to use `-o output.json` to write the output to a file, as the output can be quite verbose. This can then be inspected with `jq` or similar.
 
-Moreover, it also free the console output for informational messages. Use
+Moreover, it also frees the console output for informational messages. Use
 
     export RUST_LOG="WARN,kinesis_tailr=DEBUG"
 
