@@ -31,7 +31,7 @@ jobs:
         run: |
           sudo apt-get update
           sudo apt-get install -y sudo \
-            make
+            make alien
 
           mkdir -p ~/.cargo/release
 
@@ -62,6 +62,19 @@ jobs:
           files: |
             kinesis-tailr-${{ github.event.release.tag_name }}-x86_64.deb
             kinesis-tailr-${{ github.event.release.tag_name }}-x86_64.deb.md5sum
+
+      - name: Create CentOS 8 package
+        run: |
+          alien -r -k --scripts --target=x86_64 kinesis-tailr-${{ github.event.release.tag_name }}-x86_64.deb
+          md5sum kinesis-tailr-${{ github.event.release.tag_name }}-1.x86_64.rpm >> kinesis-tailr-${{ github.event.release.tag_name }}-1.x86_64.rpm.md5sum
+
+      - name: Upload CentOS 8 release
+        uses: softprops/action-gh-release@v1
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+          files: |
+            kinesis-tailr-${{ github.event.release.tag_name }}-1.x86_64.rpm
+            kinesis-tailr-${{ github.event.release.tag_name }}-1.x86_64.rpm.md5sum
 
   arch:
     runs-on: ubuntu-latest
