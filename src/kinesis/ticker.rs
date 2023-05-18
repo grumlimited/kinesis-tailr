@@ -1,4 +1,4 @@
-use hhmmss::Hhmmss;
+use humantime::format_duration;
 use log::info;
 use std::collections::HashMap;
 use std::ops::{Deref, DerefMut};
@@ -61,11 +61,14 @@ impl Ticker {
                             let millis_behind_latest = entry.1;
 
                             let behind = match millis_behind_latest {
-                                Some(behind) => Duration::from_millis(*behind as u64).hhmmss(),
+                                Some(behind) => {
+                                    let duration = Duration::from_millis(*behind as u64);
+                                    format_duration(duration).to_string()
+                                }
                                 None => "n/a".to_string(),
                             };
 
-                            if behind != "00:00:00" {
+                            if behind != "0s" {
                                 info!("{}: {}", shard_id, behind);
                                 behind_count += 1;
                             }
