@@ -148,7 +148,7 @@ mod tests {
     fn parse_date_test_ok() {
         let date = "2023-05-04T20:57:12Z";
         let result = parse_date(Some(date)).unwrap();
-        let result = result.to_rfc3339().to_string();
+        let result = result.to_rfc3339();
         assert_eq!(result, "2023-05-04T20:57:12+00:00");
     }
 
@@ -174,7 +174,7 @@ mod tests {
         );
 
         assert_eq!(
-            selected_shards(&shards.as_slice(), "stream", &Some(vec!["b".to_string()])).unwrap(),
+            selected_shards(shards.as_slice(), "stream", &Some(vec!["b".to_string()])).unwrap(),
             vec!["b"]
         );
 

@@ -120,6 +120,8 @@ async fn main() -> Result<(), io::Error> {
             .collect::<Vec<_>>()
     };
 
+    drop(tx_records);
+
     let mut shard_processors_handle = JoinSet::new();
 
     for shard_processor in shard_processors {
