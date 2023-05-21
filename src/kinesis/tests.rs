@@ -126,11 +126,8 @@ async fn produced_record_is_processed() {
     while let Some(res) = rx_records.recv().await {
         if !done_processing {
             if let Ok(adt) = res {
-                match adt {
-                    ShardProcessorADT::Progress(res) => {
-                        count += res.len();
-                    }
-                    _ => {}
+                if let ShardProcessorADT::Progress(res) = adt {
+                    count += res.len();
                 }
             }
 
