@@ -25,7 +25,7 @@ async fn file_sink_ok() {
             .send(Ok(Progress(vec![RecordResult {
                 shard_id: "".to_string(),
                 sequence_id: "".to_string(),
-                datetime: DateTime::from_secs(1_000_000 as i64),
+                datetime: DateTime::from_secs(1_000_000_i64),
                 data: "payload".as_bytes().to_vec(),
             }])))
             .await
