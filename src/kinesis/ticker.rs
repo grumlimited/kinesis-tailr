@@ -28,7 +28,7 @@ impl Ticker {
 
     pub async fn run(&mut self) {
         let counts: Arc<Mutex<HashMap<String, Option<i64>>>> = self.counts.clone();
-        self.print_timings(counts).await;
+        self.print_timings(counts);
 
         {
             let counts = self.counts.clone();
@@ -42,7 +42,7 @@ impl Ticker {
         }
     }
 
-    pub async fn print_timings(&mut self, counts: Arc<Mutex<HashMap<String, Option<i64>>>>) {
+    pub fn print_timings(&mut self, counts: Arc<Mutex<HashMap<String, Option<i64>>>>) {
         tokio::spawn({
             async move {
                 let delay = Duration::from_secs(30);

@@ -81,12 +81,6 @@ where
 
     fn format_record(&self, record_result: &RecordResult) -> String;
 
-    fn format_records(&self, record_results: &[RecordResult]) -> Vec<String> {
-        record_results
-            .iter()
-            .map(|record_result| self.format_record(record_result))
-            .collect()
-    }
     fn termination_message_and_exit(
         &self,
         handle: &mut BufWriter<W>,
@@ -122,32 +116,27 @@ where
                                 self.termination_message_and_exit(handle, count, &mut rx_records)?;
                             }
 
-                            let remaining = if count < max_messages {
-                                max_messages - count
-                            } else {
-                                0
-                            };
+                            let remaining_records_to_display =
+                                std::cmp::max(max_messages - count, 0);
 
-                            if remaining > 0 && !res.is_empty() {
-                                let split_at = std::cmp::min(remaining as usize, res.len());
+                            if remaining_records_to_display > 0 && !res.is_empty() {
+                                let split_at =
+                                    std::cmp::min(remaining_records_to_display as usize, res.len());
                                 count += split_at as u32;
 
-                                let split = res.split_at(split_at);
-                                let to_display = split.0;
+                                let (to_display, _) = res.split_at(split_at);
 
-                                let data = self.format_records(to_display);
-
-                                data.iter().for_each(|data| {
+                                to_display.iter().for_each(|record| {
+                                    let data = self.format_record(record);
                                     writeln!(handle, "{}", data).unwrap();
                                     self.delimiter(handle).unwrap();
                                 });
                             }
                         }
                         None => {
-                            let data = self.format_records(res.as_slice());
-
-                            count += data.len() as u32;
-                            data.iter().for_each(|data| {
+                            count += res.len() as u32;
+                            res.iter().for_each(|record| {
+                                let data = self.format_record(record);
                                 writeln!(handle, "{}", data).unwrap();
                                 self.delimiter(handle).unwrap()
                             });
