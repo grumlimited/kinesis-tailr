@@ -101,5 +101,5 @@ pub trait ShardProcessor<K: KinesisClient>: Send + Sync {
 
     fn has_records_beyond_end_ts(&self, records: &[RecordResult]) -> bool;
 
-    fn records_before_end_ts<'a>(&self, records: &'a [RecordResult]) -> Vec<&'a RecordResult>;
+    fn records_before_end_ts(&self, records: Vec<RecordResult>) -> Vec<RecordResult>;
 }

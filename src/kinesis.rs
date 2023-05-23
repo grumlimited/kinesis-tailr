@@ -185,6 +185,8 @@ where
             })
             .collect::<Vec<_>>();
 
+        let record_results = self.records_before_end_ts(record_results);
+
         tx_ticker_updates
             .send(TickerUpdate {
                 shard_id: shard_id.clone(),
@@ -239,16 +241,16 @@ where
         }
     }
 
-    fn records_before_end_ts<'a>(&self, records: &'a [RecordResult]) -> Vec<&'a RecordResult> {
+    fn records_before_end_ts(&self, records: Vec<RecordResult>) -> Vec<RecordResult> {
         match self.get_config().to_datetime {
             Some(end_ts) if !records.is_empty() => records
-                .iter()
+                .into_iter()
                 .filter(|record| {
                     let record_ts = Utc.timestamp_nanos(record.datetime.as_nanos() as i64);
                     record_ts < end_ts
                 })
                 .collect(),
-            _ => records.iter().collect(),
+            _ => records,
         }
     }
 }

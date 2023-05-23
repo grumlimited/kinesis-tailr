@@ -180,11 +180,11 @@ async fn has_records_beyond_end_ts_when_has_end_ts() {
     };
     let record1_clone = record1.clone();
 
-    let mut records = vec![record1];
+    let mut records = vec![record1_clone.clone()];
 
     assert_eq!(
-        processor.records_before_end_ts(&records),
-        vec![&record1_clone] as Vec<&RecordResult>
+        processor.records_before_end_ts(records),
+        vec![record1_clone.clone()] as Vec<RecordResult>
     );
 
     let future_ts = to_datetime.add(chrono::Duration::days(1));
@@ -196,11 +196,11 @@ async fn has_records_beyond_end_ts_when_has_end_ts() {
         data: vec![],
     };
 
-    records.append(&mut vec![record2]);
+    let mut records = vec![record1_clone.clone(), record2.clone()];
 
     assert_eq!(
-        processor.records_before_end_ts(&records),
-        vec![&record1_clone]
+        processor.records_before_end_ts(records),
+        vec![record1_clone]
     );
 }
 
@@ -230,8 +230,8 @@ async fn has_records_beyond_end_ts_when_no_end_ts() {
     let records: Vec<RecordResult> = vec![];
 
     assert_eq!(
-        processor.records_before_end_ts(records.as_slice()),
-        vec![] as Vec<&RecordResult>
+        processor.records_before_end_ts(records),
+        vec![] as Vec<RecordResult>
     );
 
     let record = RecordResult {
@@ -244,10 +244,7 @@ async fn has_records_beyond_end_ts_when_no_end_ts() {
 
     let records = vec![record];
 
-    assert_eq!(
-        processor.records_before_end_ts(records.as_slice()),
-        vec![&record_clone]
-    );
+    assert_eq!(processor.records_before_end_ts(records), vec![record_clone]);
 }
 
 #[derive(Clone, Debug)]
