@@ -185,7 +185,9 @@ where
             })
             .collect::<Vec<_>>();
 
+        let nb_records = record_results.len();
         let record_results = self.records_before_end_ts(record_results);
+        let nb_records_before_end_ts = record_results.len();
 
         tx_ticker_updates
             .send(TickerUpdate {
@@ -203,19 +205,46 @@ where
                 .expect("Could not send records to tx_records");
         }
 
-        let last_sequence_id: Option<String> = resp
-            .records()
-            .and_then(|r| r.last())
-            .and_then(|r| r.sequence_number())
-            .map(|s| s.into());
+        /*
+         * There are 2 reasons we should keep polling a shard:
+         * - nb_records == 0: we need to keep polling until we get records, ie we dont know whether we are past to_datetime
+         * - nb_records_before_end_ts > 0: we still have some (at least 1) records before to_datetime (or no to_datetime set)
+         */
+        let should_continue = nb_records == 0 || nb_records_before_end_ts > 0;
 
-        let results = ShardIteratorProgress {
-            shard_id: shard_id.clone(),
-            last_sequence_id,
-            next_shard_iterator: next_shard_iterator.map(|s| s.into()),
-        };
+        if should_continue {
+            let last_sequence_id: Option<String> = resp
+                .records()
+                .and_then(|r| r.last())
+                .and_then(|r| r.sequence_number())
+                .map(|s| s.into());
 
-        tx_shard_iterator_progress.send(results).await.unwrap();
+            let shard_iterator_progress = ShardIteratorProgress {
+                shard_id: shard_id.clone(),
+                last_sequence_id,
+                next_shard_iterator: next_shard_iterator.map(|s| s.into()),
+            };
+
+            tx_shard_iterator_progress
+                .send(shard_iterator_progress)
+                .await
+                .unwrap();
+        } else {
+            debug!(
+                "{} records in batch and {} records before {}",
+                nb_records,
+                nb_records_before_end_ts,
+                self.get_config()
+                    .to_datetime
+                    .map(|ts| ts.to_rfc3339())
+                    .unwrap_or("[No end timestamp]".to_string())
+            );
+            self.get_config()
+                .tx_records
+                .send(Ok(ShardProcessorADT::BeyondToTimestamp))
+                .await
+                .expect("Could not send BeyondToTimestamp to tx_records");
+        }
 
         Ok(())
     }
