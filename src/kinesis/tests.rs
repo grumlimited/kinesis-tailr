@@ -196,7 +196,7 @@ async fn has_records_beyond_end_ts_when_has_end_ts() {
         data: vec![],
     };
 
-    let mut records = vec![record1_clone.clone(), record2.clone()];
+    let records = vec![record1_clone.clone(), record2.clone()];
 
     assert_eq!(
         processor.records_before_end_ts(records),

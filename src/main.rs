@@ -39,7 +39,7 @@ async fn main() -> Result<(), io::Error> {
         .await
         .unwrap_or_else(|_| panic!("Could not describe shards for stream {}", opt.stream_name));
 
-    let selected_shards = selected_shards(&shards, &opt.stream_name, &opt.shard_id)?;
+    let selected_shards = selected_shards(shards, &opt.stream_name, &opt.shard_id)?;
 
     print_runtime(&opt, &selected_shards);
 
@@ -77,11 +77,6 @@ async fn main() -> Result<(), io::Error> {
     });
 
     let shard_processors = {
-        let selected_shards = selected_shards
-            .iter()
-            .map(|s| String::from(*s))
-            .collect::<Vec<_>>();
-
         let semaphore = Arc::new(Semaphore::new(opt.concurrent));
 
         let (tx_ticker_updates, rx_ticker_updates) = mpsc::channel::<TickerUpdate>(1000);
