@@ -1,6 +1,6 @@
 use crate::aws::client::KinesisClient;
 use crate::kinesis::models::{
-    PanicError, ShardIteratorProgress, ShardProcessor, ShardProcessorADT,
+    PanicError, RecordResult, ShardIteratorProgress, ShardProcessor, ShardProcessorADT,
     ShardProcessorAtTimestamp, ShardProcessorConfig, ShardProcessorLatest,
 };
 use crate::kinesis::ticker::TickerUpdate;
@@ -13,6 +13,7 @@ use aws_sdk_kinesis::primitives::{Blob, DateTime};
 use aws_sdk_kinesis::types::error::InvalidArgumentException;
 use aws_sdk_kinesis::types::{Record, Shard};
 use aws_sdk_kinesis::Error;
+use chrono::prelude::*;
 use chrono::Utc;
 use std::ops::Add;
 use std::sync::Arc;
@@ -117,7 +118,6 @@ async fn produced_record_is_processed() {
     let mut count = 0;
 
     let ticker_update = rx_ticker_updates.recv().await.unwrap();
-    println!("{:?}", ticker_update);
     assert_eq!(
         ticker_update,
         TickerUpdate {
@@ -143,6 +143,77 @@ async fn produced_record_is_processed() {
     }
 
     assert_eq!(count, 1);
+}
+
+#[tokio::test]
+async fn has_records_beyond_end_ts_when_has_end_ts() {
+    let (tx_records, _) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(10);
+    let (tx_ticker_updates, _) = mpsc::channel::<TickerUpdate>(10);
+
+    let client = TestKinesisClient {
+        region: Some(Region::new("us-east-1")),
+    };
+
+    let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
+
+    let to_datetime = Utc.with_ymd_and_hms(2020, 6, 1, 12, 0, 0).unwrap();
+    let processor = ShardProcessorLatest {
+        config: ShardProcessorConfig {
+            client,
+            stream: "test".to_string(),
+            shard_id: "shardId-000000000000".to_string(),
+            to_datetime: Some(to_datetime),
+            semaphore,
+            tx_records,
+            tx_ticker_updates,
+        },
+    };
+
+    // let records = vec![];
+    // assert_eq!(processor.has_records_beyond_end_ts(&records), true);
+
+    let records = vec![RecordResult {
+        shard_id: "shard_id".to_string(),
+        sequence_id: "sequence_id".to_string(),
+        datetime: DateTime::from_secs(1000),
+        data: vec![],
+    }];
+    assert_eq!(processor.has_records_beyond_end_ts(&records), true);
+}
+
+#[tokio::test]
+async fn has_records_beyond_end_ts_when_no_end_ts() {
+    let (tx_records, _) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(10);
+    let (tx_ticker_updates, _) = mpsc::channel::<TickerUpdate>(10);
+
+    let client = TestKinesisClient {
+        region: Some(Region::new("us-east-1")),
+    };
+
+    let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
+
+    let processor = ShardProcessorLatest {
+        config: ShardProcessorConfig {
+            client,
+            stream: "test".to_string(),
+            shard_id: "shardId-000000000000".to_string(),
+            to_datetime: None,
+            semaphore,
+            tx_records,
+            tx_ticker_updates,
+        },
+    };
+
+    let records = vec![];
+    assert_eq!(processor.has_records_beyond_end_ts(&records), true);
+
+    let records = vec![RecordResult {
+        shard_id: "shard_id".to_string(),
+        sequence_id: "sequence_id".to_string(),
+        datetime: DateTime::from_secs(1000),
+        data: vec![],
+    }];
+    assert_eq!(processor.has_records_beyond_end_ts(&records), true);
 }
 
 #[derive(Clone, Debug)]
