@@ -172,23 +172,36 @@ async fn has_records_beyond_end_ts_when_has_end_ts() {
     let records = vec![];
     assert_eq!(processor.has_records_beyond_end_ts(&records), true);
 
-    let mut records = vec![RecordResult {
+    let record1 = RecordResult {
         shard_id: "shard_id".to_string(),
         sequence_id: "sequence_id".to_string(),
         datetime: DateTime::from_secs(1000),
         data: vec![],
-    }];
-    assert_eq!(processor.has_records_beyond_end_ts(&records), false);
+    };
+    let record1_clone = record1.clone();
 
-    let r = to_datetime.add(chrono::Duration::days(1));
+    let mut records = vec![record1];
 
-    records.append(&mut vec![RecordResult {
+    assert_eq!(
+        processor.records_before_end_ts(&records),
+        vec![&record1_clone] as Vec<&RecordResult>
+    );
+
+    let future_ts = to_datetime.add(chrono::Duration::days(1));
+
+    let record2 = RecordResult {
         shard_id: "shard_id".to_string(),
         sequence_id: "sequence_id".to_string(),
-        datetime: DateTime::from_millis(r.timestamp_millis()),
+        datetime: DateTime::from_millis(future_ts.timestamp_millis()),
         data: vec![],
-    }]);
-    assert_eq!(processor.has_records_beyond_end_ts(&records), true);
+    };
+
+    records.append(&mut vec![record2]);
+
+    assert_eq!(
+        processor.records_before_end_ts(&records),
+        vec![&record1_clone]
+    );
 }
 
 #[tokio::test]
@@ -214,16 +227,27 @@ async fn has_records_beyond_end_ts_when_no_end_ts() {
         },
     };
 
-    let records = vec![];
-    assert_eq!(processor.has_records_beyond_end_ts(&records), true);
+    let records: Vec<RecordResult> = vec![];
 
-    let records = vec![RecordResult {
+    assert_eq!(
+        processor.records_before_end_ts(records.as_slice()),
+        vec![] as Vec<&RecordResult>
+    );
+
+    let record = RecordResult {
         shard_id: "shard_id".to_string(),
         sequence_id: "sequence_id".to_string(),
         datetime: DateTime::from_secs(1000),
         data: vec![],
-    }];
-    assert_eq!(processor.has_records_beyond_end_ts(&records), true);
+    };
+    let record_clone = record.clone();
+
+    let records = vec![record];
+
+    assert_eq!(
+        processor.records_before_end_ts(records.as_slice()),
+        vec![&record_clone]
+    );
 }
 
 #[derive(Clone, Debug)]

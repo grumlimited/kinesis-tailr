@@ -238,6 +238,19 @@ where
             _ => true,
         }
     }
+
+    fn records_before_end_ts<'a>(&self, records: &'a [RecordResult]) -> Vec<&'a RecordResult> {
+        match self.get_config().to_datetime {
+            Some(end_ts) if !records.is_empty() => records
+                .iter()
+                .filter(|record| {
+                    let record_ts = Utc.timestamp_nanos(record.datetime.as_nanos() as i64);
+                    record_ts < end_ts
+                })
+                .collect(),
+            _ => records.iter().collect(),
+        }
+    }
 }
 
 #[cfg(test)]

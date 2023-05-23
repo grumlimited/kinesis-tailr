@@ -31,7 +31,7 @@ pub enum ShardProcessorADT {
 pub struct PanicError {
     pub message: String,
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RecordResult {
     pub shard_id: String,
     pub sequence_id: String,
@@ -100,4 +100,6 @@ pub trait ShardProcessor<K: KinesisClient>: Send + Sync {
     ) -> Result<(), Error>;
 
     fn has_records_beyond_end_ts(&self, records: &[RecordResult]) -> bool;
+
+    fn records_before_end_ts<'a>(&self, records: &'a [RecordResult]) -> Vec<&'a RecordResult>;
 }
