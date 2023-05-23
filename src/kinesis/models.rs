@@ -20,7 +20,7 @@ pub struct ShardIteratorProgress {
     pub(crate) next_shard_iterator: Option<String>,
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq)]
 pub enum ShardProcessorADT {
     Termination,
     BeyondToTimestamp,

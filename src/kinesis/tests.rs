@@ -146,6 +146,46 @@ async fn produced_record_is_processed() {
 }
 
 #[tokio::test]
+async fn beyond_to_timestamp_is_received() {
+    let (tx_records, mut rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(10);
+    let (tx_ticker_updates, mut rx_ticker_updates) = mpsc::channel::<TickerUpdate>(10);
+
+    let client = TestKinesisClient {
+        region: Some(Region::new("us-east-1")),
+    };
+
+    let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
+
+    let to_datetime = Utc.with_ymd_and_hms(2020, 6, 1, 12, 0, 0).unwrap();
+    let processor = ShardProcessorLatest {
+        config: ShardProcessorConfig {
+            client,
+            stream: "test".to_string(),
+            shard_id: "shardId-000000000000".to_string(),
+            to_datetime: Some(to_datetime),
+            semaphore,
+            tx_records,
+            tx_ticker_updates,
+        },
+    };
+
+    // start producer
+    tokio::spawn(async move { processor.run().await });
+
+    let ticker_update = rx_ticker_updates.recv().await.unwrap();
+    assert_eq!(
+        ticker_update,
+        TickerUpdate {
+            shard_id: "shardId-000000000000".to_string(),
+            millis_behind_latest: Some(1000)
+        }
+    );
+
+    let result = rx_records.recv().await.unwrap().unwrap();
+    assert_eq!(result, ShardProcessorADT::BeyondToTimestamp);
+}
+
+#[tokio::test]
 async fn has_records_beyond_end_ts_when_has_end_ts() {
     let (tx_records, _) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(10);
     let (tx_ticker_updates, _) = mpsc::channel::<TickerUpdate>(10);
@@ -261,7 +301,8 @@ impl KinesisClient for TestKinesisClient {
     }
 
     async fn get_records(&self, _shard_iterator: &str) -> Result<GetRecordsOutput, Error> {
-        let dt = DateTime::from_secs(5000);
+        let to_datetime = Utc.with_ymd_and_hms(2021, 6, 1, 12, 0, 0).unwrap();
+        let dt = DateTime::from_secs(to_datetime.timestamp());
         let record = Record::builder()
             .approximate_arrival_timestamp(dt)
             .sequence_number("1")
