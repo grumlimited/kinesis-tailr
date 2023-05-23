@@ -220,11 +220,12 @@ where
 
     fn has_records_beyond_end_ts(&self, records: &[RecordResult]) -> bool {
         match self.get_config().to_datetime {
-            Some(end_ts) => {
+            Some(end_ts) if !records.is_empty() => {
+                let epoch = Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap();
+
                 let find_most_recent_ts = |records: &[RecordResult]| -> DateTime<Utc> {
-                    records.iter().fold(end_ts, |current_ts, r| {
-                        let ts = r.datetime;
-                        let record_ts = Utc.timestamp_nanos(ts.as_nanos() as i64);
+                    records.iter().fold(epoch, |current_ts, record| {
+                        let record_ts = Utc.timestamp_nanos(record.datetime.as_nanos() as i64);
 
                         std::cmp::max(current_ts, record_ts)
                     })
@@ -234,7 +235,7 @@ where
 
                 most_recent_ts >= end_ts
             }
-            None => true,
+            _ => true,
         }
     }
 }

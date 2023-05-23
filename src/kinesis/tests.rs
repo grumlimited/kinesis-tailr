@@ -169,15 +169,25 @@ async fn has_records_beyond_end_ts_when_has_end_ts() {
         },
     };
 
-    // let records = vec![];
-    // assert_eq!(processor.has_records_beyond_end_ts(&records), true);
+    let records = vec![];
+    assert_eq!(processor.has_records_beyond_end_ts(&records), true);
 
-    let records = vec![RecordResult {
+    let mut records = vec![RecordResult {
         shard_id: "shard_id".to_string(),
         sequence_id: "sequence_id".to_string(),
         datetime: DateTime::from_secs(1000),
         data: vec![],
     }];
+    assert_eq!(processor.has_records_beyond_end_ts(&records), false);
+
+    let r = to_datetime.add(chrono::Duration::days(1));
+
+    records.append(&mut vec![RecordResult {
+        shard_id: "shard_id".to_string(),
+        sequence_id: "sequence_id".to_string(),
+        datetime: DateTime::from_millis(r.timestamp_millis()),
+        data: vec![],
+    }]);
     assert_eq!(processor.has_records_beyond_end_ts(&records), true);
 }
 
