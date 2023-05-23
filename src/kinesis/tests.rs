@@ -180,7 +180,7 @@ async fn has_records_beyond_end_ts_when_has_end_ts() {
     };
     let record1_clone = record1.clone();
 
-    let mut records = vec![record1_clone.clone()];
+    let records = vec![record1_clone.clone()];
 
     assert_eq!(
         processor.records_before_end_ts(records),

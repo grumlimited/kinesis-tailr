@@ -231,8 +231,9 @@ where
                 .unwrap();
         } else {
             debug!(
-                "{} records in batch and {} records before {}",
+                "{} records in batch for shard-id {} and {} records before {}",
                 nb_records,
+                shard_id,
                 nb_records_before_end_ts,
                 self.get_config()
                     .to_datetime
