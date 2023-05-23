@@ -16,11 +16,13 @@ use crate::kinesis::models::{
 use crate::kinesis::ticker::TickerUpdate;
 use crate::kinesis::{IteratorProvider, ShardIteratorProgress};
 
+#[allow(clippy::too_many_arguments)]
 pub fn new(
     client: AwsKinesisClient,
     stream: String,
     shard_id: String,
     from_datetime: Option<chrono::DateTime<Utc>>,
+    to_datetime: Option<chrono::DateTime<Utc>>,
     semaphore: Arc<Semaphore>,
     tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
     tx_ticker_updates: Sender<TickerUpdate>,
@@ -33,6 +35,7 @@ pub fn new(
                 client,
                 stream,
                 shard_id,
+                to_datetime,
                 semaphore,
                 tx_records,
                 tx_ticker_updates,
@@ -44,6 +47,7 @@ pub fn new(
                 client,
                 stream,
                 shard_id,
+                to_datetime,
                 semaphore,
                 tx_records,
                 tx_ticker_updates,

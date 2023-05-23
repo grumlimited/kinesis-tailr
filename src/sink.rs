@@ -110,6 +110,9 @@ where
         while let Some(res) = rx_records.recv().await {
             match res {
                 Ok(adt) => match adt {
+                    ShardProcessorADT::BeyondToTimestamp => {
+                        panic!("Error: beyond timestamp");
+                    }
                     ShardProcessorADT::Progress(res) => match self.get_config().max_messages {
                         Some(max_messages) => {
                             if count >= max_messages {

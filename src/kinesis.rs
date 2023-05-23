@@ -4,6 +4,8 @@ use crate::kinesis::ticker::TickerUpdate;
 use async_trait::async_trait;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::Error;
+use chrono::prelude::*;
+use chrono::{DateTime, Utc};
 use log::{debug, error};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
@@ -154,7 +156,7 @@ where
 
     * Because shards are multiplexed per ShardProcessor, we need to keep
     * track of the shard_id for each shard_iterator.
-    */
+     */
     async fn publish_records_shard(
         &self,
         shard_iterator: &str,
@@ -214,6 +216,29 @@ where
         tx_shard_iterator_progress.send(results).await.unwrap();
 
         Ok(())
+    }
+
+    fn has_records_beyond_end_ts(&self, records: &[RecordResult]) -> bool {
+        let find_most_recent_ts: fn(&[RecordResult]) -> DateTime<Utc> =
+            |records: &[RecordResult]| -> DateTime<Utc> {
+                let epoch = Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap();
+
+                let max: DateTime<Utc> = records.iter().fold(epoch, |current_ts, r| {
+                    let ts = r.datetime;
+                    let record_ts = Utc.timestamp_nanos(ts.as_nanos() as i64);
+
+                    std::cmp::max(current_ts, record_ts)
+                });
+
+                max
+            };
+
+        let most_recent_ts = find_most_recent_ts(records);
+
+        self.get_config()
+            .to_datetime
+            .map(|end_ts| most_recent_ts > end_ts)
+            .unwrap_or(true)
     }
 }
 

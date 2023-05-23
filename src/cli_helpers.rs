@@ -23,6 +23,10 @@ pub struct Opt {
     #[structopt(long)]
     pub from_datetime: Option<String>,
 
+    /// End datetime position to tail up to. ISO 8601 format.
+    #[structopt(long)]
+    pub to_datetime: Option<String>,
+
     /// Maximum number of messages to retrieve
     #[structopt(long)]
     pub max_messages: Option<u32>,

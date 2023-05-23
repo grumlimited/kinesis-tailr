@@ -30,6 +30,7 @@ async fn main() -> Result<(), io::Error> {
     let opt = Opt::parse();
 
     let from_datetime = parse_date(opt.from_datetime.as_deref());
+    let to_datetime = parse_date(opt.to_datetime.as_deref());
     let client = create_client(opt.region.clone(), opt.endpoint_url.clone()).await;
 
     let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(1000);
@@ -109,6 +110,7 @@ async fn main() -> Result<(), io::Error> {
                         stream_name,
                         shard_id,
                         from_datetime,
+                        to_datetime,
                         semaphore,
                         tx_records.clone(),
                         tx_ticker_updates.clone(),
