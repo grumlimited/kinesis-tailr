@@ -126,5 +126,5 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           files: |
-            ${{ env.ARCH_PKG_NAME }}
-            ${{ env.ARCH_PKG_NAME }}.md5sum
+            build-aux/arch/${{ env.ARCH_PKG_NAME }}
+            build-aux/arch/${{ env.ARCH_PKG_NAME }}.md5sum
