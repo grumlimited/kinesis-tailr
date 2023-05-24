@@ -32,10 +32,17 @@ dependencies = [
     "clippy",
     "test",
 ]
+[tasks.install]
+script_runner = "bash"
+dependencies = ["release"]
+script = '''
+    mkdir -p ${DESTDIR}/usr/bin
+    cp target/release/kinesis-tailr ${DESTDIR}/usr/bin/
+'''
 
 [tasks.debian-pkg]
 script_runner = "bash"
-dependencies = ["release"]
+dependencies = ["install"]
 script = '''
     mkdir -p ${DESTDIR}/DEBIAN
     cp build-aux/debian/control ${DESTDIR}/DEBIAN/
