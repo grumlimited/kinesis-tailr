@@ -43,20 +43,12 @@ jobs:
         run: cargo make build
 
       - name: Tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
+        run: cargo make test
         env:
           RUST_BACKTRACE: 1
 
       - name: Formatting
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+        run: cargo make fmt
 
       - name: Clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
+        run: cargo make clippy

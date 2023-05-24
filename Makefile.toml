@@ -1,7 +1,7 @@
-[tasks.format]
+[tasks.fmt]
 install_crate = "rustfmt"
 command = "cargo"
-args = ["fmt", "--", "--emit=files"]
+args = ["fmt", "--", "--check"]
 
 [tasks.clean]
 command = "cargo"
@@ -19,11 +19,11 @@ dependencies = ["build"]
 
 [tasks.clippy]
 command = "cargo"
-args = ["clippy", "--fix", "--allow-dirty"]
+args = ["clippy"]
 
 [tasks.all]
 dependencies = [
-    "format",
+    "fmt",
     "build",
     "clippy",
     "test",
