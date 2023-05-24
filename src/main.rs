@@ -41,7 +41,7 @@ async fn main() -> Result<(), io::Error> {
 
     let client = create_client(opt.region.clone(), opt.endpoint_url.clone()).await;
 
-    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(10000);
+    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(1000);
 
     let shards = get_shards(&client, &opt.stream_name)
         .await
