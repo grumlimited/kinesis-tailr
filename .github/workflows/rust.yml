@@ -29,10 +29,6 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: System dependencies
-        run: |
-          sudo apt-get update
-
       - name: Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -41,26 +37,18 @@ jobs:
           override: true
           components: rustfmt, clippy
 
-      - name: Build
-        uses: actions-rs/cargo@v1
-        with:
-          command: build
-
-      - name: Tests
-        uses: actions-rs/cargo@v1
-        with:
-          command: test
-        env:
-          RUST_BACKTRACE: 1
+      - uses: davidB/rust-cargo-make@v1
 
       - name: Formatting
-        uses: actions-rs/cargo@v1
-        with:
-          command: fmt
-          args: --all -- --check
+        run: cargo make fmt
 
       - name: Clippy
-        uses: actions-rs/cargo@v1
-        with:
-          command: clippy
-          args: -- -D warnings
+        run: cargo make clippy
+
+      - name: Build
+        run: cargo make build
+
+      - name: Tests
+        run: cargo make test
+        env:
+          RUST_BACKTRACE: 1
