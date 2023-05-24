@@ -2,7 +2,7 @@
 
 A simple tool to tail a Kinesis stream built with Rust.
 
-# Installation
+## Installation
 
 ### Requirements
 
@@ -25,7 +25,7 @@ cargo install --git https://github.com/grumlimited/kinesis-tailr
 
 The [release page](https://github.com/grumlimited/kinesis-tailr/releases) provides packages for Debian and CentOS and Arch Linux.
 
-# Usage
+## Usage
 
     ❯ kinesis-tailr -help
 
@@ -64,9 +64,11 @@ kinesis-tailr \
 
 General logging level for debugging can be turned on with:
 
-    export RUST_LOG="INFO"
+```bash
+export RUST_LOG="INFO"
 
-    kinesis-tailr --stream-name mystream
+kinesis-tailr --stream-name mystream
+```
 
     [2023-05-10T21:45:14Z INFO  aws_config::meta::region] load_region; provider=None
     [2023-05-10T21:45:14Z INFO  aws_config::meta::region] load_region; provider=EnvironmentVariableRegionProvider { env: Env(Real) }
@@ -76,10 +78,11 @@ General logging level for debugging can be turned on with:
 
 Specific logging for `kinesis-tailr` can be turned on with:
 
-    export RUST_LOG="WARN,kinesis_tailr=INFO"
+```bash
+export RUST_LOG="WARN,kinesis_tailr=INFO"
 
-    kinesis-tailr --stream-name mystream --from-datetime '2023-05-17T19:00:00Z' -o output.json
-
+kinesis-tailr --stream-name mystream --from-datetime '2023-05-17T19:00:00Z' -o output.json
+```
     [2023-05-17T20:37:35Z INFO  kinesis_tailr::kinesis::ticker] shardId-000000001119: 00:31:23
     [2023-05-17T20:37:35Z INFO  kinesis_tailr::kinesis::ticker] shardId-000000001144: 00:31:27
     [2023-05-17T20:37:35Z INFO  kinesis_tailr::kinesis::ticker] shardId-000000001085: 00:31:31
