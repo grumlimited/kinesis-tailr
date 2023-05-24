@@ -6,9 +6,9 @@ on:
 name: Continuous integration
 
 env:
-  DEB_PKG_NAME=kinesis-tailr-${{ github.event.release.tag_name }}-x86_64.deb
-  RPM_PKG_NAME=kinesis-tailr-${{ github.event.release.tag_name }}-1.x86_64.rpm
-  ARCH_PKG_NAME=kinesis-tailr-bin-${{ github.event.release.tag_name }}-1-x86_64.pkg.tar.zst
+  DEB_PKG_NAME: kinesis-tailr-${{ github.event.release.tag_name }}-x86_64.deb
+  RPM_PKG_NAME: kinesis-tailr-${{ github.event.release.tag_name }}-1.x86_64.rpm
+  ARCH_PKG_NAME: kinesis-tailr-bin-${{ github.event.release.tag_name }}-1-x86_64.pkg.tar.zst
 
 jobs:
   ci:
