@@ -36,8 +36,8 @@ impl ConsoleSink {
 }
 
 impl Configurable for ConsoleSink {
-    fn get_config(&self) -> SinkConfig {
-        self.config.clone()
+    fn get_config(&self) -> &SinkConfig {
+        &self.config
     }
     fn shard_count(&self) -> usize {
         self.shard_count

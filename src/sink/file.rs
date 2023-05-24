@@ -40,8 +40,8 @@ impl FileSink {
 }
 
 impl Configurable for FileSink {
-    fn get_config(&self) -> SinkConfig {
-        self.config.clone()
+    fn get_config(&self) -> &SinkConfig {
+        &self.config
     }
 
     fn shard_count(&self) -> usize {

@@ -22,7 +22,7 @@ pub struct SinkConfig {
 }
 
 pub trait Configurable {
-    fn get_config(&self) -> SinkConfig;
+    fn get_config(&self) -> &SinkConfig;
     fn shard_count(&self) -> usize;
 }
 
@@ -115,7 +115,7 @@ where
                 Ok(adt) => match adt {
                     ShardProcessorADT::BeyondToTimestamp => {
                         if sc > 0 {
-                            sc -= 1;
+                            sc = sc.saturating_sub(1);
                         }
 
                         if sc == 0 {

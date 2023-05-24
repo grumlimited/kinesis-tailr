@@ -26,6 +26,7 @@ fn format_nb_messages_ok() {
 fn format_outputs() {
     let _console = ConsoleSink {
         config: Default::default(),
+        shard_count: 1,
     };
 
     let bw_console = ConsoleSink {
@@ -33,6 +34,7 @@ fn format_outputs() {
             no_color: true,
             ..Default::default()
         },
+        shard_count: 1,
     };
 
     // These dont pass on CI :-(
@@ -136,7 +138,11 @@ impl SinkOutput<Vec<u8>> for StringSink {
 }
 
 impl Configurable for StringSink {
-    fn get_config(&self) -> SinkConfig {
-        self.config.clone()
+    fn get_config(&self) -> &SinkConfig {
+        &self.config
+    }
+
+    fn shard_count(&self) -> usize {
+        1
     }
 }
