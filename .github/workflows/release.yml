@@ -64,8 +64,8 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           files: |
-            ${DEB_PKG_NAME}
-            ${DEB_PKG_NAME}.md5sum
+            ${{ env.DEB_PKG_NAME }}
+            ${{ env.DEB_PKG_NAME }}.md5sum
 
   centos:
     runs-on: ubuntu-latest
@@ -89,8 +89,8 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           files: |
-            ${RPM_PKG_NAME}
-            ${RPM_PKG_NAME}.md5sum
+            ${{ env.RPM_PKG_NAME }}
+            ${{ env.RPM_PKG_NAME }}.md5sum
 
   arch:
     runs-on: ubuntu-latest
@@ -126,5 +126,5 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           files: |
-            ${ARCH_PKG_NAME}
-            ${ARCH_PKG_NAME}.md5sum
+            ${{ env.ARCH_PKG_NAME }}
+            ${{ env.ARCH_PKG_NAME }}.md5sum
