@@ -182,7 +182,7 @@ mod tests {
         );
 
         assert_eq!(
-            selected_shards(shards.clone(), "stream", &Some(vec!["c".to_string()])).unwrap(),
+            selected_shards(shards, "stream", &Some(vec!["c".to_string()])).unwrap(),
             vec!["c"]
         );
     }

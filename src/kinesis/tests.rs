@@ -210,7 +210,7 @@ async fn has_records_beyond_end_ts_when_has_end_ts() {
     };
 
     let records = vec![];
-    assert_eq!(processor.has_records_beyond_end_ts(&records), true);
+    assert!(processor.has_records_beyond_end_ts(&records));
 
     let record1 = RecordResult {
         shard_id: "shard_id".to_string(),
@@ -218,7 +218,7 @@ async fn has_records_beyond_end_ts_when_has_end_ts() {
         datetime: DateTime::from_secs(1000),
         data: vec![],
     };
-    let record1_clone = record1.clone();
+    let record1_clone = record1;
 
     let records = vec![record1_clone.clone()];
 
@@ -236,7 +236,7 @@ async fn has_records_beyond_end_ts_when_has_end_ts() {
         data: vec![],
     };
 
-    let records = vec![record1_clone.clone(), record2.clone()];
+    let records = vec![record1_clone.clone(), record2];
 
     assert_eq!(
         processor.records_before_end_ts(records),
