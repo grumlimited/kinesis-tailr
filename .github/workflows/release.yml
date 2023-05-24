@@ -52,7 +52,7 @@ jobs:
           DESTDIR: '~/kinesis-tailr-deb'
         run: |
           mkdir -p $DESTDIR
-          RELEASE_VERSION=${{ github.event.release.tag_name }} DESTDIR=$DESTDIR make debian-pkg
+          RELEASE_VERSION=${{ github.event.release.tag_name }} DESTDIR=$DESTDIR cargo make debian-pkg
 
       - name: Upload Debian release
         uses: softprops/action-gh-release@v1
