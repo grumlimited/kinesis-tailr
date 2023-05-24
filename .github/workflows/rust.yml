@@ -39,12 +39,12 @@ jobs:
           profile: minimal
           toolchain: stable
           override: true
-          components: rustfmt, clippy
+          components: rustfmt, clippy, make
 
       - name: Build
         uses: actions-rs/cargo@v1
         with:
-          command: build
+          command: make all
 
       - name: Tests
         uses: actions-rs/cargo@v1
