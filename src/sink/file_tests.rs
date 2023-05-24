@@ -18,6 +18,7 @@ async fn file_sink_ok() {
     let mut sink = FileSink {
         config: Default::default(),
         file: file.clone(),
+        shard_count: 1,
     };
 
     tokio::spawn(async move {

@@ -20,9 +20,10 @@ pub struct ShardIteratorProgress {
     pub(crate) next_shard_iterator: Option<String>,
 }
 
-#[derive(Debug, Clone)]
+#[derive(Debug, PartialEq)]
 pub enum ShardProcessorADT {
     Termination,
+    BeyondToTimestamp,
     Progress(Vec<RecordResult>),
 }
 
@@ -30,7 +31,7 @@ pub enum ShardProcessorADT {
 pub struct PanicError {
     pub message: String,
 }
-#[derive(Debug, Clone)]
+#[derive(Debug, Clone, PartialEq)]
 pub struct RecordResult {
     pub shard_id: String,
     pub sequence_id: String,
@@ -43,6 +44,7 @@ pub struct ShardProcessorConfig<K: KinesisClient> {
     pub client: K,
     pub stream: String,
     pub shard_id: String,
+    pub to_datetime: Option<chrono::DateTime<Utc>>,
     pub semaphore: Arc<Semaphore>,
     pub tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
     pub tx_ticker_updates: Sender<TickerUpdate>,
@@ -96,4 +98,8 @@ pub trait ShardProcessor<K: KinesisClient>: Send + Sync {
         tx_ticker: Sender<TickerUpdate>,
         tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
     ) -> Result<(), Error>;
+
+    fn has_records_beyond_end_ts(&self, records: &[RecordResult]) -> bool;
+
+    fn records_before_end_ts(&self, records: Vec<RecordResult>) -> Vec<RecordResult>;
 }

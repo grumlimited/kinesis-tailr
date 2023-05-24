@@ -8,9 +8,11 @@ use crate::sink::{Configurable, SinkConfig, SinkOutput};
 pub struct FileSink {
     pub(crate) config: SinkConfig,
     pub(crate) file: PathBuf,
+    pub(crate) shard_count: usize,
 }
 
 impl FileSink {
+    #[allow(clippy::too_many_arguments)]
     pub fn new<P: Into<PathBuf>>(
         max_messages: Option<u32>,
         no_color: bool,
@@ -18,6 +20,7 @@ impl FileSink {
         print_shardid: bool,
         print_timestamp: bool,
         print_delimiter: bool,
+        shard_count: usize,
         file: P,
     ) -> Self {
         FileSink {
@@ -31,13 +34,18 @@ impl FileSink {
                 exit_after_termination: true,
             },
             file: file.into(),
+            shard_count,
         }
     }
 }
 
 impl Configurable for FileSink {
-    fn get_config(&self) -> SinkConfig {
-        self.config.clone()
+    fn get_config(&self) -> &SinkConfig {
+        &self.config
+    }
+
+    fn shard_count(&self) -> usize {
+        self.shard_count
     }
 }
 

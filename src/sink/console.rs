@@ -7,6 +7,7 @@ pub const CONSOLE_BUF_SIZE: usize = 8 * 1024;
 
 pub struct ConsoleSink {
     pub(crate) config: SinkConfig,
+    pub(crate) shard_count: usize,
 }
 
 impl ConsoleSink {
@@ -17,6 +18,7 @@ impl ConsoleSink {
         print_shardid: bool,
         print_timestamp: bool,
         print_delimiter: bool,
+        shard_count: usize,
     ) -> Self {
         ConsoleSink {
             config: SinkConfig {
@@ -28,13 +30,17 @@ impl ConsoleSink {
                 print_delimiter,
                 exit_after_termination: true,
             },
+            shard_count,
         }
     }
 }
 
 impl Configurable for ConsoleSink {
-    fn get_config(&self) -> SinkConfig {
-        self.config.clone()
+    fn get_config(&self) -> &SinkConfig {
+        &self.config
+    }
+    fn shard_count(&self) -> usize {
+        self.shard_count
     }
 }
 

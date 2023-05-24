@@ -4,7 +4,9 @@ use crate::kinesis::ticker::TickerUpdate;
 use async_trait::async_trait;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::Error;
-use log::{debug, error};
+use chrono::prelude::*;
+use chrono::{DateTime, Utc};
+use log::{debug, error, info};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{sleep, Duration};
@@ -154,7 +156,7 @@ where
 
     * Because shards are multiplexed per ShardProcessor, we need to keep
     * track of the shard_id for each shard_iterator.
-    */
+     */
     async fn publish_records_shard(
         &self,
         shard_iterator: &str,
@@ -183,6 +185,10 @@ where
             })
             .collect::<Vec<_>>();
 
+        let nb_records = record_results.len();
+        let record_results = self.records_before_end_ts(record_results);
+        let nb_records_before_end_ts = record_results.len();
+
         tx_ticker_updates
             .send(TickerUpdate {
                 shard_id: shard_id.clone(),
@@ -199,21 +205,83 @@ where
                 .expect("Could not send records to tx_records");
         }
 
-        let last_sequence_id: Option<String> = resp
-            .records()
-            .and_then(|r| r.last())
-            .and_then(|r| r.sequence_number())
-            .map(|s| s.into());
+        /*
+         * There are 2 reasons we should keep polling a shard:
+         * - nb_records == 0: we need to keep polling until we get records, ie we dont know whether we are past to_datetime
+         * - nb_records_before_end_ts > 0: we still have some (at least 1) records before to_datetime (or no to_datetime set)
+         */
+        let should_continue = nb_records == 0 || nb_records_before_end_ts > 0;
 
-        let results = ShardIteratorProgress {
-            shard_id: shard_id.clone(),
-            last_sequence_id,
-            next_shard_iterator: next_shard_iterator.map(|s| s.into()),
-        };
+        if should_continue {
+            let last_sequence_id: Option<String> = resp
+                .records()
+                .and_then(|r| r.last())
+                .and_then(|r| r.sequence_number())
+                .map(|s| s.into());
 
-        tx_shard_iterator_progress.send(results).await.unwrap();
+            let shard_iterator_progress = ShardIteratorProgress {
+                shard_id: shard_id.clone(),
+                last_sequence_id,
+                next_shard_iterator: next_shard_iterator.map(|s| s.into()),
+            };
+
+            tx_shard_iterator_progress
+                .send(shard_iterator_progress)
+                .await
+                .unwrap();
+        } else {
+            info!(
+                "{} records in batch for shard-id {} and {} records before {}",
+                nb_records,
+                shard_id,
+                nb_records_before_end_ts,
+                self.get_config()
+                    .to_datetime
+                    .map(|ts| ts.to_rfc3339())
+                    .unwrap_or("[No end timestamp]".to_string())
+            );
+            self.get_config()
+                .tx_records
+                .send(Ok(ShardProcessorADT::BeyondToTimestamp))
+                .await
+                .expect("Could not send BeyondToTimestamp to tx_records");
+        }
 
         Ok(())
+    }
+
+    fn has_records_beyond_end_ts(&self, records: &[RecordResult]) -> bool {
+        match self.get_config().to_datetime {
+            Some(end_ts) if !records.is_empty() => {
+                let epoch = Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap();
+
+                let find_most_recent_ts = |records: &[RecordResult]| -> DateTime<Utc> {
+                    records.iter().fold(epoch, |current_ts, record| {
+                        let record_ts = Utc.timestamp_nanos(record.datetime.as_nanos() as i64);
+
+                        std::cmp::max(current_ts, record_ts)
+                    })
+                };
+
+                let most_recent_ts = find_most_recent_ts(records);
+
+                most_recent_ts >= end_ts
+            }
+            _ => true,
+        }
+    }
+
+    fn records_before_end_ts(&self, records: Vec<RecordResult>) -> Vec<RecordResult> {
+        match self.get_config().to_datetime {
+            Some(end_ts) if !records.is_empty() => records
+                .into_iter()
+                .filter(|record| {
+                    let record_ts = Utc.timestamp_nanos(record.datetime.as_nanos() as i64);
+                    record_ts < end_ts
+                })
+                .collect(),
+            _ => records,
+        }
     }
 }
 

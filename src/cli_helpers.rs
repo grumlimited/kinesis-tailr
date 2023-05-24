@@ -23,6 +23,10 @@ pub struct Opt {
     #[structopt(long)]
     pub from_datetime: Option<String>,
 
+    /// End datetime position to tail up to. ISO 8601 format.
+    #[structopt(long)]
+    pub to_datetime: Option<String>,
+
     /// Maximum number of messages to retrieve
     #[structopt(long)]
     pub max_messages: Option<u32>,
@@ -65,18 +69,17 @@ pub struct Opt {
     pub verbose: bool,
 }
 
-pub(crate) fn selected_shards<'a>(
-    shards: &'a [String],
+pub(crate) fn selected_shards(
+    shards: Vec<String>,
     stream_name: &str,
     shard_ids: &Option<Vec<String>>,
-) -> io::Result<Vec<&'a str>> {
+) -> io::Result<Vec<String>> {
     let filtered = match shard_ids {
         Some(shard_ids) => shards
-            .iter()
+            .into_iter()
             .filter(|s| shard_ids.contains(s))
-            .map(|e| e.as_str())
             .collect::<Vec<_>>(),
-        None => shards.iter().map(|e| e.as_str()).collect::<Vec<_>>(),
+        None => shards,
     };
 
     if filtered.is_empty() {
@@ -95,7 +98,7 @@ pub(crate) fn set_log_level() {
     );
 }
 
-pub(crate) fn print_runtime(opt: &Opt, selected_shards: &[&str]) {
+pub(crate) fn print_runtime(opt: &Opt, selected_shards: &[String]) {
     if opt.verbose {
         info!("Kinesis client version: {}", PKG_VERSION);
         info!(
@@ -164,22 +167,22 @@ mod tests {
         let shards = vec!["a".to_string(), "b".to_string(), "c".to_string()];
 
         assert_eq!(
-            selected_shards(shards.as_slice(), "stream", &None).unwrap(),
+            selected_shards(shards.clone(), "stream", &None).unwrap(),
             vec!["a", "b", "c"]
         );
 
         assert_eq!(
-            selected_shards(shards.as_slice(), "stream", &Some(vec!["a".to_string()])).unwrap(),
+            selected_shards(shards.clone(), "stream", &Some(vec!["a".to_string()])).unwrap(),
             vec!["a"]
         );
 
         assert_eq!(
-            selected_shards(shards.as_slice(), "stream", &Some(vec!["b".to_string()])).unwrap(),
+            selected_shards(shards.clone(), "stream", &Some(vec!["b".to_string()])).unwrap(),
             vec!["b"]
         );
 
         assert_eq!(
-            selected_shards(shards.as_slice(), "stream", &Some(vec!["c".to_string()])).unwrap(),
+            selected_shards(shards, "stream", &Some(vec!["c".to_string()])).unwrap(),
             vec!["c"]
         );
     }
@@ -190,7 +193,7 @@ mod tests {
         let shards = vec!["a".to_string(), "b".to_string(), "c".to_string()];
 
         assert_eq!(
-            selected_shards(shards.as_slice(), "stream", &Some(vec!["d".to_string()])).unwrap(),
+            selected_shards(shards, "stream", &Some(vec!["d".to_string()])).unwrap(),
             vec![] as Vec<&str>
         );
     }

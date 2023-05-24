@@ -2,7 +2,7 @@
 
 A simple tool to tail a Kinesis stream built with Rust.
 
-# Installation
+## Installation
 
 ### Requirements
 
@@ -15,13 +15,17 @@ A simple tool to tail a Kinesis stream built with Rust.
 make install-local
 ```
 
-Installs a single binary to `/usr/local/bin/kinesis-tailr`.
+Installs a single binary to `/usr/local/bin/kinesis-tailr`. Alternatively, use
+
+```bash
+cargo install --git https://github.com/grumlimited/kinesis-tailr
+```
 
 ### Releases
 
 The [release page](https://github.com/grumlimited/kinesis-tailr/releases) provides packages for Debian and CentOS and Arch Linux.
 
-# Usage
+## Usage
 
     ❯ kinesis-tailr -help
 
@@ -32,6 +36,7 @@ The [release page](https://github.com/grumlimited/kinesis-tailr/releases) provid
         -s, --stream-name <STREAM_NAME>      Name of the stream
         --endpoint-url <ENDPOINT_URL>        Endpoint URL to use
         --from-datetime <FROM_DATETIME>      Start datetime position to tail from. ISO 8601 format
+        --to-datetime <TO_DATETIME>          End datetime position to tail up to. ISO 8601 format
         --max-messages <MAX_MESSAGES>        Maximum number of messages to retrieve
         --no-color                           Disable color output
         --print-delimiter                    Print a delimiter between each payload
@@ -46,20 +51,24 @@ The [release page](https://github.com/grumlimited/kinesis-tailr/releases) provid
 
 ### Example
 
-     kinesis-tailr \
-        --region eu-west-1 \
-        --stream-name=ddb-stream-dev \
-        --print-timestamp \
-        --from-datetime '2023-05-04T20:57:12+00:00' \
-        --max-messages 2
+```bash
+kinesis-tailr \
+    --region eu-west-1 \
+    --stream-name=ddb-stream-dev \
+    --print-timestamp \
+    --from-datetime '2023-05-04T20:57:12+00:00' \
+    --max-messages 2
+```
 
 ### Logging
 
 General logging level for debugging can be turned on with:
 
-    export RUST_LOG="INFO"
+```bash
+export RUST_LOG="INFO"
 
-    kinesis-tailr --stream-name mystream
+kinesis-tailr --stream-name mystream
+```
 
     [2023-05-10T21:45:14Z INFO  aws_config::meta::region] load_region; provider=None
     [2023-05-10T21:45:14Z INFO  aws_config::meta::region] load_region; provider=EnvironmentVariableRegionProvider { env: Env(Real) }
@@ -69,10 +78,11 @@ General logging level for debugging can be turned on with:
 
 Specific logging for `kinesis-tailr` can be turned on with:
 
-    export RUST_LOG="WARN,kinesis_tailr=INFO"
+```bash
+export RUST_LOG="WARN,kinesis_tailr=INFO"
 
-    kinesis-tailr --stream-name mystream --from-datetime '2023-05-17T19:00:00Z' -o output.json
-
+kinesis-tailr --stream-name mystream --from-datetime '2023-05-17T19:00:00Z' -o output.json
+```
     [2023-05-17T20:37:35Z INFO  kinesis_tailr::kinesis::ticker] shardId-000000001119: 00:31:23
     [2023-05-17T20:37:35Z INFO  kinesis_tailr::kinesis::ticker] shardId-000000001144: 00:31:27
     [2023-05-17T20:37:35Z INFO  kinesis_tailr::kinesis::ticker] shardId-000000001085: 00:31:31
@@ -86,6 +96,8 @@ It is recommended to use `-o output.json` to write the output to a file, as the 
 
 Moreover, it also frees the console output for informational messages. Use
 
-    export RUST_LOG="WARN,kinesis_tailr=DEBUG"
+```bash
+export RUST_LOG="WARN,kinesis_tailr=DEBUG"
+```
 
 for more debugging information.
