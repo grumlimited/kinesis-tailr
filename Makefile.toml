@@ -32,6 +32,7 @@ dependencies = [
     "clippy",
     "test",
 ]
+
 [tasks.install]
 script_runner = "bash"
 dependencies = ["release"]

@@ -5,6 +5,11 @@ on:
 
 name: Continuous integration
 
+env:
+  DEB_PKG_NAME=kinesis-tailr-${{ github.event.release.tag_name }}-x86_64.deb
+  RPM_PKG_NAME=kinesis-tailr-${{ github.event.release.tag_name }}-1.x86_64.rpm
+  ARCH_PKG_NAME=kinesis-tailr-bin-${{ github.event.release.tag_name }}-1-x86_64.pkg.tar.zst
+
 jobs:
   ci:
     runs-on: ubuntu-latest
@@ -59,8 +64,8 @@ jobs:
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           files: |
-            kinesis-tailr-${{ github.event.release.tag_name }}-x86_64.deb
-            kinesis-tailr-${{ github.event.release.tag_name }}-x86_64.deb.md5sum
+            ${DEB_PKG_NAME}
+            ${DEB_PKG_NAME}.md5sum
 
   centos:
     runs-on: ubuntu-latest
@@ -74,18 +79,18 @@ jobs:
 
       - name: Create CentOS 8 package
         run: |
-          wget https://github.com/grumlimited/kinesis-tailr/releases/download/${{ github.event.release.tag_name }}/kinesis-tailr-${{ github.event.release.tag_name }}-x86_64.deb -O kinesis-tailr-${{ github.event.release.tag_name }}-x86_64.deb
+          wget https://github.com/grumlimited/kinesis-tailr/releases/download/${{ github.event.release.tag_name }}/${DEB_PKG_NAME} -O ${DEB_PKG_NAME}
           
-          alien -r -k --scripts --target=x86_64 kinesis-tailr-${{ github.event.release.tag_name }}-x86_64.deb
-          md5sum kinesis-tailr-${{ github.event.release.tag_name }}-1.x86_64.rpm >> kinesis-tailr-${{ github.event.release.tag_name }}-1.x86_64.rpm.md5sum
+          alien -r -k --scripts --target=x86_64 ${DEB_PKG_NAME}
+          md5sum ${RPM_PKG_NAME} >> ${RPM_PKG_NAME}.md5sum
 
       - name: Upload CentOS 8 release
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           files: |
-            kinesis-tailr-${{ github.event.release.tag_name }}-1.x86_64.rpm
-            kinesis-tailr-${{ github.event.release.tag_name }}-1.x86_64.rpm.md5sum
+            ${RPM_PKG_NAME}
+            ${RPM_PKG_NAME}.md5sum
 
   arch:
     runs-on: ubuntu-latest
@@ -97,9 +102,9 @@ jobs:
 
       - name: Prepare arch package metadata
         run: |
-          wget https://github.com/grumlimited/kinesis-tailr/releases/download/${{ github.event.release.tag_name }}/kinesis-tailr-${{ github.event.release.tag_name }}-x86_64.deb -O build-aux/arch/kinesis-tailr-bin/kinesis-tailr-${{ github.event.release.tag_name }}-x86_64.deb
+          wget https://github.com/grumlimited/kinesis-tailr/releases/download/${{ github.event.release.tag_name }}/${DEB_PKG_NAME} -O build-aux/arch/kinesis-tailr-bin/${DEB_PKG_NAME}
 
-          MD5_SUM=$(md5sum build-aux/arch/kinesis-tailr-bin/kinesis-tailr-${{ github.event.release.tag_name }}-x86_64.deb  | awk '{print $1}')
+          MD5_SUM=$(md5sum build-aux/arch/kinesis-tailr-bin/${DEB_PKG_NAME}  | awk '{print $1}')
           awk -v q="'" -v MD5_SUM=$MD5_SUM -i inplace 'BEGINFILE{print "md5sums=(" q MD5_SUM q ")"}{print}' build-aux/arch/kinesis-tailr-bin/PKGBUILD
           awk -i inplace 'BEGINFILE{print "pkgver=${{ github.event.release.tag_name }}"}{print}' build-aux/arch/kinesis-tailr-bin/PKGBUILD
 
@@ -114,12 +119,12 @@ jobs:
       - name: Create arch package checksum file
         run: |
           sudo chown -R $USER .
-          md5sum build-aux/arch/kinesis-tailr-bin/*.zst >> build-aux/arch/kinesis-tailr-bin/kinesis-tailr-bin-${{ github.event.release.tag_name }}-1-x86_64.pkg.tar.zst.md5sum
+          md5sum build-aux/arch/kinesis-tailr-bin/${ARCH_PKG_NAME} >> build-aux/arch/${ARCH_PKG_NAME}.md5sum
 
       - name: Upload Arch Linux release
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           files: |
-            build-aux/arch/kinesis-tailr-bin/kinesis-tailr-bin-${{ github.event.release.tag_name }}-1-x86_64.pkg.tar.zst
-            build-aux/arch/kinesis-tailr-bin/kinesis-tailr-bin-${{ github.event.release.tag_name }}-1-x86_64.pkg.tar.zst.md5sum
+            ${ARCH_PKG_NAME}
+            ${ARCH_PKG_NAME}.md5sum
