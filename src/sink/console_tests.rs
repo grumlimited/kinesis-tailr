@@ -1,5 +1,5 @@
 use super::*;
-use crate::kinesis::models::ShardProcessorADT::{Progress, Termination};
+use crate::kinesis::models::ShardProcessorADT::{BeyondToTimestamp, Progress, Termination};
 use crate::sink::console::ConsoleSink;
 use aws_sdk_kinesis::primitives::DateTime;
 use tokio::sync::mpsc;
@@ -16,6 +16,7 @@ fn format_nb_messages_ok() {
             print_delimiter: false,
             exit_after_termination: false,
         },
+        shard_count: 1,
     };
 
     assert_eq!(console.format_nb_messages(1), "1 message processed");
@@ -61,8 +62,38 @@ async fn expect_zero_messages_processed() {
     let mut sink = get_string_sink(None);
 
     tokio::spawn(async move {
+        //only 1 shard -> should terminate console sink
         tx_records_clone
             .send(Ok(Termination))
+            .await
+            .expect("TODO: panic message");
+    });
+
+    let mut handle = BufWriter::new(Vec::new());
+
+    sink.run_inner(tx_records, rx_records, &mut handle)
+        .await
+        .unwrap();
+
+    handle.flush().unwrap();
+    let bytes = handle.into_inner().unwrap();
+    let string = String::from_utf8(bytes).unwrap();
+
+    assert_eq!(string, "");
+}
+
+#[tokio::test]
+async fn sending_beyondtotimestamp_should_terminate_sink() {
+    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(1);
+
+    let tx_records_clone = tx_records.clone();
+
+    let mut sink = get_string_sink(None);
+
+    tokio::spawn(async move {
+        //only 1 shard -> should terminate console sink
+        tx_records_clone
+            .send(Ok(BeyondToTimestamp))
             .await
             .expect("TODO: panic message");
     });
