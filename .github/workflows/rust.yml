@@ -39,6 +39,12 @@ jobs:
 
       - uses: davidB/rust-cargo-make@v1
 
+      - name: Formatting
+        run: cargo make fmt
+
+      - name: Clippy
+        run: cargo make clippy
+
       - name: Build
         run: cargo make build
 
@@ -46,9 +52,3 @@ jobs:
         run: cargo make test
         env:
           RUST_BACKTRACE: 1
-
-      - name: Formatting
-        run: cargo make fmt
-
-      - name: Clippy
-        run: cargo make clippy
