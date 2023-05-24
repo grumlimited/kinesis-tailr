@@ -119,12 +119,12 @@ jobs:
       - name: Create arch package checksum file
         run: |
           sudo chown -R $USER .
-          md5sum build-aux/arch/kinesis-tailr-bin/${ARCH_PKG_NAME} >> build-aux/arch/${ARCH_PKG_NAME}.md5sum
+          md5sum build-aux/arch/kinesis-tailr-bin/${ARCH_PKG_NAME} >> build-aux/arch/kinesis-tailr-bin/${ARCH_PKG_NAME}.md5sum
 
       - name: Upload Arch Linux release
         uses: softprops/action-gh-release@v1
         with:
           token: ${{ secrets.GITHUB_TOKEN }}
           files: |
-            build-aux/arch/${{ env.ARCH_PKG_NAME }}
-            build-aux/arch/${{ env.ARCH_PKG_NAME }}.md5sum
+            build-aux/arch/kinesis-tailr-bin/${{ env.ARCH_PKG_NAME }}
+            build-aux/arch/kinesis-tailr-bin/${{ env.ARCH_PKG_NAME }}.md5sum
