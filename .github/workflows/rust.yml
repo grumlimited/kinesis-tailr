@@ -29,10 +29,6 @@ jobs:
             target
           key: ${{ runner.os }}-cargo-${{ hashFiles('**/Cargo.lock') }}
 
-      - name: System dependencies
-        run: |
-          sudo apt-get update
-
       - name: Rust toolchain
         uses: actions-rs/toolchain@v1
         with:
@@ -41,10 +37,10 @@ jobs:
           override: true
           components: rustfmt, clippy
 
+      - uses: davidB/rust-cargo-make@v1
+
       - name: Build
-        uses: actions-rs/cargo@v1
-        with:
-          command: make all
+        run: cargo make build
 
       - name: Tests
         uses: actions-rs/cargo@v1

@@ -1,3 +1,6 @@
+[registries.crates-io]
+protocol = "sparse"
+
 [package]
 name = "kinesis-tailr"
 version = "0.0.1"
