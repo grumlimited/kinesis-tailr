@@ -6,7 +6,7 @@ use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::Error;
 use chrono::prelude::*;
 use chrono::{DateTime, Utc};
-use log::{debug, error};
+use log::{debug, error, info};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{sleep, Duration};
@@ -230,7 +230,7 @@ where
                 .await
                 .unwrap();
         } else {
-            debug!(
+            info!(
                 "{} records in batch for shard-id {} and {} records before {}",
                 nb_records,
                 shard_id,

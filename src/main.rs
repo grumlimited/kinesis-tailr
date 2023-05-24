@@ -33,13 +33,14 @@ async fn main() -> Result<(), io::Error> {
     let to_datetime = parse_date(opt.to_datetime.as_deref());
     let client = create_client(opt.region.clone(), opt.endpoint_url.clone()).await;
 
-    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(1000);
+    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(10000);
 
     let shards = get_shards(&client, &opt.stream_name)
         .await
         .unwrap_or_else(|_| panic!("Could not describe shards for stream {}", opt.stream_name));
 
     let selected_shards = selected_shards(shards, &opt.stream_name, &opt.shard_id)?;
+    let shard_count = selected_shards.len();
 
     print_runtime(&opt, &selected_shards);
 
@@ -55,6 +56,7 @@ async fn main() -> Result<(), io::Error> {
                         opt.print_shard_id,
                         opt.print_timestamp,
                         opt.print_delimiter,
+                        shard_count,
                         file,
                     )
                     .run(tx_records, rx_records)
@@ -68,6 +70,7 @@ async fn main() -> Result<(), io::Error> {
                         opt.print_shard_id,
                         opt.print_timestamp,
                         opt.print_delimiter,
+                        shard_count,
                     )
                     .run(tx_records, rx_records)
                     .await
