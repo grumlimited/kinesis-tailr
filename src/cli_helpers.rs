@@ -6,6 +6,7 @@ use std::io;
 use std::io::Error;
 
 #[derive(Debug, Parser)]
+#[command(version = "{#VERSION}")]
 pub struct Opt {
     /// AWS Region
     #[structopt(short, long)]
