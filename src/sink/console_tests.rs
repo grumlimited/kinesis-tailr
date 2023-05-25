@@ -11,7 +11,7 @@ fn format_nb_messages_ok() {
             max_messages: None,
             no_color: false,
             print_key: false,
-            print_shardid: false,
+            print_shard_id: false,
             print_timestamp: false,
             print_delimiter: false,
             exit_after_termination: false,
@@ -163,7 +163,7 @@ pub struct StringSink {
 }
 
 impl SinkOutput<Vec<u8>> for StringSink {
-    fn output(&mut self) -> BufWriter<Vec<u8>> {
+    fn output(&self) -> BufWriter<Vec<u8>> {
         unimplemented!()
     }
 }

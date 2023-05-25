@@ -15,7 +15,7 @@ impl ConsoleSink {
         max_messages: Option<u32>,
         no_color: bool,
         print_key: bool,
-        print_shardid: bool,
+        print_shard_id: bool,
         print_timestamp: bool,
         print_delimiter: bool,
         shard_count: usize,
@@ -25,7 +25,7 @@ impl ConsoleSink {
                 max_messages,
                 no_color,
                 print_key,
-                print_shardid,
+                print_shard_id,
                 print_timestamp,
                 print_delimiter,
                 exit_after_termination: true,
@@ -45,7 +45,7 @@ impl Configurable for ConsoleSink {
 }
 
 impl SinkOutput<Stdout> for ConsoleSink {
-    fn output(&mut self) -> BufWriter<Stdout> {
+    fn output(&self) -> BufWriter<Stdout> {
         let stdout = io::stdout(); // get the global stdout entity
         io::BufWriter::with_capacity(CONSOLE_BUF_SIZE, stdout)
     }

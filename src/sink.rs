@@ -15,7 +15,7 @@ pub struct SinkConfig {
     max_messages: Option<u32>,
     no_color: bool,
     print_key: bool,
-    print_shardid: bool,
+    print_shard_id: bool,
     print_timestamp: bool,
     print_delimiter: bool,
     exit_after_termination: bool,
@@ -31,7 +31,7 @@ pub trait SinkOutput<W>
 where
     W: Write,
 {
-    fn output(&mut self) -> BufWriter<W>;
+    fn output(&self) -> BufWriter<W>;
 
     fn write_date(&self, date: &str) -> String {
         date.to_string()
@@ -228,7 +228,7 @@ where
             data
         };
 
-        let data = if self.get_config().print_shardid {
+        let data = if self.get_config().print_shard_id {
             let shard_id = record_result.shard_id.to_string();
             let shard_id = self.write_shard_id(&shard_id);
 
