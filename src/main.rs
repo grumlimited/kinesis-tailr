@@ -43,9 +43,7 @@ async fn main() -> Result<(), io::Error> {
 
     let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(1000);
 
-    let shards = get_shards(&client, &opt.stream_name)
-        .await
-        .unwrap_or_else(|_| panic!("Could not describe shards for stream {}", opt.stream_name));
+    let shards = get_shards(&client, &opt.stream_name).await?;
 
     let selected_shards = selected_shards(shards, &opt.stream_name, &opt.shard_id)?;
     let shard_count = selected_shards.len();
