@@ -6,6 +6,9 @@ use std::io;
 use std::io::Error;
 
 #[derive(Debug, Parser)]
+#[command(
+    version = "{#RELEASE_VERSION} - Grum Ltd\nReport bugs to https://github.com/grumlimited/kinesis-tailr/issues"
+)]
 pub struct Opt {
     /// AWS Region
     #[structopt(short, long)]

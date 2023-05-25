@@ -3,6 +3,7 @@ use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::Error;
 use chrono::Utc;
 use log::debug;
+use std::io;
 use std::sync::Arc;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::Semaphore;
@@ -128,13 +129,18 @@ pub async fn handle_iterator_refresh<T, K: KinesisClient>(
         .unwrap();
 }
 
-pub async fn get_shards(client: &AwsKinesisClient, stream: &str) -> Result<Vec<String>, Error> {
-    let resp = client.list_shards(stream).await?;
+pub async fn get_shards(client: &AwsKinesisClient, stream: &str) -> io::Result<Vec<String>> {
+    let resp = client
+        .list_shards(stream)
+        .await
+        .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))
+        .map(|e| {
+            e.shards()
+                .unwrap()
+                .iter()
+                .map(|s| s.shard_id.as_ref().unwrap().clone())
+                .collect::<Vec<String>>()
+        })?;
 
-    Ok(resp
-        .shards()
-        .unwrap()
-        .iter()
-        .map(|s| s.shard_id.as_ref().unwrap().clone())
-        .collect())
+    Ok(resp)
 }

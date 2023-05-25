@@ -17,7 +17,7 @@ impl FileSink {
         max_messages: Option<u32>,
         no_color: bool,
         print_key: bool,
-        print_shardid: bool,
+        print_shard_id: bool,
         print_timestamp: bool,
         print_delimiter: bool,
         shard_count: usize,
@@ -28,7 +28,7 @@ impl FileSink {
                 max_messages,
                 no_color,
                 print_key,
-                print_shardid,
+                print_shard_id,
                 print_timestamp,
                 print_delimiter,
                 exit_after_termination: true,
@@ -50,7 +50,7 @@ impl Configurable for FileSink {
 }
 
 impl SinkOutput<File> for FileSink {
-    fn output(&mut self) -> BufWriter<File> {
+    fn output(&self) -> BufWriter<File> {
         let file = File::create(&self.file)
             .map_err(|e| {
                 io::Error::new(
