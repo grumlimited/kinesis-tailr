@@ -1,6 +1,3 @@
-[registries.crates-io]
-protocol = "sparse"
-
 [package]
 name = "kinesis-tailr"
 version = "0.0.1"
@@ -30,4 +27,3 @@ tokio = { version = "1.28.0", features = ["rt-multi-thread",  "macros"] }
 
 [features]
 default = ["clap/cargo", "clap/derive", "config/json"]
-
