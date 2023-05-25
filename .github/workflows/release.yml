@@ -51,6 +51,8 @@ jobs:
 
       - name: Build
         run: cargo make all
+        env:
+          RELEASE_VERSION: ${{ github.event.release.tag_name }}
 
       - name: Create Debian package
         env:

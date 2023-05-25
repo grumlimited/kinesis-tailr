@@ -28,10 +28,17 @@ args = ["clippy"]
 [tasks.all]
 dependencies = [
     "fmt",
+    "set-version",
     "build",
     "clippy",
     "test",
 ]
+
+[tasks.set-version]
+script_runner = "bash"
+script = '''
+    sed -i "s/{#RELEASE_VERSION}/${RELEASE_VERSION}/" src/cli_helpers.rs
+'''
 
 [tasks.install]
 script_runner = "bash"
