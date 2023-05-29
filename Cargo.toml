@@ -11,19 +11,19 @@ edition = "2021"
 
 [dependencies]
 async-trait = "0.1.68"
-aws-config= { version = "0.55.2" }
-aws-sdk-kinesis= { version = "0.27.0" }
-chrono = "0.4.21"
-clap = { version = "4.2.7", features = ["derive"] }
+aws-config= { version = "0.55.3" }
+aws-sdk-kinesis= { version = "0.28.0" }
+chrono = "0.4.25"
+clap = { version = "4.3.0", features = ["derive"] }
 colored = "2.0.0"
 config = "0.13.3"
 ctrlc-async = "3.2.2"
 env_logger = "0.10.0"
 humantime = "2.1.0"
-log = "0.4.17"
+log = "0.4.18"
 log4rs = "1.2.0"
 nix = "0.26.2"
-tokio = { version = "1.28.0", features = ["rt-multi-thread",  "macros"] }
+tokio = { version = "1.28.2", features = ["rt-multi-thread",  "macros"] }
 
 [features]
 default = ["clap/cargo", "clap/derive", "config/json"]
