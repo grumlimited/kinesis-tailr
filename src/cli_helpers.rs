@@ -168,6 +168,7 @@ pub fn reset_signal_pipe_handler() -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
+    use chrono::Duration;
 
     #[test]
     fn parse_date_test_ok() {
@@ -221,5 +222,26 @@ mod tests {
     }
 
     #[test]
-    fn xxx() {}
+    fn validate_time_boundaries_ok() {
+        let from = Some(Utc::now());
+        let to = Some(from.unwrap() + Duration::days(1));
+        assert!(validate_time_boundaries(&from, &to).is_ok());
+    }
+
+    #[test]
+    fn validate_time_boundaries_from_is_after_to() {
+        let from = Some(Utc::now());
+        let to = Some(from.unwrap() - Duration::days(1));
+        assert!(validate_time_boundaries(&from, &to).is_err());
+    }
+
+    #[test]
+    fn validate_time_boundaries_nones() {
+        let from = Some(Utc::now());
+        let to = Some(from.unwrap() + Duration::days(1));
+
+        assert!(validate_time_boundaries(&from, &None).is_ok());
+        assert!(validate_time_boundaries(&None, &to).is_ok());
+        assert!(validate_time_boundaries(&None, &None).is_ok());
+    }
 }
