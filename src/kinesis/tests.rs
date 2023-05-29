@@ -4,6 +4,7 @@ use crate::kinesis::models::{
     ShardProcessorAtTimestamp, ShardProcessorConfig, ShardProcessorLatest,
 };
 use crate::kinesis::ticker::TickerUpdate;
+use anyhow::Result;
 use async_trait::async_trait;
 use aws_sdk_kinesis::config::Region;
 use aws_sdk_kinesis::operation::get_records::GetRecordsOutput;
@@ -12,7 +13,6 @@ use aws_sdk_kinesis::operation::list_shards::ListShardsOutput;
 use aws_sdk_kinesis::primitives::{Blob, DateTime};
 use aws_sdk_kinesis::types::error::InvalidArgumentException;
 use aws_sdk_kinesis::types::{Record, Shard};
-use aws_sdk_kinesis::Error;
 use chrono::prelude::*;
 use chrono::Utc;
 use std::ops::Add;
@@ -294,13 +294,13 @@ pub struct TestKinesisClient {
 
 #[async_trait]
 impl KinesisClient for TestKinesisClient {
-    async fn list_shards(&self, _stream: &str) -> Result<ListShardsOutput, Error> {
+    async fn list_shards(&self, _stream: &str) -> Result<ListShardsOutput> {
         Ok(ListShardsOutput::builder()
             .shards(Shard::builder().shard_id("000001").build())
             .build())
     }
 
-    async fn get_records(&self, _shard_iterator: &str) -> Result<GetRecordsOutput, Error> {
+    async fn get_records(&self, _shard_iterator: &str) -> Result<GetRecordsOutput> {
         let to_datetime = Utc.with_ymd_and_hms(2021, 6, 1, 12, 0, 0).unwrap();
         let dt = DateTime::from_secs(to_datetime.timestamp());
         let record = Record::builder()
@@ -321,7 +321,7 @@ impl KinesisClient for TestKinesisClient {
         _stream: &str,
         _shard_id: &str,
         _timestamp: &chrono::DateTime<Utc>,
-    ) -> Result<GetShardIteratorOutput, Error> {
+    ) -> Result<GetShardIteratorOutput> {
         Ok(GetShardIteratorOutput::builder()
             .shard_iterator("shard_iterator".to_string())
             .build())
@@ -332,7 +332,7 @@ impl KinesisClient for TestKinesisClient {
         _stream: &str,
         _shard_id: &str,
         _starting_sequence_number: &str,
-    ) -> Result<GetShardIteratorOutput, Error> {
+    ) -> Result<GetShardIteratorOutput> {
         Ok(GetShardIteratorOutput::builder()
             .shard_iterator("shard_iterator".to_string())
             .build())
@@ -342,7 +342,7 @@ impl KinesisClient for TestKinesisClient {
         &self,
         _stream: &str,
         _shard_id: &str,
-    ) -> Result<GetShardIteratorOutput, Error> {
+    ) -> Result<GetShardIteratorOutput> {
         Ok(GetShardIteratorOutput::builder()
             .shard_iterator("shard_iterator".to_string())
             .build())
@@ -358,11 +358,11 @@ pub struct TestTimestampInFutureKinesisClient {}
 
 #[async_trait]
 impl KinesisClient for TestTimestampInFutureKinesisClient {
-    async fn list_shards(&self, _stream: &str) -> Result<ListShardsOutput, Error> {
+    async fn list_shards(&self, _stream: &str) -> Result<ListShardsOutput> {
         unimplemented!()
     }
 
-    async fn get_records(&self, _shard_iterator: &str) -> Result<GetRecordsOutput, Error> {
+    async fn get_records(&self, _shard_iterator: &str) -> Result<GetRecordsOutput> {
         unimplemented!()
     }
 
@@ -371,12 +371,13 @@ impl KinesisClient for TestTimestampInFutureKinesisClient {
         _stream: &str,
         _shard_id: &str,
         _timestamp: &chrono::DateTime<Utc>,
-    ) -> Result<GetShardIteratorOutput, Error> {
-        Err(Error::InvalidArgumentException(
+    ) -> Result<GetShardIteratorOutput> {
+        Err(aws_sdk_kinesis::Error::InvalidArgumentException(
             InvalidArgumentException::builder()
                 .message("Timestamp is in future")
                 .build(),
-        ))
+        )
+        .into())
     }
 
     async fn get_shard_iterator_at_sequence(
@@ -384,7 +385,7 @@ impl KinesisClient for TestTimestampInFutureKinesisClient {
         _stream: &str,
         _shard_id: &str,
         _starting_sequence_number: &str,
-    ) -> Result<GetShardIteratorOutput, Error> {
+    ) -> Result<GetShardIteratorOutput> {
         unimplemented!()
     }
 
@@ -392,7 +393,7 @@ impl KinesisClient for TestTimestampInFutureKinesisClient {
         &self,
         _stream: &str,
         _shard_id: &str,
-    ) -> Result<GetShardIteratorOutput, Error> {
+    ) -> Result<GetShardIteratorOutput> {
         unimplemented!()
     }
 

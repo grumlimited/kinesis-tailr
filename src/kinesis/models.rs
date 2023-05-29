@@ -3,10 +3,10 @@ use crate::iterator::at_timestamp;
 use crate::kinesis::helpers::get_latest_iterator;
 use crate::kinesis::ticker::TickerUpdate;
 use crate::kinesis::IteratorProvider;
+use anyhow::Result;
 use async_trait::async_trait;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::primitives::DateTime;
-use aws_sdk_kinesis::Error;
 use chrono::Utc;
 use std::fmt::Debug;
 use std::sync::Arc;
@@ -67,7 +67,7 @@ impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorLatest<K> {
         self.config.clone()
     }
 
-    async fn get_iterator(&self, shard_id: &str) -> Result<GetShardIteratorOutput, Error> {
+    async fn get_iterator(&self, shard_id: &str) -> Result<GetShardIteratorOutput> {
         get_latest_iterator(self.clone(), shard_id).await
     }
 }
@@ -78,7 +78,7 @@ impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorAtTimestamp<K> {
         self.config.clone()
     }
 
-    async fn get_iterator(&self, shard_id: &str) -> Result<GetShardIteratorOutput, Error> {
+    async fn get_iterator(&self, shard_id: &str) -> Result<GetShardIteratorOutput> {
         at_timestamp(&self.config.client, &self.from_datetime)
             .iterator(&self.config.stream, shard_id)
             .await
@@ -87,7 +87,7 @@ impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorAtTimestamp<K> {
 
 #[async_trait]
 pub trait ShardProcessor<K: KinesisClient>: Send + Sync {
-    async fn run(&self) -> Result<(), Error>;
+    async fn run(&self) -> Result<()>;
 
     async fn seed_shards(&self, tx_shard_iterator_progress: Sender<ShardIteratorProgress>);
 
@@ -97,7 +97,7 @@ pub trait ShardProcessor<K: KinesisClient>: Send + Sync {
         shard_id: String,
         tx_ticker: Sender<TickerUpdate>,
         tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
-    ) -> Result<(), Error>;
+    ) -> Result<()>;
 
     fn has_records_beyond_end_ts(&self, records: &[RecordResult]) -> bool;
 

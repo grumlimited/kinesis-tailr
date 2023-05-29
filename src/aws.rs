@@ -1,5 +1,6 @@
 pub mod client {
 
+    use anyhow::Result;
     use async_trait::async_trait;
     use aws_config::meta::region::RegionProviderChain;
     use aws_sdk_kinesis::config::Region;
@@ -8,7 +9,7 @@ pub mod client {
     use aws_sdk_kinesis::operation::list_shards::ListShardsOutput;
     use aws_sdk_kinesis::primitives::DateTime;
     use aws_sdk_kinesis::types::ShardIteratorType;
-    use aws_sdk_kinesis::{Client, Error};
+    use aws_sdk_kinesis::Client;
     use chrono::Utc;
 
     #[derive(Clone, Debug)]
@@ -18,29 +19,29 @@ pub mod client {
 
     #[async_trait]
     pub trait KinesisClient: Sync + Send + Clone + 'static {
-        async fn list_shards(&self, stream: &str) -> Result<ListShardsOutput, Error>;
+        async fn list_shards(&self, stream: &str) -> Result<ListShardsOutput>;
 
-        async fn get_records(&self, shard_iterator: &str) -> Result<GetRecordsOutput, Error>;
+        async fn get_records(&self, shard_iterator: &str) -> Result<GetRecordsOutput>;
 
         async fn get_shard_iterator_at_timestamp(
             &self,
             stream: &str,
             shard_id: &str,
             timestamp: &chrono::DateTime<Utc>,
-        ) -> Result<GetShardIteratorOutput, Error>;
+        ) -> Result<GetShardIteratorOutput>;
 
         async fn get_shard_iterator_at_sequence(
             &self,
             stream: &str,
             shard_id: &str,
             starting_sequence_number: &str,
-        ) -> Result<GetShardIteratorOutput, Error>;
+        ) -> Result<GetShardIteratorOutput>;
 
         async fn get_shard_iterator_latest(
             &self,
             stream: &str,
             shard_id: &str,
-        ) -> Result<GetShardIteratorOutput, Error>;
+        ) -> Result<GetShardIteratorOutput>;
 
         fn get_region(&self) -> Option<&Region>;
 
@@ -51,7 +52,7 @@ pub mod client {
 
     #[async_trait]
     impl KinesisClient for AwsKinesisClient {
-        async fn list_shards(&self, stream: &str) -> Result<ListShardsOutput, Error> {
+        async fn list_shards(&self, stream: &str) -> Result<ListShardsOutput> {
             self.client
                 .list_shards()
                 .stream_name(stream)
@@ -60,7 +61,7 @@ pub mod client {
                 .map_err(|e| e.into())
         }
 
-        async fn get_records(&self, shard_iterator: &str) -> Result<GetRecordsOutput, Error> {
+        async fn get_records(&self, shard_iterator: &str) -> Result<GetRecordsOutput> {
             self.client
                 .get_records()
                 .shard_iterator(shard_iterator)
@@ -74,7 +75,7 @@ pub mod client {
             stream: &str,
             shard_id: &str,
             timestamp: &chrono::DateTime<Utc>,
-        ) -> Result<GetShardIteratorOutput, Error> {
+        ) -> Result<GetShardIteratorOutput> {
             self.client
                 .get_shard_iterator()
                 .shard_iterator_type(ShardIteratorType::AtTimestamp)
@@ -91,7 +92,7 @@ pub mod client {
             stream: &str,
             shard_id: &str,
             starting_sequence_number: &str,
-        ) -> Result<GetShardIteratorOutput, Error> {
+        ) -> Result<GetShardIteratorOutput> {
             self.client
                 .get_shard_iterator()
                 .shard_iterator_type(ShardIteratorType::AtSequenceNumber)
@@ -107,7 +108,7 @@ pub mod client {
             &self,
             stream: &str,
             shard_id: &str,
-        ) -> Result<GetShardIteratorOutput, Error> {
+        ) -> Result<GetShardIteratorOutput> {
             self.client
                 .get_shard_iterator()
                 .shard_iterator_type(ShardIteratorType::Latest)

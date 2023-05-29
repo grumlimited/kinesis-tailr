@@ -1,7 +1,7 @@
 #![allow(clippy::result_large_err)]
 
+use anyhow::Result;
 use kinesis::ticker::{Ticker, TickerUpdate};
-use std::io;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Semaphore};
 
@@ -23,7 +23,7 @@ mod aws;
 mod cli_helpers;
 
 #[tokio::main]
-async fn main() -> Result<(), io::Error> {
+async fn main() -> Result<()> {
     reset_signal_pipe_handler().expect("TODO: panic message");
     set_log_level();
 
@@ -129,5 +129,7 @@ async fn main() -> Result<(), io::Error> {
         shard_processors_handle.spawn(shard_processor);
     }
 
-    handle.await?
+    let _ = handle.await?;
+
+    Ok(())
 }
