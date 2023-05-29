@@ -32,19 +32,7 @@ async fn main() -> Result<(), io::Error> {
     let from_datetime = parse_date(opt.from_datetime.as_deref());
     let to_datetime = parse_date(opt.to_datetime.as_deref());
 
-    from_datetime
-        .zip(to_datetime)
-        .iter()
-        .try_for_each(|(from, to)| {
-            if std::cmp::max(from, to) == from {
-                Err(io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    "from_datetime must be before to_datetime",
-                ))
-            } else {
-                Ok(())
-            }
-        })?;
+    validate_time_boundaries(&from_datetime, &to_datetime)?;
 
     let client = create_client(opt.region.clone(), opt.endpoint_url.clone()).await;
 

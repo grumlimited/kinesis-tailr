@@ -126,6 +126,25 @@ pub(crate) fn print_runtime(opt: &Opt, selected_shards: &[String]) {
     }
 }
 
+pub fn validate_time_boundaries(
+    from_datetime: &Option<DateTime<Utc>>,
+    to_datetime: &Option<DateTime<Utc>>,
+) -> io::Result<()> {
+    from_datetime
+        .zip(to_datetime.as_ref())
+        .iter()
+        .try_for_each(|(from, to)| {
+            if std::cmp::max(from, to) == from {
+                Err(io::Error::new(
+                    io::ErrorKind::InvalidInput,
+                    "from_datetime must be before to_datetime",
+                ))
+            } else {
+                Ok(())
+            }
+        })
+}
+
 pub fn parse_date(from: Option<&str>) -> Option<DateTime<Utc>> {
     from.map(|f| chrono::Utc.datetime_from_str(f, "%+").unwrap())
 }
@@ -200,4 +219,7 @@ mod tests {
             vec![] as Vec<&str>
         );
     }
+
+    #[test]
+    fn xxx() {}
 }
