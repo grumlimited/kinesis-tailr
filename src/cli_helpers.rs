@@ -1,9 +1,9 @@
+use anyhow::Result;
 use aws_sdk_kinesis::meta::PKG_VERSION;
 use chrono::{DateTime, TimeZone, Utc};
 use clap::Parser;
 use log::info;
 use std::io;
-use std::io::Error;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -149,7 +149,7 @@ pub fn parse_date(from: Option<&str>) -> Option<DateTime<Utc>> {
     from.map(|f| chrono::Utc.datetime_from_str(f, "%+").unwrap())
 }
 
-pub fn reset_signal_pipe_handler() -> Result<(), Error> {
+pub fn reset_signal_pipe_handler() -> Result<()> {
     // https://github.com/rust-lang/rust/issues/46016
     // Long story short: handle SIGPIPE (ie. broken pipe) on Unix systems gracefully.
     #[cfg(target_family = "unix")]
@@ -157,8 +157,7 @@ pub fn reset_signal_pipe_handler() -> Result<(), Error> {
         use nix::sys::signal;
 
         unsafe {
-            signal::signal(signal::Signal::SIGPIPE, signal::SigHandler::SigDfl)
-                .map_err(Error::from)?;
+            signal::signal(signal::Signal::SIGPIPE, signal::SigHandler::SigDfl)?;
         }
     }
 

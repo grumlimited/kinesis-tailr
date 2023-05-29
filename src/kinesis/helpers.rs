@@ -1,6 +1,6 @@
 use crate::aws::client::{AwsKinesisClient, KinesisClient};
+use anyhow::Result;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
-use aws_sdk_kinesis::Error;
 use chrono::Utc;
 use log::debug;
 use std::io;
@@ -60,7 +60,7 @@ pub fn new(
 pub async fn get_latest_iterator<T, K: KinesisClient>(
     iterator_provider: T,
     shard_id: &str,
-) -> Result<GetShardIteratorOutput, Error>
+) -> Result<GetShardIteratorOutput>
 where
     T: IteratorProvider<K>,
 {
@@ -73,7 +73,7 @@ pub async fn get_iterator_since<T, K: KinesisClient>(
     iterator_provider: T,
     starting_sequence_number: &str,
     shard_id: &str,
-) -> Result<GetShardIteratorOutput, Error>
+) -> Result<GetShardIteratorOutput>
 where
     T: IteratorProvider<K>,
 {

@@ -1059,6 +1059,7 @@ dependencies = [
 name = "kinesis-tailr"
 version = "0.0.1"
 dependencies = [
+ "anyhow",
  "async-trait",
  "aws-config",
  "aws-sdk-kinesis",

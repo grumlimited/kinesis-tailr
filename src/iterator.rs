@@ -1,7 +1,7 @@
 use crate::aws::client::KinesisClient;
+use anyhow::Result;
 use async_trait::async_trait;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
-use aws_sdk_kinesis::Error;
 use chrono::Utc;
 
 #[async_trait]
@@ -10,7 +10,7 @@ pub trait ShardIterator {
         &'a self,
         stream: &'a str,
         shard_id: &'a str,
-    ) -> Result<GetShardIteratorOutput, Error>;
+    ) -> Result<GetShardIteratorOutput>;
 }
 
 pub fn latest<'a, K>(client: &'a K) -> Box<dyn ShardIterator + 'a + Send + Sync>
@@ -57,7 +57,7 @@ impl<K: KinesisClient> ShardIterator for LatestShardIterator<'_, K> {
         &'a self,
         stream: &'a str,
         shard_id: &'a str,
-    ) -> Result<GetShardIteratorOutput, Error> {
+    ) -> Result<GetShardIteratorOutput> {
         self.client
             .get_shard_iterator_latest(stream, shard_id)
             .await
@@ -70,7 +70,7 @@ impl<K: KinesisClient> ShardIterator for AtSequenceShardIterator<'_, K> {
         &'a self,
         stream: &'a str,
         shard_id: &'a str,
-    ) -> Result<GetShardIteratorOutput, Error> {
+    ) -> Result<GetShardIteratorOutput> {
         self.client
             .get_shard_iterator_at_sequence(stream, shard_id, self.starting_sequence_number)
             .await
@@ -83,7 +83,7 @@ impl<K: KinesisClient> ShardIterator for AtTimestampShardIterator<'_, K> {
         &'a self,
         stream: &'a str,
         shard_id: &'a str,
-    ) -> Result<GetShardIteratorOutput, Error> {
+    ) -> Result<GetShardIteratorOutput> {
         self.client
             .get_shard_iterator_at_timestamp(stream, shard_id, self.timestamp)
             .await

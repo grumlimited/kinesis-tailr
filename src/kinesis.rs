@@ -1,6 +1,7 @@
 use crate::aws::client::KinesisClient;
 use crate::kinesis::models::*;
 use crate::kinesis::ticker::TickerUpdate;
+use anyhow::Result;
 use async_trait::async_trait;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::Error;
@@ -19,7 +20,7 @@ pub mod ticker;
 pub trait IteratorProvider<K: KinesisClient>: Send + Sync + Clone + 'static {
     fn get_config(&self) -> ShardProcessorConfig<K>;
 
-    async fn get_iterator(&self, shard_id: &str) -> Result<GetShardIteratorOutput, Error>;
+    async fn get_iterator(&self, shard_id: &str) -> Result<GetShardIteratorOutput>;
 }
 
 #[async_trait]
@@ -28,7 +29,7 @@ where
     K: KinesisClient,
     T: IteratorProvider<K>,
 {
-    async fn run(&self) -> Result<(), Error> {
+    async fn run(&self) -> Result<()> {
         let (tx_shard_iterator_progress, mut rx_shard_iterator_progress) =
             mpsc::channel::<ShardIteratorProgress>(5);
 
@@ -57,8 +58,8 @@ where
                                 .await;
 
                             if let Err(e) = result {
-                                match e {
-                                    Error::ExpiredIteratorException(inner) => {
+                                match e.downcast_ref::<Error>() {
+                                    Some(Error::ExpiredIteratorException(inner)) => {
                                         debug!("ExpiredIteratorException: {}", inner);
                                         helpers::handle_iterator_refresh(
                                             res_clone.clone(),
@@ -67,7 +68,7 @@ where
                                         )
                                         .await;
                                     }
-                                    Error::ProvisionedThroughputExceededException(inner) => {
+                                    Some(Error::ProvisionedThroughputExceededException(inner)) => {
                                         debug!("ProvisionedThroughputExceededException: {}", inner);
                                         sleep(Duration::from_secs(10)).await;
                                         helpers::handle_iterator_refresh(
@@ -78,12 +79,12 @@ where
                                         .await;
                                     }
                                     e => {
-                                        error!("Error: {}", e);
+                                        error!("Unknown error: {:?}", e);
                                         cloned_self
                                             .get_config()
                                             .tx_records
                                             .send(Err(PanicError {
-                                                message: e.to_string(),
+                                                message: format!("{:?}", e),
                                             }))
                                             .await
                                             .expect("Could not send error to tx_records");
@@ -163,7 +164,7 @@ where
         shard_id: String,
         tx_ticker_updates: Sender<TickerUpdate>,
         tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
-    ) -> Result<(), Error> {
+    ) -> Result<()> {
         let resp = self.get_config().client.get_records(shard_iterator).await?;
 
         let next_shard_iterator = resp.next_shard_iterator();
