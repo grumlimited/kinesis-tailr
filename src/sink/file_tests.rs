@@ -1,5 +1,5 @@
 use crate::kinesis::models::ShardProcessorADT::{Progress, Termination};
-use crate::kinesis::models::{PanicError, RecordResult, ShardProcessorADT};
+use crate::kinesis::models::{ProcessError, RecordResult, ShardProcessorADT};
 use crate::sink::file::FileSink;
 use crate::sink::Sink;
 use aws_sdk_kinesis::primitives::DateTime;
@@ -9,7 +9,7 @@ use tokio::sync::mpsc;
 
 #[tokio::test]
 async fn file_sink_ok() {
-    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(1);
+    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(1);
 
     let tx_records_clone = tx_records.clone();
 
