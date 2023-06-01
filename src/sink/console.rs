@@ -54,7 +54,7 @@ impl SinkOutput<Stdout> for ConsoleSink {
         if self.config.no_color {
             date.to_string()
         } else {
-            date.to_string().red().to_string()
+            date.red().to_string()
         }
     }
 
@@ -62,7 +62,7 @@ impl SinkOutput<Stdout> for ConsoleSink {
         if self.config.no_color {
             shard_id.to_string()
         } else {
-            shard_id.to_string().blue().to_string()
+            shard_id.blue().to_string()
         }
     }
 
@@ -70,7 +70,7 @@ impl SinkOutput<Stdout> for ConsoleSink {
         if self.config.no_color {
             key.to_string()
         } else {
-            key.to_string().yellow().to_string()
+            key.yellow().to_string()
         }
     }
 
@@ -79,7 +79,7 @@ impl SinkOutput<Stdout> for ConsoleSink {
         if self.config.no_color {
             delimiter.to_string()
         } else {
-            delimiter.to_string().truecolor(128, 128, 128).to_string()
+            delimiter.truecolor(128, 128, 128).to_string()
         }
     }
 }

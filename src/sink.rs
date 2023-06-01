@@ -1,6 +1,6 @@
 use async_trait::async_trait;
 use chrono::TimeZone;
-use log::info;
+use log::debug;
 use std::io;
 use std::io::{BufWriter, Error, Write};
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -158,7 +158,7 @@ where
                         }
                     },
                     ShardProcessorADT::Termination => {
-                        info!("Termination message received");
+                        debug!("Termination message received");
                         let messages_processed = count;
 
                         self.termination_message_and_exit(
@@ -191,7 +191,6 @@ where
         // with tests where only one handler can be registered.
         if self.get_config().exit_after_termination {
             ctrlc_async::set_async_handler(async move {
-                info!("Setting Ctrl-C handler");
                 tx_records
                     .send(Ok(ShardProcessorADT::Termination))
                     .await
