@@ -76,7 +76,7 @@ pub(crate) fn selected_shards(
     shards: Vec<String>,
     stream_name: &str,
     shard_ids: &Option<Vec<String>>,
-) -> io::Result<Vec<String>> {
+) -> Result<Vec<String>> {
     let filtered = match shard_ids {
         Some(shard_ids) => shards
             .into_iter()
@@ -89,7 +89,8 @@ pub(crate) fn selected_shards(
         Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             format!("No shards found for stream {}", stream_name),
-        ))
+        )
+        .into())
     } else {
         Ok(filtered)
     }
@@ -129,7 +130,7 @@ pub(crate) fn print_runtime(opt: &Opt, selected_shards: &[String]) {
 pub fn validate_time_boundaries(
     from_datetime: &Option<DateTime<Utc>>,
     to_datetime: &Option<DateTime<Utc>>,
-) -> io::Result<()> {
+) -> Result<()> {
     from_datetime
         .zip(to_datetime.as_ref())
         .iter()
@@ -138,7 +139,8 @@ pub fn validate_time_boundaries(
                 Err(io::Error::new(
                     io::ErrorKind::InvalidInput,
                     "from_datetime must be before to_datetime",
-                ))
+                )
+                .into())
             } else {
                 Ok(())
             }

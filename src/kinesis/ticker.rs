@@ -79,7 +79,7 @@ impl Ticker {
                             info!("------------------------------")
                         }
                     }
-                    sleep(delay).await;
+                    sleep(delay).await
                 }
             }
         });

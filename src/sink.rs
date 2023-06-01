@@ -1,8 +1,10 @@
+use anyhow::Error;
+use anyhow::Result;
 use async_trait::async_trait;
 use chrono::TimeZone;
 use log::debug;
 use std::io;
-use std::io::{BufWriter, Error, Write};
+use std::io::{BufWriter, Write};
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::kinesis::models::{PanicError, RecordResult, ShardProcessorADT};
@@ -26,7 +28,6 @@ pub trait Configurable {
     fn shard_count(&self) -> usize;
 }
 
-#[async_trait]
 pub trait SinkOutput<W>
 where
     W: Write,
@@ -200,7 +201,7 @@ where
         }
     }
 
-    fn delimiter(&self, handle: &mut BufWriter<W>) -> Result<(), Error> {
+    fn delimiter(&self, handle: &mut BufWriter<W>) -> Result<()> {
         if self.get_config().print_delimiter {
             writeln!(
                 handle,

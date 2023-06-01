@@ -75,10 +75,10 @@ impl SinkOutput<Stdout> for ConsoleSink {
     }
 
     fn write_delimiter(&self, delimiter: &str) -> String {
-        // grey-ish
         if self.config.no_color {
             delimiter.to_string()
         } else {
+            // grey-ish
             delimiter.truecolor(128, 128, 128).to_string()
         }
     }
