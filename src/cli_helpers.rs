@@ -3,7 +3,6 @@ use aws_sdk_kinesis::meta::PKG_VERSION;
 use chrono::{DateTime, TimeZone, Utc};
 use clap::Parser;
 use log::info;
-use std::io;
 
 #[derive(Debug, Parser)]
 #[command(
@@ -86,11 +85,11 @@ pub(crate) fn selected_shards(
     };
 
     if filtered.is_empty() {
-        Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!("No shards found for stream {}", stream_name),
-        )
-        .into())
+        Err(anyhow!(
+            "No shards found for stream {} (filtered: {})",
+            stream_name,
+            shard_ids.is_some()
+        ))
     } else {
         Ok(filtered)
     }
