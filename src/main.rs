@@ -29,8 +29,8 @@ async fn main() -> Result<()> {
 
     let opt = Opt::parse();
 
-    let from_datetime = parse_date(opt.from_datetime.as_deref());
-    let to_datetime = parse_date(opt.to_datetime.as_deref());
+    let from_datetime = parse_date(opt.from_datetime.as_deref())?;
+    let to_datetime = parse_date(opt.to_datetime.as_deref())?;
 
     validate_time_boundaries(&from_datetime, &to_datetime)?;
 

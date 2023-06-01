@@ -33,6 +33,7 @@ pub enum ProcessError {
     #[error("The stream panicked: {0}")]
     PanicError(String),
 }
+
 #[derive(Debug, Clone, PartialEq)]
 pub struct RecordResult {
     pub shard_id: String,

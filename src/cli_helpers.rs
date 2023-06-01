@@ -1,4 +1,4 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use aws_sdk_kinesis::meta::PKG_VERSION;
 use chrono::{DateTime, TimeZone, Utc};
 use clap::Parser;
@@ -136,19 +136,21 @@ pub fn validate_time_boundaries(
         .iter()
         .try_for_each(|(from, to)| {
             if std::cmp::max(from, to) == from {
-                Err(io::Error::new(
-                    io::ErrorKind::InvalidInput,
-                    "from_datetime must be before to_datetime",
-                )
-                .into())
+                Err(anyhow!("{} must be before {}", from, to))
             } else {
                 Ok(())
             }
         })
 }
 
-pub fn parse_date(from: Option<&str>) -> Option<DateTime<Utc>> {
-    from.map(|f| chrono::Utc.datetime_from_str(f, "%+").unwrap())
+pub fn parse_date(datetime: Option<&str>) -> Result<Option<DateTime<Utc>>> {
+    datetime
+        .map(|dt| {
+            chrono::Utc
+                .datetime_from_str(dt, "%+")
+                .map_err(|_| anyhow!("Could not parse date [{}]", dt))
+        })
+        .map_or(Ok(None), |r| r.map(Some))
 }
 
 pub fn reset_signal_pipe_handler() -> Result<()> {
@@ -174,7 +176,7 @@ mod tests {
     #[test]
     fn parse_date_test_ok() {
         let date = "2023-05-04T20:57:12Z";
-        let result = parse_date(Some(date)).unwrap();
+        let result = parse_date(Some(date)).unwrap().unwrap();
         let result = result.to_rfc3339();
         assert_eq!(result, "2023-05-04T20:57:12+00:00");
     }
@@ -183,7 +185,7 @@ mod tests {
     #[should_panic]
     fn parse_date_test_fail() {
         let invalid_date = "xxx";
-        parse_date(Some(invalid_date));
+        let _ = parse_date(Some(invalid_date)).unwrap();
     }
 
     #[test]
