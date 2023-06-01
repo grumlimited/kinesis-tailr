@@ -55,7 +55,7 @@ fn format_outputs() {
 
 #[tokio::test]
 async fn expect_zero_messages_processed() {
-    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(1);
+    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(1);
 
     let tx_records_clone = tx_records.clone();
 
@@ -84,7 +84,7 @@ async fn expect_zero_messages_processed() {
 
 #[tokio::test]
 async fn sending_beyondtotimestamp_should_terminate_sink() {
-    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(1);
+    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(1);
 
     let tx_records_clone = tx_records.clone();
 
@@ -113,7 +113,7 @@ async fn sending_beyondtotimestamp_should_terminate_sink() {
 
 #[tokio::test]
 async fn expect_split() {
-    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(1);
+    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(1);
 
     let tx_records_clone = tx_records.clone();
 

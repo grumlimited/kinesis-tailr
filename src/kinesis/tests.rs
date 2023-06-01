@@ -1,6 +1,6 @@
 use crate::aws::client::KinesisClient;
 use crate::kinesis::models::{
-    PanicError, RecordResult, ShardIteratorProgress, ShardProcessor, ShardProcessorADT,
+    ProcessError, RecordResult, ShardIteratorProgress, ShardProcessor, ShardProcessorADT,
     ShardProcessorAtTimestamp, ShardProcessorConfig, ShardProcessorLatest,
 };
 use crate::kinesis::ticker::TickerUpdate;
@@ -23,7 +23,7 @@ use tokio::time::sleep;
 
 #[tokio::test]
 async fn seed_shards_test() {
-    let (tx_records, _) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(10);
+    let (tx_records, _) = mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(10);
     let (tx_ticker_updates, _) = mpsc::channel::<TickerUpdate>(10);
 
     let (tx_shard_iterator_progress, mut rx_shard_iterator_progress) =
@@ -62,7 +62,7 @@ async fn seed_shards_test() {
 #[tokio::test]
 #[should_panic]
 async fn seed_shards_test_timestamp_in_future() {
-    let (tx_records, _) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(10);
+    let (tx_records, _) = mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(10);
     let (tx_ticker_updates, _) = mpsc::channel::<TickerUpdate>(10);
 
     let (tx_shard_iterator_progress, _) = mpsc::channel::<ShardIteratorProgress>(1);
@@ -89,7 +89,7 @@ async fn seed_shards_test_timestamp_in_future() {
 
 #[tokio::test]
 async fn produced_record_is_processed() {
-    let (tx_records, mut rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(10);
+    let (tx_records, mut rx_records) = mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(10);
     let (tx_ticker_updates, mut rx_ticker_updates) = mpsc::channel::<TickerUpdate>(10);
 
     let client = TestKinesisClient {
@@ -147,7 +147,7 @@ async fn produced_record_is_processed() {
 
 #[tokio::test]
 async fn beyond_to_timestamp_is_received() {
-    let (tx_records, mut rx_records) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(10);
+    let (tx_records, mut rx_records) = mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(10);
     let (tx_ticker_updates, mut rx_ticker_updates) = mpsc::channel::<TickerUpdate>(10);
 
     let client = TestKinesisClient {
@@ -187,7 +187,7 @@ async fn beyond_to_timestamp_is_received() {
 
 #[tokio::test]
 async fn has_records_beyond_end_ts_when_has_end_ts() {
-    let (tx_records, _) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(10);
+    let (tx_records, _) = mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(10);
     let (tx_ticker_updates, _) = mpsc::channel::<TickerUpdate>(10);
 
     let client = TestKinesisClient {
@@ -246,7 +246,7 @@ async fn has_records_beyond_end_ts_when_has_end_ts() {
 
 #[tokio::test]
 async fn has_records_beyond_end_ts_when_no_end_ts() {
-    let (tx_records, _) = mpsc::channel::<Result<ShardProcessorADT, PanicError>>(10);
+    let (tx_records, _) = mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(10);
     let (tx_ticker_updates, _) = mpsc::channel::<TickerUpdate>(10);
 
     let client = TestKinesisClient {

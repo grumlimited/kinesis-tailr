@@ -11,8 +11,8 @@ use tokio::sync::Semaphore;
 use crate::iterator::at_sequence;
 use crate::iterator::latest;
 use crate::kinesis::models::{
-    PanicError, ShardProcessor, ShardProcessorADT, ShardProcessorAtTimestamp, ShardProcessorConfig,
-    ShardProcessorLatest,
+    ProcessError, ShardProcessor, ShardProcessorADT, ShardProcessorAtTimestamp,
+    ShardProcessorConfig, ShardProcessorLatest,
 };
 use crate::kinesis::ticker::TickerUpdate;
 use crate::kinesis::{IteratorProvider, ShardIteratorProgress};
@@ -25,7 +25,7 @@ pub fn new(
     from_datetime: Option<chrono::DateTime<Utc>>,
     to_datetime: Option<chrono::DateTime<Utc>>,
     semaphore: Arc<Semaphore>,
-    tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
+    tx_records: Sender<Result<ShardProcessorADT, ProcessError>>,
     tx_ticker_updates: Sender<TickerUpdate>,
 ) -> Box<dyn ShardProcessor<AwsKinesisClient> + Send + Sync> {
     debug!("Creating ShardProcessor with shard {}", shard_id);

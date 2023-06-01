@@ -7,7 +7,7 @@ use std::io;
 use std::io::{BufWriter, Write};
 use tokio::sync::mpsc::{Receiver, Sender};
 
-use crate::kinesis::models::{PanicError, RecordResult, ShardProcessorADT};
+use crate::kinesis::models::{ProcessError, RecordResult, ShardProcessorADT};
 
 pub mod console;
 pub mod file;
@@ -59,18 +59,18 @@ where
 {
     async fn run_inner(
         &mut self,
-        tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
-        rx_records: Receiver<Result<ShardProcessorADT, PanicError>>,
+        tx_records: Sender<Result<ShardProcessorADT, ProcessError>>,
+        rx_records: Receiver<Result<ShardProcessorADT, ProcessError>>,
         handle: &mut BufWriter<W>,
     ) -> io::Result<()>;
 
     async fn run(
         &mut self,
-        tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
-        rx_records: Receiver<Result<ShardProcessorADT, PanicError>>,
+        tx_records: Sender<Result<ShardProcessorADT, ProcessError>>,
+        rx_records: Receiver<Result<ShardProcessorADT, ProcessError>>,
     ) -> io::Result<()>;
 
-    fn handle_termination(&self, tx_records: Sender<Result<ShardProcessorADT, PanicError>>);
+    fn handle_termination(&self, tx_records: Sender<Result<ShardProcessorADT, ProcessError>>);
 
     fn delimiter(&self, handle: &mut BufWriter<W>) -> Result<(), Error>;
 
@@ -88,7 +88,7 @@ where
         &self,
         handle: &mut BufWriter<W>,
         count: u32,
-        rx_records: &mut Receiver<Result<ShardProcessorADT, PanicError>>,
+        rx_records: &mut Receiver<Result<ShardProcessorADT, ProcessError>>,
     ) -> io::Result<()>;
 }
 
@@ -100,8 +100,8 @@ where
 {
     async fn run_inner(
         &mut self,
-        tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
-        mut rx_records: Receiver<Result<ShardProcessorADT, PanicError>>,
+        tx_records: Sender<Result<ShardProcessorADT, ProcessError>>,
+        mut rx_records: Receiver<Result<ShardProcessorADT, ProcessError>>,
         handle: &mut BufWriter<W>,
     ) -> io::Result<()> {
         self.delimiter(handle).unwrap();
@@ -169,8 +169,8 @@ where
                         )?;
                     }
                 },
-                Err(e) => {
-                    panic!("Error: {}", e.message);
+                Err(ProcessError::PanicError(message)) => {
+                    panic!("Error: {}", message);
                 }
             }
         }
@@ -180,14 +180,14 @@ where
 
     async fn run(
         &mut self,
-        tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
-        rx_records: Receiver<Result<ShardProcessorADT, PanicError>>,
+        tx_records: Sender<Result<ShardProcessorADT, ProcessError>>,
+        rx_records: Receiver<Result<ShardProcessorADT, ProcessError>>,
     ) -> io::Result<()> {
         let output = &mut self.output();
         self.run_inner(tx_records, rx_records, output).await
     }
 
-    fn handle_termination(&self, tx_records: Sender<Result<ShardProcessorADT, PanicError>>) {
+    fn handle_termination(&self, tx_records: Sender<Result<ShardProcessorADT, ProcessError>>) {
         // Note: the exit_after_termination check is to help
         // with tests where only one handler can be registered.
         if self.get_config().exit_after_termination {
@@ -255,7 +255,7 @@ where
         &self,
         handle: &mut BufWriter<W>,
         count: u32,
-        rx_records: &mut Receiver<Result<ShardProcessorADT, PanicError>>,
+        rx_records: &mut Receiver<Result<ShardProcessorADT, ProcessError>>,
     ) -> io::Result<()> {
         handle.flush()?;
 

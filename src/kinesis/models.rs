@@ -10,6 +10,7 @@ use aws_sdk_kinesis::primitives::DateTime;
 use chrono::Utc;
 use std::fmt::Debug;
 use std::sync::Arc;
+use thiserror::Error;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::Semaphore;
 
@@ -27,9 +28,10 @@ pub enum ShardProcessorADT {
     Progress(Vec<RecordResult>),
 }
 
-#[derive(Debug, Clone)]
-pub struct PanicError {
-    pub message: String,
+#[derive(Error, Debug, Clone)]
+pub enum ProcessError {
+    #[error("The stream panicked: {0}")]
+    PanicError(String),
 }
 #[derive(Debug, Clone, PartialEq)]
 pub struct RecordResult {
@@ -46,7 +48,7 @@ pub struct ShardProcessorConfig<K: KinesisClient> {
     pub shard_id: String,
     pub to_datetime: Option<chrono::DateTime<Utc>>,
     pub semaphore: Arc<Semaphore>,
-    pub tx_records: Sender<Result<ShardProcessorADT, PanicError>>,
+    pub tx_records: Sender<Result<ShardProcessorADT, ProcessError>>,
     pub tx_ticker_updates: Sender<TickerUpdate>,
 }
 

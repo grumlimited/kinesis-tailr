@@ -83,9 +83,7 @@ where
                                         cloned_self
                                             .get_config()
                                             .tx_records
-                                            .send(Err(PanicError {
-                                                message: format!("{:?}", e),
-                                            }))
+                                            .send(Err(ProcessError::PanicError(format!("{:?}", e))))
                                             .await
                                             .expect("Could not send error to tx_records");
                                     }
@@ -96,9 +94,9 @@ where
                             cloned_self
                                 .get_config()
                                 .tx_records
-                                .send(Err(PanicError {
-                                    message: "ShardIterator is None".to_string(),
-                                }))
+                                .send(Err(ProcessError::PanicError(
+                                    "ShardIterator is None".to_string(),
+                                )))
                                 .await
                                 .expect("");
                         }
@@ -141,9 +139,7 @@ where
             Err(e) => {
                 self.get_config()
                     .tx_records
-                    .send(Err(PanicError {
-                        message: e.to_string(),
-                    }))
+                    .send(Err(ProcessError::PanicError(e.to_string())))
                     .await
                     .expect("Could not send error to tx_records");
             }
