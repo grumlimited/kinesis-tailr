@@ -92,7 +92,10 @@ impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorAtTimestamp<K> {
 pub trait ShardProcessor<K: KinesisClient>: Send + Sync {
     async fn run(&self) -> Result<()>;
 
-    async fn seed_shards(&self, tx_shard_iterator_progress: Sender<ShardIteratorProgress>);
+    async fn seed_shards(
+        &self,
+        tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
+    ) -> Result<()>;
 
     async fn publish_records_shard(
         &self,

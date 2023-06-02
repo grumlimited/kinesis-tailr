@@ -34,7 +34,7 @@ where
         let (tx_shard_iterator_progress, mut rx_shard_iterator_progress) =
             mpsc::channel::<ShardIteratorProgress>(5);
 
-        self.seed_shards(tx_shard_iterator_progress.clone()).await;
+        self.seed_shards(tx_shard_iterator_progress.clone()).await?;
 
         tokio::spawn({
             let cloned_self = self.clone();
@@ -111,14 +111,11 @@ where
         Ok(())
     }
 
-    async fn seed_shards(&self, tx_shard_iterator_progress: Sender<ShardIteratorProgress>) {
-        let permit = self
-            .get_config()
-            .semaphore
-            .clone()
-            .acquire_owned()
-            .await
-            .unwrap();
+    async fn seed_shards(
+        &self,
+        tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
+    ) -> Result<()> {
+        let permit = self.get_config().semaphore.clone().acquire_owned().await?;
 
         debug!("Seeding shard {}", self.get_config().shard_id);
 
@@ -134,19 +131,18 @@ where
                         last_sequence_id: None,
                         next_shard_iterator: shard_iterator,
                     })
-                    .await
-                    .unwrap();
+                    .await?;
             }
             Err(e) => {
                 self.get_config()
                     .tx_records
                     .send(Err(ProcessError::PanicError(e.to_string())))
-                    .await
-                    .expect("Could not send error to tx_records");
+                    .await?;
             }
         }
 
         drop(permit);
+        Ok(())
     }
 
     /**

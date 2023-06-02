@@ -47,7 +47,10 @@ async fn seed_shards_test() {
         },
     };
 
-    processor.seed_shards(tx_shard_iterator_progress).await;
+    processor
+        .seed_shards(tx_shard_iterator_progress)
+        .await
+        .unwrap();
 
     let shard_iterator_progress = rx_shard_iterator_progress.recv().await.unwrap();
 
@@ -84,7 +87,10 @@ async fn seed_shards_test_timestamp_in_future() {
         from_datetime: Utc::now().add(chrono::Duration::days(1)),
     };
 
-    processor.seed_shards(tx_shard_iterator_progress).await;
+    processor
+        .seed_shards(tx_shard_iterator_progress)
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
