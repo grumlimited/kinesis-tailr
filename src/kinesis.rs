@@ -7,7 +7,7 @@ use aws_sdk_kinesis::operation::get_records::GetRecordsError;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use chrono::prelude::*;
 use chrono::{DateTime, Utc};
-use log::{debug, error, info};
+use log::{debug, info};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{sleep, Duration};
@@ -67,7 +67,8 @@ where
                                             cloned_self.clone(),
                                             tx_shard_iterator_progress.clone(),
                                         )
-                                        .await;
+                                        .await
+                                        .unwrap();
                                     }
                                     Some(ProvisionedThroughputExceededException(inner)) => {
                                         debug!("ProvisionedThroughputExceededException: {}", inner);
@@ -77,10 +78,10 @@ where
                                             cloned_self.clone(),
                                             tx_shard_iterator_progress.clone(),
                                         )
-                                        .await;
+                                        .await
+                                        .unwrap();
                                     }
                                     e => {
-                                        error!("Unknown error: {:?}", e);
                                         cloned_self
                                             .get_config()
                                             .tx_records

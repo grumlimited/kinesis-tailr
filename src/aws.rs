@@ -97,7 +97,7 @@ pub mod client {
         ) -> Result<GetShardIteratorOutput> {
             self.client
                 .get_shard_iterator()
-                .shard_iterator_type(ShardIteratorType::AtSequenceNumber)
+                .shard_iterator_type(ShardIteratorType::AfterSequenceNumber)
                 .starting_sequence_number(starting_sequence_number)
                 .stream_name(stream)
                 .shard_id(shard_id)
