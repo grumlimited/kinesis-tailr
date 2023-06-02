@@ -12,7 +12,7 @@ A simple tool to tail a Kinesis stream built with Rust.
 ### From source
 
 ```bash
-make install-local
+cargo make install-local
 ```
 
 Installs a single binary to `/usr/local/bin/kinesis-tailr`. Alternatively, use
