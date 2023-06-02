@@ -1,12 +1,16 @@
 use crate::aws::client::{AwsKinesisClient, KinesisClient};
 use anyhow::Result;
-use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
+use aws_sdk_kinesis::operation::get_shard_iterator::{
+    GetShardIteratorError, GetShardIteratorOutput,
+};
 use chrono::Utc;
 use log::debug;
 use std::io;
 use std::sync::Arc;
+use std::time::Duration;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::Semaphore;
+use tokio::time::sleep;
 
 use crate::iterator::at_sequence;
 use crate::iterator::latest;
@@ -89,44 +93,65 @@ pub async fn handle_iterator_refresh<T, K: KinesisClient>(
     shard_iterator_progress: ShardIteratorProgress,
     iterator_provider: T,
     tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
-) where
+) -> Result<()>
+where
     T: IteratorProvider<K>,
 {
-    let (sequence_id, iterator) = match shard_iterator_progress.last_sequence_id {
-        Some(last_sequence_id) => {
-            let resp = get_iterator_since(
-                iterator_provider,
-                &last_sequence_id,
-                &shard_iterator_progress.shard_id,
-            )
-            .await
-            .unwrap();
+    let cloned_shard_iterator_progress = shard_iterator_progress.clone();
+
+    let result = match shard_iterator_progress.last_sequence_id {
+        Some(last_sequence_id) => get_iterator_since(
+            iterator_provider.clone(),
+            &last_sequence_id,
+            &shard_iterator_progress.shard_id,
+        )
+        .await
+        .map(|output| {
             (
-                Some(last_sequence_id),
-                resp.shard_iterator().map(|v| v.into()),
+                Some(last_sequence_id.clone()),
+                output.shard_iterator().map(|v| v.to_string()),
             )
-        }
-        None => {
-            let resp = get_latest_iterator(iterator_provider, &shard_iterator_progress.shard_id)
-                .await
-                .unwrap();
-            (None, resp.shard_iterator().map(|v| v.into()))
-        }
+        }),
+        None => get_latest_iterator(iterator_provider, &shard_iterator_progress.shard_id)
+            .await
+            .map(|output| (None, output.shard_iterator().map(|v| v.to_string()))),
     };
 
-    debug!(
-        "Refreshing with next_shard_iterator: {:?} / last_sequence_id {:?}",
-        iterator, sequence_id
-    );
+    match result {
+        Ok((sequence_id, Some(iterator))) => {
+            debug!(
+                "Refreshing with next_shard_iterator: {:?} / last_sequence_id {:?}",
+                iterator, sequence_id
+            );
 
-    tx_shard_iterator_progress
-        .send(ShardIteratorProgress {
-            shard_id: shard_iterator_progress.shard_id.clone(),
-            last_sequence_id: sequence_id,
-            next_shard_iterator: iterator,
-        })
-        .await
-        .unwrap();
+            tx_shard_iterator_progress
+                .send(ShardIteratorProgress {
+                    shard_id: shard_iterator_progress.shard_id.clone(),
+                    last_sequence_id: sequence_id,
+                    next_shard_iterator: Some(iterator),
+                })
+                .await?;
+        }
+        Ok((_, None)) => {
+            panic!("No iterator returned")
+        }
+        Err(e) => match e.downcast_ref::<GetShardIteratorError>() {
+            Some(e) => {
+                sleep(Duration::from_secs(10)).await;
+                if e.is_provisioned_throughput_exceeded_exception() {
+                    tx_shard_iterator_progress
+                        .send(cloned_shard_iterator_progress)
+                        .await?;
+                }
+            }
+            None => {
+                debug!("Error getting iterator: {:?}", e);
+                todo!();
+            }
+        },
+    };
+
+    Ok(())
 }
 
 pub async fn get_shards(client: &AwsKinesisClient, stream: &str) -> io::Result<Vec<String>> {

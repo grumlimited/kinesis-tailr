@@ -40,6 +40,14 @@ script = '''
     sed -i "s/{#RELEASE_VERSION}/${RELEASE_VERSION}/" src/cli_helpers.rs
 '''
 
+[tasks.install-local]
+script_runner = "bash"
+dependencies = ["release"]
+script = '''
+    mkdir -p ${DESTDIR}/usr/local/bin
+    sudo cp target/release/kinesis-tailr ${DESTDIR}/usr/local/bin/
+'''
+
 [tasks.install]
 script_runner = "bash"
 dependencies = ["release"]

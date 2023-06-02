@@ -1,4 +1,5 @@
 use crate::aws::client::KinesisClient;
+use crate::kinesis::helpers;
 use crate::kinesis::models::{
     ProcessError, RecordResult, ShardIteratorProgress, ShardProcessor, ShardProcessorADT,
     ShardProcessorAtTimestamp, ShardProcessorConfig, ShardProcessorLatest,
@@ -47,14 +48,17 @@ async fn seed_shards_test() {
         },
     };
 
-    processor.seed_shards(tx_shard_iterator_progress).await;
+    processor
+        .seed_shards(tx_shard_iterator_progress)
+        .await
+        .unwrap();
 
     let shard_iterator_progress = rx_shard_iterator_progress.recv().await.unwrap();
 
     assert_eq!(shard_iterator_progress.shard_id, "shardId-000000000000");
     assert_eq!(
         shard_iterator_progress.next_shard_iterator,
-        Some("shard_iterator".to_string())
+        Some("shard_iterator_latest".to_string())
     );
     assert_eq!(shard_iterator_progress.last_sequence_id, None);
 }
@@ -84,7 +88,10 @@ async fn seed_shards_test_timestamp_in_future() {
         from_datetime: Utc::now().add(chrono::Duration::days(1)),
     };
 
-    processor.seed_shards(tx_shard_iterator_progress).await;
+    processor
+        .seed_shards(tx_shard_iterator_progress)
+        .await
+        .unwrap();
 }
 
 #[tokio::test]
@@ -287,6 +294,51 @@ async fn has_records_beyond_end_ts_when_no_end_ts() {
     assert_eq!(processor.records_before_end_ts(records), vec![record_clone]);
 }
 
+#[tokio::test]
+async fn handle_iterator_refresh_ok() {
+    let shard_iterator_progress = ShardIteratorProgress {
+        shard_id: "shardId-000000000000".to_string(),
+        last_sequence_id: Some("sequence_id".to_string()),
+        next_shard_iterator: Some("some_iterator".to_string()),
+    };
+
+    let client = TestKinesisClient {
+        region: Some(Region::new("us-east-1")),
+    };
+
+    let provider = ShardProcessorLatest {
+        config: ShardProcessorConfig {
+            client,
+            stream: "test".to_string(),
+            shard_id: "shardId-000000000000".to_string(),
+            to_datetime: None,
+            semaphore: Arc::new(Semaphore::new(10)),
+            tx_records: mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(10).0,
+            tx_ticker_updates: mpsc::channel::<TickerUpdate>(10).0,
+        },
+    };
+
+    let (tx_shard_iterator_progress, mut rx_shard_iterator_progress) =
+        mpsc::channel::<ShardIteratorProgress>(1);
+
+    helpers::handle_iterator_refresh(
+        shard_iterator_progress,
+        provider,
+        tx_shard_iterator_progress,
+    )
+    .await
+    .unwrap();
+
+    let progress = rx_shard_iterator_progress.recv().await.unwrap();
+
+    assert_eq!(progress.shard_id, "shardId-000000000000".to_string());
+    assert_eq!(progress.last_sequence_id, Some("sequence_id".to_string()));
+    assert_eq!(
+        progress.next_shard_iterator,
+        Some("shard_iterator_at_sequence".to_string())
+    );
+}
+
 #[derive(Clone, Debug)]
 pub struct TestKinesisClient {
     region: Option<Region>,
@@ -334,7 +386,7 @@ impl KinesisClient for TestKinesisClient {
         _starting_sequence_number: &str,
     ) -> Result<GetShardIteratorOutput> {
         Ok(GetShardIteratorOutput::builder()
-            .shard_iterator("shard_iterator".to_string())
+            .shard_iterator("shard_iterator_at_sequence".to_string())
             .build())
     }
 
@@ -344,7 +396,7 @@ impl KinesisClient for TestKinesisClient {
         _shard_id: &str,
     ) -> Result<GetShardIteratorOutput> {
         Ok(GetShardIteratorOutput::builder()
-            .shard_iterator("shard_iterator".to_string())
+            .shard_iterator("shard_iterator_latest".to_string())
             .build())
     }
 

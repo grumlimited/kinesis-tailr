@@ -3,14 +3,15 @@ use crate::kinesis::models::*;
 use crate::kinesis::ticker::TickerUpdate;
 use anyhow::Result;
 use async_trait::async_trait;
+use aws_sdk_kinesis::operation::get_records::GetRecordsError;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
-use aws_sdk_kinesis::Error;
 use chrono::prelude::*;
 use chrono::{DateTime, Utc};
-use log::{debug, error, info};
+use log::{debug, info};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{sleep, Duration};
+use GetRecordsError::{ExpiredIteratorException, ProvisionedThroughputExceededException};
 
 pub mod helpers;
 pub mod models;
@@ -33,7 +34,7 @@ where
         let (tx_shard_iterator_progress, mut rx_shard_iterator_progress) =
             mpsc::channel::<ShardIteratorProgress>(5);
 
-        self.seed_shards(tx_shard_iterator_progress.clone()).await;
+        self.seed_shards(tx_shard_iterator_progress.clone()).await?;
 
         tokio::spawn({
             let cloned_self = self.clone();
@@ -58,17 +59,18 @@ where
                                 .await;
 
                             if let Err(e) = result {
-                                match e.downcast_ref::<Error>() {
-                                    Some(Error::ExpiredIteratorException(inner)) => {
+                                match e.downcast_ref::<GetRecordsError>() {
+                                    Some(ExpiredIteratorException(inner)) => {
                                         debug!("ExpiredIteratorException: {}", inner);
                                         helpers::handle_iterator_refresh(
                                             res_clone.clone(),
                                             cloned_self.clone(),
                                             tx_shard_iterator_progress.clone(),
                                         )
-                                        .await;
+                                        .await
+                                        .unwrap();
                                     }
-                                    Some(Error::ProvisionedThroughputExceededException(inner)) => {
+                                    Some(ProvisionedThroughputExceededException(inner)) => {
                                         debug!("ProvisionedThroughputExceededException: {}", inner);
                                         sleep(Duration::from_secs(10)).await;
                                         helpers::handle_iterator_refresh(
@@ -76,10 +78,10 @@ where
                                             cloned_self.clone(),
                                             tx_shard_iterator_progress.clone(),
                                         )
-                                        .await;
+                                        .await
+                                        .unwrap();
                                     }
                                     e => {
-                                        error!("Unknown error: {:?}", e);
                                         cloned_self
                                             .get_config()
                                             .tx_records
@@ -110,14 +112,11 @@ where
         Ok(())
     }
 
-    async fn seed_shards(&self, tx_shard_iterator_progress: Sender<ShardIteratorProgress>) {
-        let permit = self
-            .get_config()
-            .semaphore
-            .clone()
-            .acquire_owned()
-            .await
-            .unwrap();
+    async fn seed_shards(
+        &self,
+        tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
+    ) -> Result<()> {
+        let permit = self.get_config().semaphore.clone().acquire_owned().await?;
 
         debug!("Seeding shard {}", self.get_config().shard_id);
 
@@ -133,19 +132,18 @@ where
                         last_sequence_id: None,
                         next_shard_iterator: shard_iterator,
                     })
-                    .await
-                    .unwrap();
+                    .await?;
             }
             Err(e) => {
                 self.get_config()
                     .tx_records
                     .send(Err(ProcessError::PanicError(e.to_string())))
-                    .await
-                    .expect("Could not send error to tx_records");
+                    .await?;
             }
         }
 
         drop(permit);
+        Ok(())
     }
 
     /**

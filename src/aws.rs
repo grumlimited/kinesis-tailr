@@ -67,6 +67,7 @@ pub mod client {
                 .shard_iterator(shard_iterator)
                 .send()
                 .await
+                .map_err(|e| e.into_service_error())
                 .map_err(|e| e.into())
         }
 
@@ -84,6 +85,7 @@ pub mod client {
                 .shard_id(shard_id)
                 .send()
                 .await
+                .map_err(|e| e.into_service_error())
                 .map_err(|e| e.into())
         }
 
@@ -95,12 +97,13 @@ pub mod client {
         ) -> Result<GetShardIteratorOutput> {
             self.client
                 .get_shard_iterator()
-                .shard_iterator_type(ShardIteratorType::AtSequenceNumber)
+                .shard_iterator_type(ShardIteratorType::AfterSequenceNumber)
                 .starting_sequence_number(starting_sequence_number)
                 .stream_name(stream)
                 .shard_id(shard_id)
                 .send()
                 .await
+                .map_err(|e| e.into_service_error())
                 .map_err(|e| e.into())
         }
 
@@ -116,6 +119,7 @@ pub mod client {
                 .shard_id(shard_id)
                 .send()
                 .await
+                .map_err(|e| e.into_service_error())
                 .map_err(|e| e.into())
         }
 
