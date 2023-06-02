@@ -3,14 +3,15 @@ use crate::kinesis::models::*;
 use crate::kinesis::ticker::TickerUpdate;
 use anyhow::Result;
 use async_trait::async_trait;
+use aws_sdk_kinesis::operation::get_records::GetRecordsError;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
-use aws_sdk_kinesis::Error;
 use chrono::prelude::*;
 use chrono::{DateTime, Utc};
 use log::{debug, error, info};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{sleep, Duration};
+use GetRecordsError::{ExpiredIteratorException, ProvisionedThroughputExceededException};
 
 pub mod helpers;
 pub mod models;
@@ -58,8 +59,8 @@ where
                                 .await;
 
                             if let Err(e) = result {
-                                match e.downcast_ref::<Error>() {
-                                    Some(Error::ExpiredIteratorException(inner)) => {
+                                match e.downcast_ref::<GetRecordsError>() {
+                                    Some(ExpiredIteratorException(inner)) => {
                                         debug!("ExpiredIteratorException: {}", inner);
                                         helpers::handle_iterator_refresh(
                                             res_clone.clone(),
@@ -68,7 +69,7 @@ where
                                         )
                                         .await;
                                     }
-                                    Some(Error::ProvisionedThroughputExceededException(inner)) => {
+                                    Some(ProvisionedThroughputExceededException(inner)) => {
                                         debug!("ProvisionedThroughputExceededException: {}", inner);
                                         sleep(Duration::from_secs(10)).await;
                                         helpers::handle_iterator_refresh(

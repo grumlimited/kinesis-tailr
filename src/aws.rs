@@ -67,6 +67,7 @@ pub mod client {
                 .shard_iterator(shard_iterator)
                 .send()
                 .await
+                .map_err(|e| e.into_service_error())
                 .map_err(|e| e.into())
         }
 
@@ -84,6 +85,7 @@ pub mod client {
                 .shard_id(shard_id)
                 .send()
                 .await
+                .map_err(|e| e.into_service_error())
                 .map_err(|e| e.into())
         }
 
@@ -101,6 +103,7 @@ pub mod client {
                 .shard_id(shard_id)
                 .send()
                 .await
+                .map_err(|e| e.into_service_error())
                 .map_err(|e| e.into())
         }
 
@@ -116,6 +119,7 @@ pub mod client {
                 .shard_id(shard_id)
                 .send()
                 .await
+                .map_err(|e| e.into_service_error())
                 .map_err(|e| e.into())
         }
 
