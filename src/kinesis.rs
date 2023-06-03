@@ -1,4 +1,5 @@
 use crate::aws::client::KinesisClient;
+use crate::kinesis::helpers::wait_secs;
 use crate::kinesis::models::*;
 use crate::kinesis::ticker::TickerUpdate;
 use anyhow::Result;
@@ -21,7 +22,7 @@ pub mod ticker;
 pub trait IteratorProvider<K: KinesisClient>: Send + Sync + Clone + 'static {
     fn get_config(&self) -> ShardProcessorConfig<K>;
 
-    async fn get_iterator(&self, shard_id: &str) -> Result<GetShardIteratorOutput>;
+    async fn get_iterator(&self) -> Result<GetShardIteratorOutput>;
 }
 
 #[async_trait]
@@ -41,6 +42,7 @@ where
             let tx_shard_iterator_progress = tx_shard_iterator_progress.clone();
             let tx_ticker_updates = self.get_config().tx_ticker_updates;
             let semaphore = self.get_config().semaphore;
+
             async move {
                 while let Some(res) = rx_shard_iterator_progress.recv().await {
                     let permit = semaphore.clone().acquire_owned().await.unwrap();
@@ -70,9 +72,10 @@ where
                                         .await
                                         .unwrap();
                                     }
-                                    Some(ProvisionedThroughputExceededException(inner)) => {
-                                        debug!("ProvisionedThroughputExceededException: {}", inner);
-                                        sleep(Duration::from_secs(10)).await;
+                                    Some(ProvisionedThroughputExceededException(_)) => {
+                                        let ws = wait_secs();
+                                        debug!("ProvisionedThroughputExceededException: waiting {} seconds", ws);
+                                        sleep(Duration::from_secs(ws)).await;
                                         helpers::handle_iterator_refresh(
                                             res_clone.clone(),
                                             cloned_self.clone(),
@@ -122,7 +125,7 @@ where
 
         let tx_shard_iterator_progress = tx_shard_iterator_progress.clone();
 
-        match self.get_iterator(&self.get_config().shard_id).await {
+        match self.get_iterator().await {
             Ok(resp) => {
                 let shard_iterator: Option<String> = resp.shard_iterator().map(|s| s.into());
                 tx_shard_iterator_progress

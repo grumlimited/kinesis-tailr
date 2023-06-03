@@ -1,6 +1,6 @@
 use crate::aws::client::KinesisClient;
-use crate::iterator::at_timestamp;
-use crate::kinesis::helpers::get_latest_iterator;
+use crate::iterator::ShardIterator;
+use crate::iterator::{at_timestamp, latest};
 use crate::kinesis::ticker::TickerUpdate;
 use crate::kinesis::IteratorProvider;
 use anyhow::Result;
@@ -70,8 +70,8 @@ impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorLatest<K> {
         self.config.clone()
     }
 
-    async fn get_iterator(&self, shard_id: &str) -> Result<GetShardIteratorOutput> {
-        get_latest_iterator(self.clone(), shard_id).await
+    async fn get_iterator(&self) -> Result<GetShardIteratorOutput> {
+        latest(&self.config).iterator().await
     }
 }
 
@@ -81,9 +81,9 @@ impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorAtTimestamp<K> {
         self.config.clone()
     }
 
-    async fn get_iterator(&self, shard_id: &str) -> Result<GetShardIteratorOutput> {
-        at_timestamp(&self.config.client, &self.from_datetime)
-            .iterator(&self.config.stream, shard_id)
+    async fn get_iterator(&self) -> Result<GetShardIteratorOutput> {
+        at_timestamp(&self.config, &self.from_datetime)
+            .iterator()
             .await
     }
 }
