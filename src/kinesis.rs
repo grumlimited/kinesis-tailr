@@ -22,7 +22,7 @@ pub mod ticker;
 pub trait IteratorProvider<K: KinesisClient>: Send + Sync + Clone + 'static {
     fn get_config(&self) -> ShardProcessorConfig<K>;
 
-    async fn get_iterator(&self, shard_id: &str) -> Result<GetShardIteratorOutput>;
+    async fn get_iterator(&self) -> Result<GetShardIteratorOutput>;
 }
 
 #[async_trait]
@@ -125,7 +125,7 @@ where
 
         let tx_shard_iterator_progress = tx_shard_iterator_progress.clone();
 
-        match self.get_iterator(&self.get_config().shard_id).await {
+        match self.get_iterator().await {
             Ok(resp) => {
                 let shard_iterator: Option<String> = resp.shard_iterator().map(|s| s.into());
                 tx_shard_iterator_progress

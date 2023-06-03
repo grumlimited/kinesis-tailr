@@ -64,30 +64,23 @@ pub fn new(
 
 pub async fn get_latest_iterator<T, K: KinesisClient>(
     iterator_provider: T,
-    shard_id: &str,
 ) -> Result<GetShardIteratorOutput>
 where
     T: IteratorProvider<K>,
 {
-    latest(&iterator_provider.get_config().client)
-        .iterator(&iterator_provider.get_config().stream, shard_id)
-        .await
+    latest(&iterator_provider.get_config()).iterator().await
 }
 
 pub async fn get_iterator_since<T, K: KinesisClient>(
     iterator_provider: T,
     starting_sequence_number: &str,
-    shard_id: &str,
 ) -> Result<GetShardIteratorOutput>
 where
     T: IteratorProvider<K>,
 {
-    at_sequence(
-        &iterator_provider.get_config().client,
-        starting_sequence_number,
-    )
-    .iterator(&iterator_provider.get_config().stream, shard_id)
-    .await
+    at_sequence(&iterator_provider.get_config(), starting_sequence_number)
+        .iterator()
+        .await
 }
 
 pub async fn handle_iterator_refresh<T, K: KinesisClient>(
@@ -101,19 +94,15 @@ where
     let cloned_shard_iterator_progress = shard_iterator_progress.clone();
 
     let result = match shard_iterator_progress.last_sequence_id {
-        Some(last_sequence_id) => get_iterator_since(
-            iterator_provider.clone(),
-            &last_sequence_id,
-            &shard_iterator_progress.shard_id,
-        )
-        .await
-        .map(|output| {
-            (
-                Some(last_sequence_id.clone()),
-                output.shard_iterator().map(|v| v.to_string()),
-            )
-        }),
-        None => get_latest_iterator(iterator_provider, &shard_iterator_progress.shard_id)
+        Some(last_sequence_id) => get_iterator_since(iterator_provider.clone(), &last_sequence_id)
+            .await
+            .map(|output| {
+                (
+                    Some(last_sequence_id.clone()),
+                    output.shard_iterator().map(|v| v.to_string()),
+                )
+            }),
+        None => get_latest_iterator(iterator_provider)
             .await
             .map(|output| (None, output.shard_iterator().map(|v| v.to_string()))),
     };
