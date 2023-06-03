@@ -1,4 +1,5 @@
 use crate::aws::client::KinesisClient;
+use crate::kinesis::helpers::wait_secs;
 use crate::kinesis::models::*;
 use crate::kinesis::ticker::TickerUpdate;
 use anyhow::Result;
@@ -41,6 +42,7 @@ where
             let tx_shard_iterator_progress = tx_shard_iterator_progress.clone();
             let tx_ticker_updates = self.get_config().tx_ticker_updates;
             let semaphore = self.get_config().semaphore;
+
             async move {
                 while let Some(res) = rx_shard_iterator_progress.recv().await {
                     let permit = semaphore.clone().acquire_owned().await.unwrap();
@@ -70,9 +72,10 @@ where
                                         .await
                                         .unwrap();
                                     }
-                                    Some(ProvisionedThroughputExceededException(inner)) => {
-                                        debug!("ProvisionedThroughputExceededException: {}", inner);
-                                        sleep(Duration::from_secs(10)).await;
+                                    Some(ProvisionedThroughputExceededException(_)) => {
+                                        let ws = wait_secs();
+                                        debug!("ProvisionedThroughputExceededException: waiting {} seconds", ws);
+                                        sleep(Duration::from_secs(ws)).await;
                                         helpers::handle_iterator_refresh(
                                             res_clone.clone(),
                                             cloned_self.clone(),

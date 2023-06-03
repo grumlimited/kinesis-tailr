@@ -1,5 +1,6 @@
 use crate::aws::client::KinesisClient;
 use crate::kinesis::helpers;
+use crate::kinesis::helpers::wait_secs;
 use crate::kinesis::models::{
     ProcessError, RecordResult, ShardIteratorProgress, ShardProcessor, ShardProcessorADT,
     ShardProcessorAtTimestamp, ShardProcessorConfig, ShardProcessorLatest,
@@ -337,6 +338,16 @@ async fn handle_iterator_refresh_ok() {
         progress.next_shard_iterator,
         Some("shard_iterator_at_sequence".to_string())
     );
+}
+
+#[test]
+fn wait_secs_ok() {
+    for _ in 0..1000 {
+        let w = wait_secs();
+
+        assert!(w <= 12);
+        assert!(w >= 1);
+    }
 }
 
 #[derive(Clone, Debug)]
