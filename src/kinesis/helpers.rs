@@ -1,4 +1,5 @@
 use crate::aws::client::{AwsKinesisClient, KinesisClient};
+use crate::iterator::ShardIterator;
 use anyhow::Result;
 use aws_sdk_kinesis::operation::get_shard_iterator::{
     GetShardIteratorError, GetShardIteratorOutput,

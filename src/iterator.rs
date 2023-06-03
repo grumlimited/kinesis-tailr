@@ -13,40 +13,37 @@ pub trait ShardIterator {
     ) -> Result<GetShardIteratorOutput>;
 }
 
-pub fn latest<'a, K>(client: &'a K) -> Box<dyn ShardIterator + 'a + Send + Sync>
-where
-    K: KinesisClient,
-{
-    Box::new(LatestShardIterator { client })
+pub fn latest<K: KinesisClient>(client: &K) -> LatestShardIterator<'_, K> {
+    LatestShardIterator { client }
 }
 
 pub fn at_sequence<'a, K: KinesisClient>(
     client: &'a K,
     starting_sequence_number: &'a str,
-) -> Box<dyn ShardIterator + 'a + Send + Sync> {
-    Box::new(AtSequenceShardIterator {
+) -> AtSequenceShardIterator<'a, K> {
+    AtSequenceShardIterator {
         client,
         starting_sequence_number,
-    })
+    }
 }
 
 pub fn at_timestamp<'a, K: KinesisClient>(
     client: &'a K,
     timestamp: &'a chrono::DateTime<Utc>,
-) -> Box<dyn ShardIterator + 'a + Send + Sync> {
-    Box::new(AtTimestampShardIterator { client, timestamp })
+) -> AtTimestampShardIterator<'a, K> {
+    AtTimestampShardIterator { client, timestamp }
 }
 
-struct LatestShardIterator<'a, K: KinesisClient> {
+pub struct LatestShardIterator<'a, K: KinesisClient> {
     client: &'a K,
 }
 
-struct AtSequenceShardIterator<'a, K: KinesisClient> {
+pub struct AtSequenceShardIterator<'a, K: KinesisClient> {
     client: &'a K,
     starting_sequence_number: &'a str,
 }
 
-struct AtTimestampShardIterator<'a, K: KinesisClient> {
+pub struct AtTimestampShardIterator<'a, K: KinesisClient> {
     client: &'a K,
     timestamp: &'a chrono::DateTime<Utc>,
 }
