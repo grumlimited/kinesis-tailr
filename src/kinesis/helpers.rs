@@ -133,7 +133,7 @@ where
                 .await?;
         }
         Ok((_, None)) => {
-            panic!("No iterator returned")
+            Err(io::Error::new(io::ErrorKind::Other, "No iterator returned"))?;
         }
         Err(e) => match e.downcast_ref::<GetShardIteratorError>() {
             Some(e) => {
@@ -147,8 +147,7 @@ where
                 }
             }
             None => {
-                debug!("Error getting iterator: {:?}", e);
-                todo!();
+                Err(e)?;
             }
         },
     };
