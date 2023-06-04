@@ -19,7 +19,7 @@ pub mod models;
 pub mod ticker;
 
 #[async_trait]
-pub trait IteratorProvider<K: KinesisClient>: Send + Sync + Clone + 'static {
+pub trait IteratorProvider<K: KinesisClient>: Send + Sync + Clone {
     fn get_config(&self) -> ShardProcessorConfig<K>;
 
     async fn get_iterator(&self) -> Result<GetShardIteratorOutput>;
@@ -37,80 +37,72 @@ where
 
         self.seed_shards(tx_shard_iterator_progress.clone()).await?;
 
-        tokio::spawn({
-            let cloned_self = self.clone();
-            let tx_shard_iterator_progress = tx_shard_iterator_progress.clone();
-            let tx_ticker_updates = self.get_config().tx_ticker_updates;
-            let semaphore = self.get_config().semaphore;
+        while let Some(res) = rx_shard_iterator_progress.recv().await {
+            let permit = self.get_config().semaphore.acquire_owned().await.unwrap();
 
-            async move {
-                while let Some(res) = rx_shard_iterator_progress.recv().await {
-                    let permit = semaphore.clone().acquire_owned().await.unwrap();
+            let res_clone = res.clone();
 
-                    let res_clone = res.clone();
+            match res.next_shard_iterator {
+                Some(shard_iterator) => {
+                    let result = self
+                        .publish_records_shard(
+                            &shard_iterator,
+                            res.shard_id.clone(),
+                            self.get_config().tx_ticker_updates.clone(),
+                            tx_shard_iterator_progress.clone(),
+                        )
+                        .await;
 
-                    match res.next_shard_iterator {
-                        Some(shard_iterator) => {
-                            let result = cloned_self
-                                .publish_records_shard(
-                                    &shard_iterator,
-                                    res.shard_id.clone(),
-                                    tx_ticker_updates.clone(),
+                    if let Err(e) = result {
+                        match e.downcast_ref::<GetRecordsError>() {
+                            Some(ExpiredIteratorException(inner)) => {
+                                debug!("ExpiredIteratorException: {}", inner);
+                                helpers::handle_iterator_refresh(
+                                    res_clone.clone(),
+                                    self.clone(),
                                     tx_shard_iterator_progress.clone(),
                                 )
-                                .await;
-
-                            if let Err(e) = result {
-                                match e.downcast_ref::<GetRecordsError>() {
-                                    Some(ExpiredIteratorException(inner)) => {
-                                        debug!("ExpiredIteratorException: {}", inner);
-                                        helpers::handle_iterator_refresh(
-                                            res_clone.clone(),
-                                            cloned_self.clone(),
-                                            tx_shard_iterator_progress.clone(),
-                                        )
-                                        .await
-                                        .unwrap();
-                                    }
-                                    Some(ProvisionedThroughputExceededException(_)) => {
-                                        let ws = wait_secs();
-                                        debug!("ProvisionedThroughputExceededException: waiting {} seconds", ws);
-                                        sleep(Duration::from_secs(ws)).await;
-                                        helpers::handle_iterator_refresh(
-                                            res_clone.clone(),
-                                            cloned_self.clone(),
-                                            tx_shard_iterator_progress.clone(),
-                                        )
-                                        .await
-                                        .unwrap();
-                                    }
-                                    e => {
-                                        cloned_self
-                                            .get_config()
-                                            .tx_records
-                                            .send(Err(ProcessError::PanicError(format!("{:?}", e))))
-                                            .await
-                                            .expect("Could not send error to tx_records");
-                                    }
-                                }
+                                .await
+                                .unwrap();
+                            }
+                            Some(ProvisionedThroughputExceededException(_)) => {
+                                let ws = wait_secs();
+                                debug!(
+                                    "ProvisionedThroughputExceededException: waiting {} seconds",
+                                    ws
+                                );
+                                sleep(Duration::from_secs(ws)).await;
+                                helpers::handle_iterator_refresh(
+                                    res_clone.clone(),
+                                    self.clone(),
+                                    tx_shard_iterator_progress.clone(),
+                                )
+                                .await
+                                .unwrap();
+                            }
+                            e => {
+                                self.get_config()
+                                    .tx_records
+                                    .send(Err(ProcessError::PanicError(format!("{:?}", e))))
+                                    .await
+                                    .expect("Could not send error to tx_records");
                             }
                         }
-                        None => {
-                            cloned_self
-                                .get_config()
-                                .tx_records
-                                .send(Err(ProcessError::PanicError(
-                                    "ShardIterator is None".to_string(),
-                                )))
-                                .await
-                                .expect("");
-                        }
-                    };
-
-                    drop(permit);
+                    }
                 }
-            }
-        });
+                None => {
+                    self.get_config()
+                        .tx_records
+                        .send(Err(ProcessError::PanicError(
+                            "ShardIterator is None".to_string(),
+                        )))
+                        .await
+                        .expect("");
+                }
+            };
+
+            drop(permit);
+        }
 
         Ok(())
     }
