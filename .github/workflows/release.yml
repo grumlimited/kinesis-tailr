@@ -48,6 +48,7 @@ jobs:
           components: rustfmt, clippy
 
       - uses: davidB/rust-cargo-make@v1
+      - uses: taiki-e/install-action@nextest
 
 
       - name: Build
