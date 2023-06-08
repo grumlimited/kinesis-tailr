@@ -38,6 +38,7 @@ jobs:
           components: rustfmt, clippy
 
       - uses: davidB/rust-cargo-make@v1
+      - uses: baptiste0928/cargo-install@v1
 
       - name: Formatting
         run: cargo make fmt
