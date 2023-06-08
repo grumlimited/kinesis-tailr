@@ -11,6 +11,7 @@ fn format_nb_messages_ok() {
             max_messages: None,
             no_color: false,
             print_key: false,
+            print_sequence_number: false,
             print_shard_id: false,
             print_timestamp: false,
             print_delimiter: false,
@@ -124,6 +125,7 @@ async fn expect_split() {
             .send(Ok(Progress(vec![RecordResult {
                 shard_id: "".to_string(),
                 sequence_id: "".to_string(),
+                partition_key: "partition_key".to_string(),
                 datetime: DateTime::from_secs(1_000_000_i64),
                 data: "payload".as_bytes().to_vec(),
             }])))

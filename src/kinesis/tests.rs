@@ -223,6 +223,7 @@ async fn has_records_beyond_end_ts_when_has_end_ts() {
     let record1 = RecordResult {
         shard_id: "shard_id".to_string(),
         sequence_id: "sequence_id".to_string(),
+        partition_key: "partition_key".to_string(),
         datetime: DateTime::from_secs(1000),
         data: vec![],
     };
@@ -240,6 +241,7 @@ async fn has_records_beyond_end_ts_when_has_end_ts() {
     let record2 = RecordResult {
         shard_id: "shard_id".to_string(),
         sequence_id: "sequence_id".to_string(),
+        partition_key: "partition_key".to_string(),
         datetime: DateTime::from_millis(future_ts.timestamp_millis()),
         data: vec![],
     };
@@ -285,6 +287,7 @@ async fn has_records_beyond_end_ts_when_no_end_ts() {
     let record = RecordResult {
         shard_id: "shard_id".to_string(),
         sequence_id: "sequence_id".to_string(),
+        partition_key: "partition_key".to_string(),
         datetime: DateTime::from_secs(1000),
         data: vec![],
     };

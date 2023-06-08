@@ -15,6 +15,7 @@ impl ConsoleSink {
         max_messages: Option<u32>,
         no_color: bool,
         print_key: bool,
+        print_sequence_number: bool,
         print_shard_id: bool,
         print_timestamp: bool,
         print_delimiter: bool,
@@ -25,6 +26,7 @@ impl ConsoleSink {
                 max_messages,
                 no_color,
                 print_key,
+                print_sequence_number,
                 print_shard_id,
                 print_timestamp,
                 print_delimiter,
@@ -71,6 +73,14 @@ impl SinkOutput<Stdout> for ConsoleSink {
             key.to_string()
         } else {
             key.yellow().to_string()
+        }
+    }
+
+    fn write_sequence_number(&self, sq: &str) -> String {
+        if self.config.no_color {
+            sq.to_string()
+        } else {
+            sq.green().to_string()
         }
     }
 

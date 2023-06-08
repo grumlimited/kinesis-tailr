@@ -177,6 +177,7 @@ where
                 RecordResult {
                     shard_id: shard_id.clone(),
                     sequence_id: record.sequence_number().unwrap().into(),
+                    partition_key: record.partition_key().unwrap_or("none").into(),
                     datetime,
                     data: data.into(),
                 }
