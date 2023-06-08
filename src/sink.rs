@@ -17,6 +17,7 @@ pub struct SinkConfig {
     max_messages: Option<u32>,
     no_color: bool,
     print_key: bool,
+    print_sequence_number: bool,
     print_shard_id: bool,
     print_timestamp: bool,
     print_delimiter: bool,
@@ -44,6 +45,10 @@ where
 
     fn write_key(&self, key: &str) -> String {
         key.to_string()
+    }
+
+    fn write_sequence_number(&self, sq: &str) -> String {
+        sq.to_string()
     }
 
     fn write_delimiter(&self, delimiter: &str) -> String {
@@ -220,8 +225,17 @@ where
             .to_string();
 
         let data = if self.get_config().print_key {
-            let key = record_result.sequence_id.to_string();
+            let key = record_result.partition_key.to_string();
             let key = self.write_key(&key);
+
+            format!("{} {}", key, data)
+        } else {
+            data
+        };
+
+        let data = if self.get_config().print_sequence_number {
+            let key = record_result.sequence_id.to_string();
+            let key = self.write_sequence_number(&key);
 
             format!("{} {}", key, data)
         } else {

@@ -38,6 +38,7 @@ pub enum ProcessError {
 pub struct RecordResult {
     pub shard_id: String,
     pub sequence_id: String,
+    pub partition_key: String,
     pub datetime: DateTime,
     pub data: Vec<u8>,
 }

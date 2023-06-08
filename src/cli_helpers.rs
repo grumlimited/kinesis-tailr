@@ -45,6 +45,10 @@ pub struct Opt {
     #[structopt(long)]
     pub print_key: bool,
 
+    /// Print the sequence number
+    #[structopt(long)]
+    pub print_sequence_number: bool,
+
     /// Print the shard ID.
     #[structopt(long)]
     pub print_shard_id: bool,
