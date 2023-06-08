@@ -11,6 +11,7 @@ pub struct ConsoleSink {
 }
 
 impl ConsoleSink {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         max_messages: Option<u32>,
         no_color: bool,
