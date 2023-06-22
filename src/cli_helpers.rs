@@ -1,6 +1,6 @@
 use anyhow::{anyhow, Result};
 use aws_sdk_kinesis::meta::PKG_VERSION;
-use chrono::{DateTime, TimeZone, Utc};
+use chrono::{DateTime, Utc};
 use clap::Parser;
 use log::info;
 
@@ -149,9 +149,9 @@ pub fn validate_time_boundaries(
 pub fn parse_date(datetime: Option<&str>) -> Result<Option<DateTime<Utc>>> {
     datetime
         .map(|dt| {
-            chrono::Utc
-                .datetime_from_str(dt, "%+")
+            chrono::DateTime::parse_from_rfc3339(dt)
                 .map_err(|_| anyhow!("Could not parse date [{}]", dt))
+                .map(|d| d.with_timezone(&Utc))
         })
         .map_or(Ok(None), |r| r.map(Some))
 }
@@ -182,6 +182,11 @@ mod tests {
         let result = parse_date(Some(date)).unwrap().unwrap();
         let result = result.to_rfc3339();
         assert_eq!(result, "2023-05-04T20:57:12+00:00");
+
+        let date = "2023-05-04T20:57:12+02:00";
+        let result = parse_date(Some(date)).unwrap().unwrap();
+        let result = result.to_rfc3339();
+        assert_eq!(result, "2023-05-04T18:57:12+00:00");
     }
 
     #[test]
