@@ -1,20 +1,24 @@
-use crate::aws::client::{AwsKinesisClient, KinesisClient};
-use crate::iterator::ShardIterator;
-use anyhow::Result;
-use aws_sdk_kinesis::operation::get_shard_iterator::{
-    GetShardIteratorError, GetShardIteratorOutput,
-};
-use chrono::Utc;
-use log::debug;
 use std::io;
 use std::sync::Arc;
 use std::time::Duration;
+
+use anyhow::Result;
+use aws_sdk_kinesis::error::SdkError;
+use aws_sdk_kinesis::error::SdkError::ServiceError;
+use aws_sdk_kinesis::operation::get_shard_iterator::{
+    GetShardIteratorError, GetShardIteratorOutput,
+};
+use aws_sdk_kinesis::operation::list_shards::ListShardsError;
+use chrono::Utc;
+use log::debug;
 use tokio::sync::mpsc::Sender;
 use tokio::sync::Semaphore;
 use tokio::time::sleep;
 
+use crate::aws::client::{AwsKinesisClient, KinesisClient};
 use crate::iterator::at_sequence;
 use crate::iterator::latest;
+use crate::iterator::ShardIterator;
 use crate::kinesis::models::{
     ProcessError, ShardProcessor, ShardProcessorADT, ShardProcessorAtTimestamp,
     ShardProcessorConfig, ShardProcessorLatest,
@@ -149,7 +153,15 @@ pub async fn get_shards(client: &AwsKinesisClient, stream: &str) -> io::Result<V
     let resp = client
         .list_shards(stream)
         .await
-        .map_err(|e| io::Error::new(io::ErrorKind::Other, e.to_string()))
+        .map_err(|e| {
+            let message = match e.downcast_ref::<SdkError<ListShardsError>>() {
+                Some(ServiceError(inner)) => inner.err().to_string(),
+                Some(other) => other.to_string(),
+                _ => e.to_string(),
+            };
+
+            io::Error::new(io::ErrorKind::Other, message)
+        })
         .map(|e| {
             e.shards()
                 .unwrap()
