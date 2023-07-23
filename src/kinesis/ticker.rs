@@ -11,7 +11,7 @@ use tokio::time::{sleep, Duration};
 #[derive(Debug, Clone, PartialEq)]
 pub struct TickerUpdate {
     pub shard_id: String,
-    pub millis_behind_latest: i64,
+    pub millis_behind: i64,
 }
 
 pub struct Ticker {
@@ -38,7 +38,7 @@ impl Ticker {
                 let mut counts = counts.lock().await;
                 let counts = counts.deref_mut();
 
-                counts.insert(res.shard_id.clone(), res.millis_behind_latest);
+                counts.insert(res.shard_id.clone(), res.millis_behind);
             }
         }
     }
@@ -46,7 +46,7 @@ impl Ticker {
     pub fn print_timings(&mut self, counts: Arc<Mutex<HashMap<String, i64>>>) {
         tokio::spawn({
             async move {
-                let delay = Duration::from_secs(10);
+                let delay = Duration::from_secs(30);
                 let counts = counts.clone();
 
                 loop {

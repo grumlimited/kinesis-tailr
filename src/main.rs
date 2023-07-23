@@ -1,7 +1,6 @@
 #![allow(clippy::result_large_err)]
 
 use anyhow::Result;
-use chrono::{DateTime, Utc};
 use kinesis::ticker::{Ticker, TickerUpdate};
 use std::sync::Arc;
 use tokio::sync::{mpsc, Semaphore};
@@ -31,7 +30,7 @@ async fn main() -> Result<()> {
     let opt = Opt::parse();
 
     let from_datetime = parse_date(opt.from_datetime.as_deref())?;
-    let to_datetime: Option<DateTime<Utc>> = parse_date(opt.to_datetime.as_deref())?;
+    let to_datetime = parse_date(opt.to_datetime.as_deref())?;
 
     validate_time_boundaries(&from_datetime, &to_datetime)?;
 
@@ -86,7 +85,7 @@ async fn main() -> Result<()> {
     let (tx_ticker_updates, rx_ticker_updates) = mpsc::channel::<TickerUpdate>(shard_count);
 
     tokio::spawn({
-        let mut ticker: Ticker = Ticker::new(rx_ticker_updates);
+        let mut ticker = Ticker::new(rx_ticker_updates);
 
         async move {
             ticker.run().await;

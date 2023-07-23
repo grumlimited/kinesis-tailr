@@ -184,7 +184,7 @@ where
             tx_ticker_updates
                 .send(TickerUpdate {
                     shard_id: shard_id.clone(),
-                    millis_behind_latest: millis_behind,
+                    millis_behind,
                 })
                 .await
                 .expect("Could not send TickerUpdate to tx_ticker_updates");
