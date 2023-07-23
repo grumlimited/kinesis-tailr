@@ -130,7 +130,7 @@ async fn produced_record_is_processed() {
         ticker_update,
         TickerUpdate {
             shard_id: "shardId-000000000000".to_string(),
-            millis_behind_latest: Some(1000)
+            millis_behind_latest: 1000
         }
     );
 
@@ -185,7 +185,7 @@ async fn beyond_to_timestamp_is_received() {
         ticker_update,
         TickerUpdate {
             shard_id: "shardId-000000000000".to_string(),
-            millis_behind_latest: Some(1000)
+            millis_behind_latest: 1000
         }
     );
 
