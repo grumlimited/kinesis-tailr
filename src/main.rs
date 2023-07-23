@@ -82,18 +82,18 @@ async fn main() -> Result<()> {
         }
     });
 
+    let (tx_ticker_updates, rx_ticker_updates) = mpsc::channel::<TickerUpdate>(shard_count);
+
+    tokio::spawn({
+        let mut ticker = Ticker::new(rx_ticker_updates);
+
+        async move {
+            ticker.run().await;
+        }
+    });
+
     let shard_processors = {
         let semaphore = Arc::new(Semaphore::new(opt.concurrent));
-
-        let (tx_ticker_updates, rx_ticker_updates) = mpsc::channel::<TickerUpdate>(1000);
-
-        tokio::spawn({
-            let mut ticker: Ticker = Ticker::new(rx_ticker_updates);
-
-            async move {
-                ticker.run().await;
-            }
-        });
 
         selected_shards
             .iter()

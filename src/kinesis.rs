@@ -180,13 +180,15 @@ where
         let record_results = self.records_before_end_ts(record_results);
         let nb_records_before_end_ts = record_results.len();
 
-        tx_ticker_updates
-            .send(TickerUpdate {
-                shard_id: shard_id.clone(),
-                millis_behind_latest: resp.millis_behind_latest(),
-            })
-            .await
-            .expect("Could not send TickerUpdate to tx_ticker_updates");
+        if let Some(millis_behind) = resp.millis_behind_latest() {
+            tx_ticker_updates
+                .send(TickerUpdate {
+                    shard_id: shard_id.clone(),
+                    millis_behind,
+                })
+                .await
+                .expect("Could not send TickerUpdate to tx_ticker_updates");
+        }
 
         if !record_results.is_empty() {
             self.get_config()
