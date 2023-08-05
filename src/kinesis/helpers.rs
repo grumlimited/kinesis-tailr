@@ -10,7 +10,7 @@ use aws_sdk_kinesis::operation::get_shard_iterator::{
 };
 use aws_sdk_kinesis::operation::list_shards::{ListShardsError, ListShardsOutput};
 use chrono::Utc;
-use log::{debug, warn};
+use log::{debug, info};
 use tokio::sync::mpsc::Sender;
 use tokio::sync::Semaphore;
 use tokio::time::sleep;
@@ -164,11 +164,9 @@ pub async fn get_shards(client: &AwsKinesisClient, stream: &str) -> io::Result<V
         }
     }
 
-    warn!("results: {:?}", results.len());
-
     match seed {
         Ok(_) => {
-            let r: Vec<String> = results
+            let shards: Vec<String> = results
                 .iter()
                 .flat_map(|r| {
                     r.shards()
@@ -179,7 +177,9 @@ pub async fn get_shards(client: &AwsKinesisClient, stream: &str) -> io::Result<V
                 })
                 .collect::<Vec<String>>();
 
-            Ok(r)
+            info!("Found {} shards", shards.len());
+
+            Ok(shards)
         }
         Err(e) => {
             let message = match e.downcast_ref::<SdkError<ListShardsError>>() {
