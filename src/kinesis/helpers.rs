@@ -8,9 +8,9 @@ use aws_sdk_kinesis::error::SdkError::ServiceError;
 use aws_sdk_kinesis::operation::get_shard_iterator::{
     GetShardIteratorError, GetShardIteratorOutput,
 };
-use aws_sdk_kinesis::operation::list_shards::ListShardsError;
+use aws_sdk_kinesis::operation::list_shards::{ListShardsError, ListShardsOutput};
 use chrono::Utc;
-use log::debug;
+use log::{debug, warn};
 use tokio::sync::mpsc::Sender;
 use tokio::sync::Semaphore;
 use tokio::time::sleep;
@@ -150,27 +150,47 @@ where
 }
 
 pub async fn get_shards(client: &AwsKinesisClient, stream: &str) -> io::Result<Vec<String>> {
-    let resp = client
-        .list_shards(stream)
-        .await
-        .map_err(|e| {
+    let mut seed = client.list_shards(stream, None).await;
+
+    let mut results: Vec<ListShardsOutput> = vec![];
+
+    while let Ok(result) = &seed {
+        results.push(result.clone());
+        if let Some(next_token) = result.next_token() {
+            let result = client.list_shards(stream, Some(next_token)).await;
+            seed = result;
+        } else {
+            break;
+        }
+    }
+
+    warn!("results: {:?}", results.len());
+
+    match seed {
+        Ok(_) => {
+            let r: Vec<String> = results
+                .iter()
+                .flat_map(|r| {
+                    r.shards()
+                        .unwrap()
+                        .iter()
+                        .map(|s| s.shard_id().unwrap().to_string())
+                        .collect::<Vec<String>>()
+                })
+                .collect::<Vec<String>>();
+
+            Ok(r)
+        }
+        Err(e) => {
             let message = match e.downcast_ref::<SdkError<ListShardsError>>() {
                 Some(ServiceError(inner)) => inner.err().to_string(),
                 Some(other) => other.to_string(),
                 _ => e.to_string(),
             };
 
-            io::Error::new(io::ErrorKind::Other, message)
-        })
-        .map(|e| {
-            e.shards()
-                .unwrap()
-                .iter()
-                .map(|s| s.shard_id.as_ref().unwrap().clone())
-                .collect::<Vec<String>>()
-        })?;
-
-    Ok(resp)
+            Err(io::Error::new(io::ErrorKind::Other, message))
+        }
+    }
 }
 
 pub fn wait_secs() -> u64 {

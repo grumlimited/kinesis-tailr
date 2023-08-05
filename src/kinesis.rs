@@ -8,7 +8,7 @@ use aws_sdk_kinesis::operation::get_records::GetRecordsError;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use chrono::prelude::*;
 use chrono::{DateTime, Utc};
-use log::{debug, info};
+use log::{debug, info, warn};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{sleep, Duration};
@@ -91,18 +91,22 @@ where
                     }
                 }
                 None => {
-                    self.get_config()
-                        .tx_records
-                        .send(Err(ProcessError::PanicError(
-                            "ShardIterator is None".to_string(),
-                        )))
-                        .await
-                        .expect("");
+                    warn!("ShardIterator is None");
+                    rx_shard_iterator_progress.close();
+                    // self.get_config()
+                    //     .tx_records
+                    //     .send(Err(ProcessError::PanicError(
+                    //         "ShardIterator is None".to_string(),
+                    //     )))
+                    //     .await
+                    //     .expect("");
                 }
             };
 
             drop(permit);
         }
+
+        warn!("ShardProcessor run() finished");
 
         Ok(())
     }
@@ -114,8 +118,6 @@ where
         let permit = self.get_config().semaphore.clone().acquire_owned().await?;
 
         debug!("Seeding shard {}", self.get_config().shard_id);
-
-        let tx_shard_iterator_progress = tx_shard_iterator_progress.clone();
 
         match self.get_iterator().await {
             Ok(resp) => {
@@ -130,6 +132,7 @@ where
                     .await?;
             }
             Err(e) => {
+                println!("XXX Error: {}", e);
                 self.get_config()
                     .tx_records
                     .send(Err(ProcessError::PanicError(e.to_string())))
