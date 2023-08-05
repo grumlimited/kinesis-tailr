@@ -1,7 +1,3 @@
-use crate::aws::client::KinesisClient;
-use crate::kinesis::helpers::wait_secs;
-use crate::kinesis::models::*;
-use crate::kinesis::ticker::TickerUpdate;
 use anyhow::Result;
 use async_trait::async_trait;
 use aws_sdk_kinesis::operation::get_records::GetRecordsError;
@@ -13,6 +9,11 @@ use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{sleep, Duration};
 use GetRecordsError::{ExpiredIteratorException, ProvisionedThroughputExceededException};
+
+use crate::aws::client::KinesisClient;
+use crate::kinesis::helpers::wait_secs;
+use crate::kinesis::models::*;
+use crate::kinesis::ticker::{ShardCountUpdate, TickerMessage};
 
 pub mod helpers;
 pub mod models;
@@ -91,7 +92,11 @@ where
                     }
                 }
                 None => {
-                    warn!("ShardIterator is None");
+                    self.get_config()
+                        .tx_ticker_updates
+                        .send(TickerMessage::RemoveShard(res.shard_id.clone()))
+                        .await
+                        .expect("Boom");
                     rx_shard_iterator_progress.close();
                     // self.get_config()
                     //     .tx_records
@@ -154,7 +159,7 @@ where
         &self,
         shard_iterator: &str,
         shard_id: String,
-        tx_ticker_updates: Sender<TickerUpdate>,
+        tx_ticker_updates: Sender<TickerMessage>,
         tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
     ) -> Result<()> {
         let resp = self.get_config().client.get_records(shard_iterator).await?;
@@ -185,10 +190,10 @@ where
 
         if let Some(millis_behind) = resp.millis_behind_latest() {
             tx_ticker_updates
-                .send(TickerUpdate {
+                .send(TickerMessage::CountUpdate(ShardCountUpdate {
                     shard_id: shard_id.clone(),
                     millis_behind,
-                })
+                }))
                 .await
                 .expect("Could not send TickerUpdate to tx_ticker_updates");
         }

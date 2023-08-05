@@ -1,12 +1,13 @@
 #![allow(clippy::result_large_err)]
 
 use anyhow::Result;
-use kinesis::ticker::{Ticker, TickerUpdate};
+use kinesis::ticker::Ticker;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Semaphore};
 
 use crate::aws::client::*;
 use crate::cli_helpers::*;
+use crate::kinesis::ticker::TickerMessage;
 use crate::sink::console::ConsoleSink;
 use crate::sink::file::FileSink;
 use crate::sink::Sink;
@@ -82,7 +83,7 @@ async fn main() -> Result<()> {
         }
     });
 
-    let (tx_ticker_updates, rx_ticker_updates) = mpsc::channel::<TickerUpdate>(shard_count);
+    let (tx_ticker_updates, rx_ticker_updates) = mpsc::channel::<TickerMessage>(shard_count);
 
     tokio::spawn({
         let mut ticker = Ticker::new(rx_ticker_updates);

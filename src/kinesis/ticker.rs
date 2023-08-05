@@ -3,24 +3,30 @@ use std::ops::DerefMut;
 use std::sync::Arc;
 
 use humantime::format_duration;
-use log::info;
+use log::{debug, info};
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::Mutex;
 use tokio::time::{sleep, Duration};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct TickerUpdate {
+pub enum TickerMessage {
+    CountUpdate(ShardCountUpdate),
+    RemoveShard(String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ShardCountUpdate {
     pub shard_id: String,
     pub millis_behind: i64,
 }
 
 pub struct Ticker {
     counts: Arc<Mutex<HashMap<String, i64>>>,
-    rx_ticker_updates: Receiver<TickerUpdate>,
+    rx_ticker_updates: Receiver<TickerMessage>,
 }
 
 impl Ticker {
-    pub fn new(rx_ticker_updates: Receiver<TickerUpdate>) -> Self {
+    pub fn new(rx_ticker_updates: Receiver<TickerMessage>) -> Self {
         Self {
             counts: Arc::new(Mutex::new(HashMap::new())),
             rx_ticker_updates,
@@ -35,10 +41,20 @@ impl Ticker {
             let counts = self.counts.clone();
 
             while let Some(res) = self.rx_ticker_updates.recv().await {
-                let mut counts = counts.lock().await;
-                let counts = counts.deref_mut();
+                match res {
+                    TickerMessage::CountUpdate(res) => {
+                        let mut counts = counts.lock().await;
+                        let counts = counts.deref_mut();
 
-                counts.insert(res.shard_id.clone(), res.millis_behind);
+                        counts.insert(res.shard_id.clone(), res.millis_behind);
+                    }
+                    TickerMessage::RemoveShard(shard_id) => {
+                        debug!("Received RemoveShard for {}", shard_id);
+                        let mut counts = counts.lock().await;
+                        let counts = counts.deref_mut();
+                        counts.remove(&shard_id);
+                    }
+                }
             }
         }
     }

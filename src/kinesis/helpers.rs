@@ -23,7 +23,7 @@ use crate::kinesis::models::{
     ProcessError, ShardProcessor, ShardProcessorADT, ShardProcessorAtTimestamp,
     ShardProcessorConfig, ShardProcessorLatest,
 };
-use crate::kinesis::ticker::TickerUpdate;
+use crate::kinesis::ticker::TickerMessage;
 use crate::kinesis::{IteratorProvider, ShardIteratorProgress};
 
 #[allow(clippy::too_many_arguments)]
@@ -35,7 +35,7 @@ pub fn new(
     to_datetime: Option<chrono::DateTime<Utc>>,
     semaphore: Arc<Semaphore>,
     tx_records: Sender<Result<ShardProcessorADT, ProcessError>>,
-    tx_ticker_updates: Sender<TickerUpdate>,
+    tx_ticker_updates: Sender<TickerMessage>,
 ) -> Box<dyn ShardProcessor<AwsKinesisClient> + Send + Sync> {
     debug!("Creating ShardProcessor with shard {}", shard_id);
 
