@@ -4,7 +4,7 @@ use aws_sdk_kinesis::operation::get_records::GetRecordsError;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use chrono::prelude::*;
 use chrono::{DateTime, Utc};
-use log::debug;
+use log::{debug, warn};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{sleep, Duration};
@@ -95,7 +95,6 @@ where
                     }
                 }
                 None => {
-                    debug!("Shard {} has been closed", res.shard_id);
                     self.get_config()
                         .tx_ticker_updates
                         .send(TickerMessage::RemoveShard(res.shard_id.clone()))
@@ -109,6 +108,18 @@ where
         }
 
         debug!("ShardProcessor {} finished", self.get_config().shard_id);
+
+        self.get_config()
+            .tx_ticker_updates
+            .send(TickerMessage::RemoveShard(
+                self.get_config().shard_id.clone(),
+            ))
+            .await?;
+
+        self.get_config()
+            .tx_records
+            .send(Ok(ShardProcessorADT::BeyondToTimestamp))
+            .await?;
 
         Ok(())
     }
@@ -223,7 +234,7 @@ where
                 .await
                 .unwrap();
         } else {
-            debug!(
+            warn!(
                 "{} records in batch for shard-id {} and {} records before {}",
                 nb_records,
                 self.get_config().shard_id,
@@ -240,18 +251,6 @@ where
                     last_sequence_id: None,
                     next_shard_iterator: None,
                 })
-                .await?;
-
-            self.get_config()
-                .tx_ticker_updates
-                .send(TickerMessage::RemoveShard(
-                    self.get_config().shard_id.clone(),
-                ))
-                .await?;
-
-            self.get_config()
-                .tx_records
-                .send(Ok(ShardProcessorADT::BeyondToTimestamp))
                 .await?;
         }
 

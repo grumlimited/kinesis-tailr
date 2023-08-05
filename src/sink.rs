@@ -2,7 +2,7 @@ use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::TimeZone;
-use log::{debug, warn};
+use log::debug;
 use std::io;
 use std::io::{BufWriter, Write};
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -123,8 +123,6 @@ where
                         if sc > 0 {
                             sc = sc.saturating_sub(1);
                         }
-
-                        warn!("Received BeyondToTimestamp {}", sc);
 
                         if sc == 0 {
                             tx_records
