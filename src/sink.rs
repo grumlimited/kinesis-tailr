@@ -2,7 +2,7 @@ use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::TimeZone;
-use log::debug;
+use log::{debug, warn};
 use std::io;
 use std::io::{BufWriter, Write};
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -124,11 +124,13 @@ where
                             sc = sc.saturating_sub(1);
                         }
 
+                        warn!("Received BeyondToTimestamp {}", sc);
+
                         if sc == 0 {
                             tx_records
                                 .send(Ok(ShardProcessorADT::Termination))
                                 .await
-                                .expect("Boom");
+                                .expect("Could not send termination message");
                         }
                     }
                     ShardProcessorADT::Progress(res) => match self.get_config().max_messages {

@@ -3,7 +3,7 @@ use std::ops::DerefMut;
 use std::sync::Arc;
 
 use humantime::format_duration;
-use log::{debug, info};
+use log::info;
 use tokio::sync::mpsc::Receiver;
 use tokio::sync::Mutex;
 use tokio::time::{sleep, Duration};
@@ -41,17 +41,13 @@ impl Ticker {
             let counts = self.counts.clone();
 
             while let Some(res) = self.rx_ticker_updates.recv().await {
+                let mut counts = counts.lock().await;
+                let counts = counts.deref_mut();
                 match res {
                     TickerMessage::CountUpdate(res) => {
-                        let mut counts = counts.lock().await;
-                        let counts = counts.deref_mut();
-
                         counts.insert(res.shard_id.clone(), res.millis_behind);
                     }
                     TickerMessage::RemoveShard(shard_id) => {
-                        debug!("Received RemoveShard for {}", shard_id);
-                        let mut counts = counts.lock().await;
-                        let counts = counts.deref_mut();
                         counts.remove(&shard_id);
                     }
                 }

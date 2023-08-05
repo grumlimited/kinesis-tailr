@@ -4,7 +4,7 @@ use aws_sdk_kinesis::operation::get_records::GetRecordsError;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use chrono::prelude::*;
 use chrono::{DateTime, Utc};
-use log::{debug, info};
+use log::debug;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{sleep, Duration};
@@ -48,7 +48,6 @@ where
                     let result = self
                         .publish_records_shard(
                             &shard_iterator,
-                            res.shard_id.clone(),
                             self.get_config().tx_ticker_updates.clone(),
                             tx_shard_iterator_progress.clone(),
                         )
@@ -57,7 +56,11 @@ where
                     if let Err(e) = result {
                         match e.downcast_ref::<GetRecordsError>() {
                             Some(ExpiredIteratorException(inner)) => {
-                                debug!("ExpiredIteratorException: {}", inner);
+                                debug!(
+                                    "ExpiredIteratorException [{}]: {}",
+                                    self.get_config().shard_id,
+                                    inner
+                                );
                                 helpers::handle_iterator_refresh(
                                     res_clone.clone(),
                                     self.clone(),
@@ -92,6 +95,7 @@ where
                     }
                 }
                 None => {
+                    debug!("Shard {} has been closed", res.shard_id);
                     self.get_config()
                         .tx_ticker_updates
                         .send(TickerMessage::RemoveShard(res.shard_id.clone()))
@@ -104,7 +108,7 @@ where
             drop(permit);
         }
 
-        debug!("ShardProcessor run() finished");
+        debug!("ShardProcessor {} finished", self.get_config().shard_id);
 
         Ok(())
     }
@@ -130,7 +134,6 @@ where
                     .await?;
             }
             Err(e) => {
-                println!("XXX Error: {}", e);
                 self.get_config()
                     .tx_records
                     .send(Err(ProcessError::PanicError(e.to_string())))
@@ -143,15 +146,11 @@ where
     }
 
     /**
-    * Publish records from a shard iterator.
-
-    * Because shards are multiplexed per ShardProcessor, we need to keep
-    * track of the shard_id for each shard_iterator.
+     * Publish records from a shard iterator.
      */
     async fn publish_records_shard(
         &self,
         shard_iterator: &str,
-        shard_id: String,
         tx_ticker_updates: Sender<TickerMessage>,
         tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
     ) -> Result<()> {
@@ -168,7 +167,7 @@ where
                 let datetime = *record.approximate_arrival_timestamp().unwrap();
 
                 RecordResult {
-                    shard_id: shard_id.clone(),
+                    shard_id: self.get_config().shard_id,
                     sequence_id: record.sequence_number().unwrap().into(),
                     partition_key: record.partition_key().unwrap_or("none").into(),
                     datetime,
@@ -184,7 +183,7 @@ where
         if let Some(millis_behind) = resp.millis_behind_latest() {
             tx_ticker_updates
                 .send(TickerMessage::CountUpdate(ShardCountUpdate {
-                    shard_id: shard_id.clone(),
+                    shard_id: self.get_config().shard_id.clone(),
                     millis_behind,
                 }))
                 .await
@@ -214,7 +213,7 @@ where
                 .map(|s| s.into());
 
             let shard_iterator_progress = ShardIteratorProgress {
-                shard_id: shard_id.clone(),
+                shard_id: self.get_config().shard_id,
                 last_sequence_id,
                 next_shard_iterator: next_shard_iterator.map(|s| s.into()),
             };
@@ -224,21 +223,36 @@ where
                 .await
                 .unwrap();
         } else {
-            info!(
+            debug!(
                 "{} records in batch for shard-id {} and {} records before {}",
                 nb_records,
-                shard_id,
+                self.get_config().shard_id,
                 nb_records_before_end_ts,
                 self.get_config()
                     .to_datetime
                     .map(|ts| ts.to_rfc3339())
                     .unwrap_or("[No end timestamp]".to_string())
             );
+
+            tx_shard_iterator_progress
+                .send(ShardIteratorProgress {
+                    shard_id: self.get_config().shard_id.clone(),
+                    last_sequence_id: None,
+                    next_shard_iterator: None,
+                })
+                .await?;
+
+            self.get_config()
+                .tx_ticker_updates
+                .send(TickerMessage::RemoveShard(
+                    self.get_config().shard_id.clone(),
+                ))
+                .await?;
+
             self.get_config()
                 .tx_records
                 .send(Ok(ShardProcessorADT::BeyondToTimestamp))
-                .await
-                .expect("Could not send BeyondToTimestamp to tx_records");
+                .await?;
         }
 
         Ok(())

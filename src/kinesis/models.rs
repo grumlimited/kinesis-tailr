@@ -101,7 +101,6 @@ pub trait ShardProcessor<K: KinesisClient>: Send + Sync {
     async fn publish_records_shard(
         &self,
         shard_iterator: &str,
-        shard_id: String,
         tx_ticker: Sender<TickerMessage>,
         tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
     ) -> Result<()>;

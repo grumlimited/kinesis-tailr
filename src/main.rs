@@ -37,12 +37,13 @@ async fn main() -> Result<()> {
 
     let client = create_client(opt.region.clone(), opt.endpoint_url.clone()).await;
 
-    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(1000);
-
     let shards = get_shards(&client, &opt.stream_name).await?;
 
     let selected_shards = selected_shards(shards, &opt.stream_name, &opt.shard_id)?;
     let shard_count = selected_shards.len();
+
+    let (tx_records, rx_records) =
+        mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(shard_count);
 
     print_runtime(&opt, &selected_shards);
 
