@@ -4,7 +4,7 @@ use aws_sdk_kinesis::operation::get_records::GetRecordsError;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use chrono::prelude::*;
 use chrono::{DateTime, Utc};
-use log::{debug, info, warn};
+use log::{debug, info};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{sleep, Duration};
@@ -96,22 +96,15 @@ where
                         .tx_ticker_updates
                         .send(TickerMessage::RemoveShard(res.shard_id.clone()))
                         .await
-                        .expect("Boom");
+                        .expect("Could not send RemoveShard to tx_ticker_updates");
                     rx_shard_iterator_progress.close();
-                    // self.get_config()
-                    //     .tx_records
-                    //     .send(Err(ProcessError::PanicError(
-                    //         "ShardIterator is None".to_string(),
-                    //     )))
-                    //     .await
-                    //     .expect("");
                 }
             };
 
             drop(permit);
         }
 
-        warn!("ShardProcessor run() finished");
+        debug!("ShardProcessor run() finished");
 
         Ok(())
     }
