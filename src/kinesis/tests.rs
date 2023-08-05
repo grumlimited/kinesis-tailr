@@ -1,11 +1,7 @@
-use crate::aws::client::KinesisClient;
-use crate::kinesis::helpers;
-use crate::kinesis::helpers::wait_secs;
-use crate::kinesis::models::{
-    ProcessError, RecordResult, ShardIteratorProgress, ShardProcessor, ShardProcessorADT,
-    ShardProcessorAtTimestamp, ShardProcessorConfig, ShardProcessorLatest,
-};
-use crate::kinesis::ticker::TickerUpdate;
+use std::ops::Add;
+use std::sync::Arc;
+use std::time::Duration;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use aws_sdk_kinesis::config::Region;
@@ -17,16 +13,22 @@ use aws_sdk_kinesis::types::error::InvalidArgumentException;
 use aws_sdk_kinesis::types::{Record, Shard};
 use chrono::prelude::*;
 use chrono::Utc;
-use std::ops::Add;
-use std::sync::Arc;
-use std::time::Duration;
 use tokio::sync::{mpsc, Semaphore};
 use tokio::time::sleep;
+
+use crate::aws::client::KinesisClient;
+use crate::kinesis::helpers;
+use crate::kinesis::helpers::wait_secs;
+use crate::kinesis::models::{
+    ProcessError, RecordResult, ShardIteratorProgress, ShardProcessor, ShardProcessorADT,
+    ShardProcessorAtTimestamp, ShardProcessorConfig, ShardProcessorLatest,
+};
+use crate::kinesis::ticker::{ShardCountUpdate, TickerMessage};
 
 #[tokio::test]
 async fn seed_shards_test() {
     let (tx_records, _) = mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(10);
-    let (tx_ticker_updates, _) = mpsc::channel::<TickerUpdate>(10);
+    let (tx_ticker_updates, _) = mpsc::channel::<TickerMessage>(10);
 
     let (tx_shard_iterator_progress, mut rx_shard_iterator_progress) =
         mpsc::channel::<ShardIteratorProgress>(1);
@@ -68,7 +70,7 @@ async fn seed_shards_test() {
 #[should_panic]
 async fn seed_shards_test_timestamp_in_future() {
     let (tx_records, _) = mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(10);
-    let (tx_ticker_updates, _) = mpsc::channel::<TickerUpdate>(10);
+    let (tx_ticker_updates, _) = mpsc::channel::<TickerMessage>(10);
 
     let (tx_shard_iterator_progress, _) = mpsc::channel::<ShardIteratorProgress>(1);
 
@@ -98,7 +100,7 @@ async fn seed_shards_test_timestamp_in_future() {
 #[tokio::test]
 async fn produced_record_is_processed() {
     let (tx_records, mut rx_records) = mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(10);
-    let (tx_ticker_updates, mut rx_ticker_updates) = mpsc::channel::<TickerUpdate>(10);
+    let (tx_ticker_updates, mut rx_ticker_updates) = mpsc::channel::<TickerMessage>(10);
 
     let client = TestKinesisClient {
         region: Some(Region::new("us-east-1")),
@@ -128,10 +130,10 @@ async fn produced_record_is_processed() {
     let ticker_update = rx_ticker_updates.recv().await.unwrap();
     assert_eq!(
         ticker_update,
-        TickerUpdate {
+        TickerMessage::CountUpdate(ShardCountUpdate {
             shard_id: "shardId-000000000000".to_string(),
             millis_behind: 1000
-        }
+        })
     );
 
     while let Some(res) = rx_records.recv().await {
@@ -156,7 +158,7 @@ async fn produced_record_is_processed() {
 #[tokio::test]
 async fn beyond_to_timestamp_is_received() {
     let (tx_records, mut rx_records) = mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(10);
-    let (tx_ticker_updates, mut rx_ticker_updates) = mpsc::channel::<TickerUpdate>(10);
+    let (tx_ticker_updates, mut rx_ticker_updates) = mpsc::channel::<TickerMessage>(10);
 
     let client = TestKinesisClient {
         region: Some(Region::new("us-east-1")),
@@ -183,10 +185,10 @@ async fn beyond_to_timestamp_is_received() {
     let ticker_update = rx_ticker_updates.recv().await.unwrap();
     assert_eq!(
         ticker_update,
-        TickerUpdate {
+        TickerMessage::CountUpdate(ShardCountUpdate {
             shard_id: "shardId-000000000000".to_string(),
             millis_behind: 1000
-        }
+        })
     );
 
     let result = rx_records.recv().await.unwrap().unwrap();
@@ -196,7 +198,7 @@ async fn beyond_to_timestamp_is_received() {
 #[tokio::test]
 async fn has_records_beyond_end_ts_when_has_end_ts() {
     let (tx_records, _) = mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(10);
-    let (tx_ticker_updates, _) = mpsc::channel::<TickerUpdate>(10);
+    let (tx_ticker_updates, _) = mpsc::channel::<TickerMessage>(10);
 
     let client = TestKinesisClient {
         region: Some(Region::new("us-east-1")),
@@ -257,7 +259,7 @@ async fn has_records_beyond_end_ts_when_has_end_ts() {
 #[tokio::test]
 async fn has_records_beyond_end_ts_when_no_end_ts() {
     let (tx_records, _) = mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(10);
-    let (tx_ticker_updates, _) = mpsc::channel::<TickerUpdate>(10);
+    let (tx_ticker_updates, _) = mpsc::channel::<TickerMessage>(10);
 
     let client = TestKinesisClient {
         region: Some(Region::new("us-east-1")),
@@ -318,7 +320,7 @@ async fn handle_iterator_refresh_ok() {
             to_datetime: None,
             semaphore: Arc::new(Semaphore::new(10)),
             tx_records: mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(10).0,
-            tx_ticker_updates: mpsc::channel::<TickerUpdate>(10).0,
+            tx_ticker_updates: mpsc::channel::<TickerMessage>(10).0,
         },
     };
 
@@ -360,7 +362,11 @@ pub struct TestKinesisClient {
 
 #[async_trait]
 impl KinesisClient for TestKinesisClient {
-    async fn list_shards(&self, _stream: &str) -> Result<ListShardsOutput> {
+    async fn list_shards(
+        &self,
+        _stream: &str,
+        _next_token: Option<&str>,
+    ) -> Result<ListShardsOutput> {
         Ok(ListShardsOutput::builder()
             .shards(Shard::builder().shard_id("000001").build())
             .build())
@@ -424,7 +430,11 @@ pub struct TestTimestampInFutureKinesisClient {}
 
 #[async_trait]
 impl KinesisClient for TestTimestampInFutureKinesisClient {
-    async fn list_shards(&self, _stream: &str) -> Result<ListShardsOutput> {
+    async fn list_shards(
+        &self,
+        _stream: &str,
+        _next_token: Option<&str>,
+    ) -> Result<ListShardsOutput> {
         unimplemented!()
     }
 
