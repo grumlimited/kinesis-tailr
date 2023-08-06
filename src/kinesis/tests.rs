@@ -1,6 +1,5 @@
 use std::ops::Add;
-use std::sync::Arc;
-use std::time::Duration;
+use std::sync::{Arc, Mutex};
 
 use anyhow::Result;
 use async_trait::async_trait;
@@ -14,7 +13,6 @@ use aws_sdk_kinesis::types::{Record, Shard};
 use chrono::prelude::*;
 use chrono::Utc;
 use tokio::sync::{mpsc, Semaphore};
-use tokio::time::sleep;
 
 use crate::aws::client::KinesisClient;
 use crate::kinesis::helpers;
@@ -35,6 +33,7 @@ async fn seed_shards_test() {
 
     let client = TestKinesisClient {
         region: Some(Region::new("us-east-1")),
+        done: Arc::new(Mutex::new(false)),
     };
 
     let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
@@ -104,13 +103,14 @@ async fn produced_record_is_processed() {
 
     let client = TestKinesisClient {
         region: Some(Region::new("us-east-1")),
+        done: Arc::new(Mutex::new(false)),
     };
 
     let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
 
     let processor = ShardProcessorLatest {
         config: ShardProcessorConfig {
-            client,
+            client: client.clone(),
             stream: "test".to_string(),
             shard_id: "shardId-000000000000".to_string(),
             to_datetime: None,
@@ -123,9 +123,7 @@ async fn produced_record_is_processed() {
     // start producer
     tokio::spawn(async move { processor.run().await });
 
-    let mut done_processing = false;
-    let mut closed_resources = false;
-    let mut count = 0;
+    let mut records_count = 0;
 
     let ticker_update = rx_ticker_updates.recv().await.unwrap();
     assert_eq!(
@@ -137,22 +135,12 @@ async fn produced_record_is_processed() {
     );
 
     while let Some(res) = rx_records.recv().await {
-        if !done_processing {
-            if let Ok(ShardProcessorADT::Progress(res)) = res {
-                count += res.len();
-            }
-
-            done_processing = true;
-        } else {
-            if !closed_resources {
-                sleep(Duration::from_millis(100)).await;
-                rx_records.close();
-            }
-            closed_resources = true;
+        if let Ok(ShardProcessorADT::Progress(res)) = res {
+            records_count += res.len();
         }
     }
 
-    assert_eq!(count, 1);
+    assert_eq!(records_count, 1);
 }
 
 #[tokio::test]
@@ -162,6 +150,7 @@ async fn beyond_to_timestamp_is_received() {
 
     let client = TestKinesisClient {
         region: Some(Region::new("us-east-1")),
+        done: Arc::new(Mutex::new(false)),
     };
 
     let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
@@ -202,6 +191,7 @@ async fn has_records_beyond_end_ts_when_has_end_ts() {
 
     let client = TestKinesisClient {
         region: Some(Region::new("us-east-1")),
+        done: Arc::new(Mutex::new(false)),
     };
 
     let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
@@ -263,6 +253,7 @@ async fn has_records_beyond_end_ts_when_no_end_ts() {
 
     let client = TestKinesisClient {
         region: Some(Region::new("us-east-1")),
+        done: Arc::new(Mutex::new(false)),
     };
 
     let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
@@ -310,6 +301,7 @@ async fn handle_iterator_refresh_ok() {
 
     let client = TestKinesisClient {
         region: Some(Region::new("us-east-1")),
+        done: Arc::new(Mutex::new(false)),
     };
 
     let provider = ShardProcessorLatest {
@@ -358,6 +350,7 @@ fn wait_secs_ok() {
 #[derive(Clone, Debug)]
 pub struct TestKinesisClient {
     region: Option<Region>,
+    done: Arc<Mutex<bool>>,
 }
 
 #[async_trait]
@@ -373,19 +366,27 @@ impl KinesisClient for TestKinesisClient {
     }
 
     async fn get_records(&self, _shard_iterator: &str) -> Result<GetRecordsOutput> {
-        let to_datetime = Utc.with_ymd_and_hms(2021, 6, 1, 12, 0, 0).unwrap();
-        let dt = DateTime::from_secs(to_datetime.timestamp());
-        let record = Record::builder()
-            .approximate_arrival_timestamp(dt)
-            .sequence_number("1")
-            .data(Blob::new("data"))
-            .build();
+        let mut current_done = self.done.lock().unwrap();
 
-        Ok(GetRecordsOutput::builder()
-            .records(record)
-            .next_shard_iterator("shard_iterator2".to_string())
-            .millis_behind_latest(1000)
-            .build())
+        if *current_done {
+            Ok(GetRecordsOutput::builder().build())
+        } else {
+            *current_done = true;
+
+            let to_datetime = Utc.with_ymd_and_hms(2021, 6, 1, 12, 0, 0).unwrap();
+            let dt = DateTime::from_secs(to_datetime.timestamp());
+            let record = Record::builder()
+                .approximate_arrival_timestamp(dt)
+                .sequence_number("1")
+                .data(Blob::new("data"))
+                .build();
+
+            Ok(GetRecordsOutput::builder()
+                .records(record)
+                .next_shard_iterator("shard_iterator2".to_string())
+                .millis_behind_latest(1000)
+                .build())
+        }
     }
 
     async fn get_shard_iterator_at_timestamp(
