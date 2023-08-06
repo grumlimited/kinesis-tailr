@@ -95,7 +95,7 @@ async fn main() -> Result<()> {
     });
 
     let shard_processors = {
-        let semaphore = Arc::new(Semaphore::new(opt.concurrent));
+        let semaphore = semaphore(shard_count, opt.concurrent);
 
         selected_shards
             .iter()
@@ -136,4 +136,13 @@ async fn main() -> Result<()> {
     let _ = handle.await?;
 
     Ok(())
+}
+
+fn semaphore(shard_count: usize, concurrent: Option<usize>) -> Arc<Semaphore> {
+    let concurrent = match concurrent {
+        Some(concurrent) => concurrent,
+        None => std::cmp::min(shard_count, SEMAPHORE_DEFAULT_SIZE),
+    };
+
+    Arc::new(Semaphore::new(concurrent))
 }
