@@ -19,7 +19,11 @@ pub mod client {
 
     #[async_trait]
     pub trait KinesisClient: Sync + Send + Clone {
-        async fn list_shards(&self, stream: &str) -> Result<ListShardsOutput>;
+        async fn list_shards(
+            &self,
+            stream: &str,
+            next_token: Option<&str>,
+        ) -> Result<ListShardsOutput>;
 
         async fn get_records(&self, shard_iterator: &str) -> Result<GetRecordsOutput>;
 
@@ -52,13 +56,17 @@ pub mod client {
 
     #[async_trait]
     impl KinesisClient for AwsKinesisClient {
-        async fn list_shards(&self, stream: &str) -> Result<ListShardsOutput> {
-            self.client
-                .list_shards()
-                .stream_name(stream)
-                .send()
-                .await
-                .map_err(|e| e.into())
+        async fn list_shards(
+            &self,
+            stream: &str,
+            next_token: Option<&str>,
+        ) -> Result<ListShardsOutput> {
+            let builder = match next_token {
+                Some(token) => self.client.list_shards().next_token(token),
+                None => self.client.list_shards().stream_name(stream),
+            };
+
+            builder.send().await.map_err(|e| e.into())
         }
 
         async fn get_records(&self, shard_iterator: &str) -> Result<GetRecordsOutput> {

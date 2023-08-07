@@ -9,18 +9,24 @@ use tokio::sync::Mutex;
 use tokio::time::{sleep, Duration};
 
 #[derive(Debug, Clone, PartialEq)]
-pub struct TickerUpdate {
+pub enum TickerMessage {
+    CountUpdate(ShardCountUpdate),
+    RemoveShard(String),
+}
+
+#[derive(Debug, Clone, PartialEq)]
+pub struct ShardCountUpdate {
     pub shard_id: String,
     pub millis_behind: i64,
 }
 
 pub struct Ticker {
     counts: Arc<Mutex<HashMap<String, i64>>>,
-    rx_ticker_updates: Receiver<TickerUpdate>,
+    rx_ticker_updates: Receiver<TickerMessage>,
 }
 
 impl Ticker {
-    pub fn new(rx_ticker_updates: Receiver<TickerUpdate>) -> Self {
+    pub fn new(rx_ticker_updates: Receiver<TickerMessage>) -> Self {
         Self {
             counts: Arc::new(Mutex::new(HashMap::new())),
             rx_ticker_updates,
@@ -37,8 +43,14 @@ impl Ticker {
             while let Some(res) = self.rx_ticker_updates.recv().await {
                 let mut counts = counts.lock().await;
                 let counts = counts.deref_mut();
-
-                counts.insert(res.shard_id.clone(), res.millis_behind);
+                match res {
+                    TickerMessage::CountUpdate(res) => {
+                        counts.insert(res.shard_id.clone(), res.millis_behind);
+                    }
+                    TickerMessage::RemoveShard(shard_id) => {
+                        counts.remove(&shard_id);
+                    }
+                }
             }
         }
     }

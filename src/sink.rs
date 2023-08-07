@@ -128,7 +128,7 @@ where
                             tx_records
                                 .send(Ok(ShardProcessorADT::Termination))
                                 .await
-                                .expect("Boom");
+                                .expect("Could not send termination message");
                         }
                     }
                     ShardProcessorADT::Progress(res) => match self.get_config().max_messages {

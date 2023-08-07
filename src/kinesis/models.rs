@@ -1,7 +1,7 @@
 use crate::aws::client::KinesisClient;
 use crate::iterator::ShardIterator;
 use crate::iterator::{at_timestamp, latest};
-use crate::kinesis::ticker::TickerUpdate;
+use crate::kinesis::ticker::TickerMessage;
 use crate::kinesis::IteratorProvider;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -51,7 +51,7 @@ pub struct ShardProcessorConfig<K: KinesisClient> {
     pub to_datetime: Option<chrono::DateTime<Utc>>,
     pub semaphore: Arc<Semaphore>,
     pub tx_records: Sender<Result<ShardProcessorADT, ProcessError>>,
-    pub tx_ticker_updates: Sender<TickerUpdate>,
+    pub tx_ticker_updates: Sender<TickerMessage>,
 }
 
 #[derive(Clone)]
@@ -101,8 +101,7 @@ pub trait ShardProcessor<K: KinesisClient>: Send + Sync {
     async fn publish_records_shard(
         &self,
         shard_iterator: &str,
-        shard_id: String,
-        tx_ticker: Sender<TickerUpdate>,
+        tx_ticker: Sender<TickerMessage>,
         tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
     ) -> Result<()>;
 

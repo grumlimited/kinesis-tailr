@@ -13,11 +13,10 @@ edition = "2021"
 anyhow = "1.0"
 async-trait = "0.1"
 aws-config = { version = "0.55" }
-aws-sdk-kinesis     = { version = "0.28" }
-chrono = "0.4"
+aws-sdk-kinesis = { version = "0.28" }
+chrono = { version = "0.4", features = ["clock", "std"] }
 clap = { version = "4.3", features = ["derive"] }
 colored = "2.0"
-config = "0.13"
 ctrlc-async = "3.2"
 env_logger = "0.10"
 humantime = "2.1"
@@ -26,7 +25,7 @@ log4rs = "1.2"
 nix = "0.26"
 rand = "0.8"
 thiserror = "1.0"
-tokio = { version = "1.28", features = ["rt-multi-thread",  "macros"] }
+tokio = { version = "1.29", features = ["rt-multi-thread",  "macros"] }
 
 [features]
-default = ["clap/cargo", "clap/derive", "config/json"]
+default = ["clap/cargo", "clap/derive"]

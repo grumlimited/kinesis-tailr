@@ -1,12 +1,13 @@
 #![allow(clippy::result_large_err)]
 
 use anyhow::Result;
-use kinesis::ticker::{Ticker, TickerUpdate};
+use kinesis::ticker::Ticker;
 use std::sync::Arc;
 use tokio::sync::{mpsc, Semaphore};
 
 use crate::aws::client::*;
 use crate::cli_helpers::*;
+use crate::kinesis::ticker::TickerMessage;
 use crate::sink::console::ConsoleSink;
 use crate::sink::file::FileSink;
 use crate::sink::Sink;
@@ -36,12 +37,13 @@ async fn main() -> Result<()> {
 
     let client = create_client(opt.region.clone(), opt.endpoint_url.clone()).await;
 
-    let (tx_records, rx_records) = mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(1000);
-
     let shards = get_shards(&client, &opt.stream_name).await?;
 
     let selected_shards = selected_shards(shards, &opt.stream_name, &opt.shard_id)?;
     let shard_count = selected_shards.len();
+
+    let (tx_records, rx_records) =
+        mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(shard_count);
 
     print_runtime(&opt, &selected_shards);
 
@@ -82,7 +84,7 @@ async fn main() -> Result<()> {
         }
     });
 
-    let (tx_ticker_updates, rx_ticker_updates) = mpsc::channel::<TickerUpdate>(shard_count);
+    let (tx_ticker_updates, rx_ticker_updates) = mpsc::channel::<TickerMessage>(shard_count);
 
     tokio::spawn({
         let mut ticker = Ticker::new(rx_ticker_updates);
@@ -93,7 +95,7 @@ async fn main() -> Result<()> {
     });
 
     let shard_processors = {
-        let semaphore = Arc::new(Semaphore::new(opt.concurrent));
+        let semaphore = semaphore(shard_count, opt.concurrent);
 
         selected_shards
             .iter()
@@ -134,4 +136,13 @@ async fn main() -> Result<()> {
     let _ = handle.await?;
 
     Ok(())
+}
+
+fn semaphore(shard_count: usize, concurrent: Option<usize>) -> Arc<Semaphore> {
+    let concurrent = match concurrent {
+        Some(concurrent) => concurrent,
+        None => std::cmp::min(shard_count, SEMAPHORE_DEFAULT_SIZE),
+    };
+
+    Arc::new(Semaphore::new(concurrent))
 }

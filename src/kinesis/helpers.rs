@@ -8,9 +8,9 @@ use aws_sdk_kinesis::error::SdkError::ServiceError;
 use aws_sdk_kinesis::operation::get_shard_iterator::{
     GetShardIteratorError, GetShardIteratorOutput,
 };
-use aws_sdk_kinesis::operation::list_shards::ListShardsError;
+use aws_sdk_kinesis::operation::list_shards::{ListShardsError, ListShardsOutput};
 use chrono::Utc;
-use log::debug;
+use log::{debug, info};
 use tokio::sync::mpsc::Sender;
 use tokio::sync::Semaphore;
 use tokio::time::sleep;
@@ -23,7 +23,7 @@ use crate::kinesis::models::{
     ProcessError, ShardProcessor, ShardProcessorADT, ShardProcessorAtTimestamp,
     ShardProcessorConfig, ShardProcessorLatest,
 };
-use crate::kinesis::ticker::TickerUpdate;
+use crate::kinesis::ticker::TickerMessage;
 use crate::kinesis::{IteratorProvider, ShardIteratorProgress};
 
 #[allow(clippy::too_many_arguments)]
@@ -35,7 +35,7 @@ pub fn new(
     to_datetime: Option<chrono::DateTime<Utc>>,
     semaphore: Arc<Semaphore>,
     tx_records: Sender<Result<ShardProcessorADT, ProcessError>>,
-    tx_ticker_updates: Sender<TickerUpdate>,
+    tx_ticker_updates: Sender<TickerMessage>,
 ) -> Box<dyn ShardProcessor<AwsKinesisClient> + Send + Sync> {
     debug!("Creating ShardProcessor with shard {}", shard_id);
 
@@ -150,27 +150,47 @@ where
 }
 
 pub async fn get_shards(client: &AwsKinesisClient, stream: &str) -> io::Result<Vec<String>> {
-    let resp = client
-        .list_shards(stream)
-        .await
-        .map_err(|e| {
+    let mut seed = client.list_shards(stream, None).await;
+
+    let mut results: Vec<ListShardsOutput> = vec![];
+
+    while let Ok(result) = &seed {
+        results.push(result.clone());
+        if let Some(next_token) = result.next_token() {
+            let result = client.list_shards(stream, Some(next_token)).await;
+            seed = result;
+        } else {
+            break;
+        }
+    }
+
+    match seed {
+        Ok(_) => {
+            let shards: Vec<String> = results
+                .iter()
+                .flat_map(|r| {
+                    r.shards()
+                        .unwrap()
+                        .iter()
+                        .map(|s| s.shard_id().unwrap().to_string())
+                        .collect::<Vec<String>>()
+                })
+                .collect::<Vec<String>>();
+
+            info!("Found {} shards", shards.len());
+
+            Ok(shards)
+        }
+        Err(e) => {
             let message = match e.downcast_ref::<SdkError<ListShardsError>>() {
                 Some(ServiceError(inner)) => inner.err().to_string(),
                 Some(other) => other.to_string(),
                 _ => e.to_string(),
             };
 
-            io::Error::new(io::ErrorKind::Other, message)
-        })
-        .map(|e| {
-            e.shards()
-                .unwrap()
-                .iter()
-                .map(|s| s.shard_id.as_ref().unwrap().clone())
-                .collect::<Vec<String>>()
-        })?;
-
-    Ok(resp)
+            Err(io::Error::new(io::ErrorKind::Other, message))
+        }
+    }
 }
 
 pub fn wait_secs() -> u64 {
