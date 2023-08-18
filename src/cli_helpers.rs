@@ -35,6 +35,11 @@ pub struct Opt {
     #[structopt(long)]
     pub max_messages: Option<u32>,
 
+    /// Maximum number of aws sdk retries. Increase if you are seeing throttling errors.
+    #[structopt(long)]
+    #[clap(default_value_t = 3)]
+    pub max_attempts: u32,
+
     /// Disable color output
     #[structopt(long)]
     pub no_color: bool,

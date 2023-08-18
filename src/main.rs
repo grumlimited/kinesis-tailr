@@ -35,7 +35,7 @@ async fn main() -> Result<()> {
 
     validate_time_boundaries(&from_datetime, &to_datetime)?;
 
-    let client = create_client(opt.region.clone(), opt.endpoint_url.clone()).await;
+    let client = create_client(opt.max_attempts, opt.region.clone(), opt.endpoint_url.clone()).await;
 
     let shards = get_shards(&client, &opt.stream_name).await?;
 
