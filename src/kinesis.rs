@@ -95,11 +95,13 @@ where
                     }
                 }
                 None => {
-                    self.get_config()
-                        .tx_ticker_updates
-                        .send(TickerMessage::RemoveShard(res.shard_id.clone()))
-                        .await
-                        .expect("Could not send RemoveShard to tx_ticker_updates");
+                    if let Some(sender) = self.get_config().tx_ticker_updates {
+                        sender
+                            .send(TickerMessage::RemoveShard(res.shard_id.clone()))
+                            .await
+                            .expect("Could not send RemoveShard to tx_ticker_updates");
+                    };
+
                     rx_shard_iterator_progress.close();
                 }
             };
@@ -109,12 +111,13 @@ where
 
         debug!("ShardProcessor {} finished", self.get_config().shard_id);
 
-        self.get_config()
-            .tx_ticker_updates
-            .send(TickerMessage::RemoveShard(
-                self.get_config().shard_id.clone(),
-            ))
-            .await?;
+        if let Some(sender) = self.get_config().tx_ticker_updates {
+            sender
+                .send(TickerMessage::RemoveShard(
+                    self.get_config().shard_id.clone(),
+                ))
+                .await?;
+        };
 
         self.get_config()
             .tx_records
@@ -162,7 +165,7 @@ where
     async fn publish_records_shard(
         &self,
         shard_iterator: &str,
-        tx_ticker_updates: Sender<TickerMessage>,
+        tx_ticker_updates: Option<Sender<TickerMessage>>,
         tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
     ) -> Result<()> {
         let resp = self.get_config().client.get_records(shard_iterator).await?;
@@ -192,13 +195,15 @@ where
         let nb_records_before_end_ts = record_results.len();
 
         if let Some(millis_behind) = resp.millis_behind_latest() {
-            tx_ticker_updates
-                .send(TickerMessage::CountUpdate(ShardCountUpdate {
-                    shard_id: self.get_config().shard_id.clone(),
-                    millis_behind,
-                }))
-                .await
-                .expect("Could not send TickerUpdate to tx_ticker_updates");
+            if let Some(tx_ticker_updates) = tx_ticker_updates {
+                tx_ticker_updates
+                    .send(TickerMessage::CountUpdate(ShardCountUpdate {
+                        shard_id: self.get_config().shard_id.clone(),
+                        millis_behind,
+                    }))
+                    .await
+                    .expect("Could not send TickerUpdate to tx_ticker_updates");
+            };
         }
 
         if !record_results.is_empty() {

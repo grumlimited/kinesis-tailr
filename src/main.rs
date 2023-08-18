@@ -116,7 +116,7 @@ async fn main() -> Result<()> {
                         to_datetime,
                         semaphore,
                         tx_records.clone(),
-                        tx_ticker_updates.clone(),
+                        Some(tx_ticker_updates.clone()),
                     );
 
                     shard_processor.run().await.unwrap();

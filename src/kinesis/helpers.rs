@@ -35,7 +35,7 @@ pub fn new(
     to_datetime: Option<chrono::DateTime<Utc>>,
     semaphore: Arc<Semaphore>,
     tx_records: Sender<Result<ShardProcessorADT, ProcessError>>,
-    tx_ticker_updates: Sender<TickerMessage>,
+    tx_ticker_updates: Option<Sender<TickerMessage>>,
 ) -> Box<dyn ShardProcessor<AwsKinesisClient> + Send + Sync> {
     debug!("Creating ShardProcessor with shard {}", shard_id);
 

@@ -46,7 +46,7 @@ async fn seed_shards_test() {
             to_datetime: None,
             semaphore,
             tx_records,
-            tx_ticker_updates,
+            tx_ticker_updates: Some(tx_ticker_updates),
         },
     };
 
@@ -85,7 +85,7 @@ async fn seed_shards_test_timestamp_in_future() {
             to_datetime: None,
             semaphore,
             tx_records,
-            tx_ticker_updates,
+            tx_ticker_updates: Some(tx_ticker_updates),
         },
         from_datetime: Utc::now().add(chrono::Duration::days(1)),
     };
@@ -116,7 +116,7 @@ async fn produced_record_is_processed() {
             to_datetime: None,
             semaphore,
             tx_records,
-            tx_ticker_updates,
+            tx_ticker_updates: Some(tx_ticker_updates),
         },
     };
 
@@ -164,7 +164,7 @@ async fn beyond_to_timestamp_is_received() {
             to_datetime: Some(to_datetime),
             semaphore,
             tx_records,
-            tx_ticker_updates,
+            tx_ticker_updates: Some(tx_ticker_updates),
         },
     };
 
@@ -205,7 +205,7 @@ async fn has_records_beyond_end_ts_when_has_end_ts() {
             to_datetime: Some(to_datetime),
             semaphore,
             tx_records,
-            tx_ticker_updates,
+            tx_ticker_updates: Some(tx_ticker_updates),
         },
     };
 
@@ -266,7 +266,7 @@ async fn has_records_beyond_end_ts_when_no_end_ts() {
             to_datetime: None,
             semaphore,
             tx_records,
-            tx_ticker_updates,
+            tx_ticker_updates: Some(tx_ticker_updates),
         },
     };
 
@@ -312,7 +312,7 @@ async fn handle_iterator_refresh_ok() {
             to_datetime: None,
             semaphore: Arc::new(Semaphore::new(10)),
             tx_records: mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(10).0,
-            tx_ticker_updates: mpsc::channel::<TickerMessage>(10).0,
+            tx_ticker_updates: Some(mpsc::channel::<TickerMessage>(10).0),
         },
     };
 
