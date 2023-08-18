@@ -59,6 +59,10 @@ pub struct Opt {
     #[structopt(long)]
     pub print_timestamp: bool,
 
+    /// Print progress status
+    #[structopt(long)]
+    pub progress: bool,
+
     /// Shard ID to tail from. Repeat option for each shard ID to filter on
     #[structopt(long)]
     pub shard_id: Option<Vec<String>>,

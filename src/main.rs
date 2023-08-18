@@ -84,15 +84,23 @@ async fn main() -> Result<()> {
         }
     });
 
-    let (tx_ticker_updates, rx_ticker_updates) = mpsc::channel::<TickerMessage>(shard_count);
+    let tx_ticker_updates = match opt.progress {
+        true => {
+            let (tx_ticker_updates, rx_ticker_updates) =
+                mpsc::channel::<TickerMessage>(shard_count);
 
-    tokio::spawn({
-        let mut ticker = Ticker::new(rx_ticker_updates);
+            tokio::spawn({
+                let mut ticker = Ticker::new(rx_ticker_updates);
 
-        async move {
-            ticker.run().await;
+                async move {
+                    ticker.run().await;
+                }
+            });
+
+            Some(tx_ticker_updates)
         }
-    });
+        _ => None,
+    };
 
     let shard_processors = {
         let semaphore = semaphore(shard_count, opt.concurrent);
@@ -116,7 +124,7 @@ async fn main() -> Result<()> {
                         to_datetime,
                         semaphore,
                         tx_records.clone(),
-                        Some(tx_ticker_updates.clone()),
+                        tx_ticker_updates.clone(),
                     );
 
                     shard_processor.run().await.unwrap();
