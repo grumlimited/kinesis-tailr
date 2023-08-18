@@ -11,7 +11,7 @@ use tokio::time::{sleep, Duration};
 use GetRecordsError::{ExpiredIteratorException, ProvisionedThroughputExceededException};
 
 use crate::aws::client::KinesisClient;
-use crate::kinesis::helpers::wait_secs;
+use crate::kinesis::helpers::wait_milliseconds;
 use crate::kinesis::models::*;
 use crate::kinesis::ticker::{ShardCountUpdate, TickerMessage};
 
@@ -70,12 +70,12 @@ where
                                 .unwrap();
                             }
                             Some(ProvisionedThroughputExceededException(_)) => {
-                                let ws = wait_secs();
+                                let milliseconds = wait_milliseconds();
                                 debug!(
-                                    "ProvisionedThroughputExceededException: waiting {} seconds",
-                                    ws
+                                    "ProvisionedThroughputExceededException [{}]: waiting {} milliseconds",
+                                    self.get_config().shard_id ,milliseconds
                                 );
-                                sleep(Duration::from_secs(ws)).await;
+                                sleep(Duration::from_millis(milliseconds)).await;
                                 helpers::handle_iterator_refresh(
                                     res_clone.clone(),
                                     self.clone(),

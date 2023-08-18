@@ -16,7 +16,7 @@ use tokio::sync::{mpsc, Semaphore};
 
 use crate::aws::client::KinesisClient;
 use crate::kinesis::helpers;
-use crate::kinesis::helpers::wait_secs;
+use crate::kinesis::helpers::wait_milliseconds;
 use crate::kinesis::models::{
     ProcessError, RecordResult, ShardIteratorProgress, ShardProcessor, ShardProcessorADT,
     ShardProcessorAtTimestamp, ShardProcessorConfig, ShardProcessorLatest,
@@ -340,7 +340,7 @@ async fn handle_iterator_refresh_ok() {
 #[test]
 fn wait_secs_ok() {
     for _ in 0..1000 {
-        let w = wait_secs();
+        let w = wait_milliseconds();
 
         assert!(w <= 12);
         assert!(w >= 1);
