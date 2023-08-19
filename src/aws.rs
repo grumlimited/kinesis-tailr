@@ -153,8 +153,7 @@ pub mod client {
                 None => inner,
             };
 
-            let retry_config = RetryConfig::standard()
-                .with_max_attempts(max_attempts);
+            let retry_config = RetryConfig::standard().with_max_attempts(max_attempts);
 
             inner.retry_config(retry_config)
         }
