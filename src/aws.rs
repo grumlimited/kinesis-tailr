@@ -1,8 +1,8 @@
 pub mod client {
-
     use anyhow::Result;
     use async_trait::async_trait;
     use aws_config::meta::region::RegionProviderChain;
+    use aws_config::retry::{RetryConfig, RetryMode};
     use aws_sdk_kinesis::config::Region;
     use aws_sdk_kinesis::operation::get_records::GetRecordsOutput;
     use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
@@ -137,6 +137,7 @@ pub mod client {
     }
 
     pub async fn create_client(
+        max_attempts: u32,
         region: Option<String>,
         endpoint_url: Option<String>,
     ) -> AwsKinesisClient {
@@ -152,7 +153,11 @@ pub mod client {
                 None => inner,
             };
 
-            inner
+            let retry_config = RetryConfig::standard()
+                .with_max_attempts(max_attempts)
+                .with_retry_mode(RetryMode::Adaptive);
+
+            inner.retry_config(retry_config)
         }
         .load()
         .await;

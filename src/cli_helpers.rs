@@ -35,6 +35,11 @@ pub struct Opt {
     #[structopt(long)]
     pub max_messages: Option<u32>,
 
+    /// Maximum number of aws sdk retries. Increase if you are seeing throttling errors.
+    #[structopt(long)]
+    #[clap(default_value_t = 3)]
+    pub max_attempts: u32,
+
     /// Disable color output
     #[structopt(long)]
     pub no_color: bool,
@@ -58,6 +63,10 @@ pub struct Opt {
     /// Print timestamps
     #[structopt(long)]
     pub print_timestamp: bool,
+
+    /// Print progress status
+    #[structopt(long)]
+    pub progress: bool,
 
     /// Shard ID to tail from. Repeat option for each shard ID to filter on
     #[structopt(long)]

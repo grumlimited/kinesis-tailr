@@ -35,7 +35,7 @@ pub fn new(
     to_datetime: Option<chrono::DateTime<Utc>>,
     semaphore: Arc<Semaphore>,
     tx_records: Sender<Result<ShardProcessorADT, ProcessError>>,
-    tx_ticker_updates: Sender<TickerMessage>,
+    tx_ticker_updates: Option<Sender<TickerMessage>>,
 ) -> Box<dyn ShardProcessor<AwsKinesisClient> + Send + Sync> {
     debug!("Creating ShardProcessor with shard {}", shard_id);
 
@@ -132,7 +132,7 @@ where
         Err(e) => match e.downcast_ref::<GetShardIteratorError>() {
             Some(e) => {
                 if e.is_provisioned_throughput_exceeded_exception() {
-                    let ws = wait_secs();
+                    let ws = wait_milliseconds();
                     debug!("ProvisionedThroughputExceededException whilst refreshing iterator.  Waiting {} seconds", ws);
                     sleep(Duration::from_secs(ws)).await;
                     tx_shard_iterator_progress
@@ -193,9 +193,9 @@ pub async fn get_shards(client: &AwsKinesisClient, stream: &str) -> io::Result<V
     }
 }
 
-pub fn wait_secs() -> u64 {
+pub fn wait_milliseconds() -> u64 {
     use rand::prelude::*;
     let mut rng = thread_rng();
 
-    rng.gen_range(1..=12)
+    rng.gen_range(50..=1000)
 }

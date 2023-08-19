@@ -51,7 +51,7 @@ pub struct ShardProcessorConfig<K: KinesisClient> {
     pub to_datetime: Option<chrono::DateTime<Utc>>,
     pub semaphore: Arc<Semaphore>,
     pub tx_records: Sender<Result<ShardProcessorADT, ProcessError>>,
-    pub tx_ticker_updates: Sender<TickerMessage>,
+    pub tx_ticker_updates: Option<Sender<TickerMessage>>,
 }
 
 #[derive(Clone)]
@@ -101,7 +101,7 @@ pub trait ShardProcessor<K: KinesisClient>: Send + Sync {
     async fn publish_records_shard(
         &self,
         shard_iterator: &str,
-        tx_ticker: Sender<TickerMessage>,
+        tx_ticker: Option<Sender<TickerMessage>>,
         tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
     ) -> Result<()>;
 
