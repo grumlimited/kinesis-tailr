@@ -38,16 +38,20 @@ The [release page](https://github.com/grumlimited/kinesis-tailr/releases) provid
         --from-datetime <FROM_DATETIME>      Start datetime position to tail from. ISO 8601 format
         --to-datetime <TO_DATETIME>          End datetime position to tail up to. ISO 8601 format
         --max-messages <MAX_MESSAGES>        Maximum number of messages to retrieve
+        --max-attempts <MAX_ATTEMPTS>        Maximum number of aws sdk retries. Increase if you are seeing throttling errors [default: 3]
         --no-color                           Disable color output
         --print-delimiter                    Print a delimiter between each payload
         --print-key                          Print the partition key
+        --print-sequence-number              Print the sequence number
         --print-shard-id                     Print the shard ID
         --print-timestamp                    Print timestamps
+        --progress                           Print progress status
         --shard-id <SHARD_ID>                Shard ID to tail from. Repeat option for each shard ID to filter on
         -o, --output-file <OUTPUT_FILE>      Output file to write to
-        -c, --concurrent <CONCURRENT>        Concurrent number of shards to tail [default: 10]
+        -c, --concurrent <CONCURRENT>        Concurrent number of shards to tail
         -v, --verbose                        Display additional information
         -h, --help                           Print help
+        -V, --version                        Print version
 
 ### Example
 
