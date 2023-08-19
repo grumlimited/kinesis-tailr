@@ -342,8 +342,8 @@ fn wait_secs_ok() {
     for _ in 0..1000 {
         let w = wait_milliseconds();
 
-        assert!(w <= 12);
-        assert!(w >= 1);
+        assert!(w <= 1000);
+        assert!(w >= 50);
     }
 }
 
