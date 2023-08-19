@@ -5,6 +5,8 @@ use std::path::PathBuf;
 
 use crate::sink::{Configurable, SinkConfig, SinkOutput};
 
+pub const FILE_BUF_SIZE: usize = 512 * 1024; // 512Ko
+
 pub struct FileSink {
     pub(crate) config: SinkConfig,
     pub(crate) file: PathBuf,
@@ -61,6 +63,6 @@ impl SinkOutput<File> for FileSink {
                 )
             })
             .unwrap();
-        BufWriter::new(file)
+        BufWriter::with_capacity(FILE_BUF_SIZE, file)
     }
 }
