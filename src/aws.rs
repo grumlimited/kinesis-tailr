@@ -157,11 +157,10 @@ pub mod client {
                 .with_max_attempts(max_attempts)
                 .with_retry_mode(RetryMode::Adaptive);
 
-            inner
-                .retry_config(retry_config)
+            inner.retry_config(retry_config)
         }
-            .load()
-            .await;
+        .load()
+        .await;
 
         let client = Client::new(&shared_config);
 

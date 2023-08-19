@@ -4,7 +4,7 @@ use aws_sdk_kinesis::operation::get_records::GetRecordsError;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use chrono::prelude::*;
 use chrono::{DateTime, Utc};
-use log::debug;
+use log::{debug, warn};
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{sleep, Duration};
@@ -56,7 +56,7 @@ where
                     if let Err(e) = result {
                         match e.downcast_ref::<GetRecordsError>() {
                             Some(ExpiredIteratorException(inner)) => {
-                                debug!(
+                                warn!(
                                     "ExpiredIteratorException [{}]: {}",
                                     self.get_config().shard_id,
                                     inner
@@ -71,8 +71,8 @@ where
                             }
                             Some(ProvisionedThroughputExceededException(_)) => {
                                 let milliseconds = wait_milliseconds();
-                                debug!(
-                                    "ProvisionedThroughputExceededException [{}]: waiting {} milliseconds",
+                                warn!(
+                                    "ProvisionedThroughputExceededException [{}]. Waiting {} milliseconds. Consider increasing --max-attempts progressively.",
                                     self.get_config().shard_id ,milliseconds
                                 );
                                 sleep(Duration::from_millis(milliseconds)).await;
