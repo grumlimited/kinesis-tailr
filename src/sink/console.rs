@@ -3,7 +3,7 @@ use colored::Colorize;
 use std::io;
 use std::io::{BufWriter, Stdout};
 
-pub const CONSOLE_BUF_SIZE: usize = 8 * 1024;
+pub const CONSOLE_BUF_SIZE: usize = 32 * 1024;
 
 pub struct ConsoleSink {
     pub(crate) config: SinkConfig,

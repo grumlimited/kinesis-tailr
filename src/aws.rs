@@ -2,7 +2,7 @@ pub mod client {
     use anyhow::Result;
     use async_trait::async_trait;
     use aws_config::meta::region::RegionProviderChain;
-    use aws_config::retry::{RetryConfig, RetryMode};
+    use aws_config::retry::RetryConfig;
     use aws_sdk_kinesis::config::Region;
     use aws_sdk_kinesis::operation::get_records::GetRecordsOutput;
     use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
@@ -153,9 +153,7 @@ pub mod client {
                 None => inner,
             };
 
-            let retry_config = RetryConfig::standard()
-                .with_max_attempts(max_attempts)
-                .with_retry_mode(RetryMode::Adaptive);
+            let retry_config = RetryConfig::standard().with_max_attempts(max_attempts);
 
             inner.retry_config(retry_config)
         }
