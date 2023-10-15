@@ -4,7 +4,6 @@ use std::time::Duration;
 
 use anyhow::Result;
 use aws_sdk_kinesis::error::SdkError;
-use aws_sdk_kinesis::error::SdkError::ServiceError;
 use aws_sdk_kinesis::operation::get_shard_iterator::{
     GetShardIteratorError, GetShardIteratorOutput,
 };
@@ -183,7 +182,7 @@ pub async fn get_shards(client: &AwsKinesisClient, stream: &str) -> io::Result<V
         }
         Err(e) => {
             let message = match e.downcast_ref::<SdkError<ListShardsError>>() {
-                Some(ServiceError(inner)) => inner.err().to_string(),
+                Some(SdkError::ServiceError(inner)) => inner.err().to_string(),
                 Some(other) => other.to_string(),
                 _ => e.to_string(),
             };
