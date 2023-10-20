@@ -92,7 +92,10 @@ impl Ticker {
                         let duration = Utc::now() - last_ts;
 
                         if duration.num_milliseconds() > (timeout * 1000) as i64 {
-                            tx_records.send(Err(Timeout(duration))).await.unwrap();
+                            tx_records
+                                .send(Err(Timeout(duration)))
+                                .await
+                                .expect("Could not sent Timeout to tx_records");
                         }
 
                         sleep(delay).await

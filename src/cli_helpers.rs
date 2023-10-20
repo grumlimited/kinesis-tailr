@@ -84,7 +84,7 @@ pub struct Opt {
     #[structopt(short, long)]
     pub verbose: bool,
 
-    /// Exits of no messages received after <timeout> seconds.
+    /// Exits if no messages received after <timeout> seconds.
     #[structopt(long)]
     pub timeout: Option<u16>,
 }
