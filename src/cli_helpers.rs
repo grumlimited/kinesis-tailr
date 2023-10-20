@@ -83,6 +83,10 @@ pub struct Opt {
     /// Display additional information
     #[structopt(short, long)]
     pub verbose: bool,
+
+    /// Exits of no messages received after <timeout> seconds.
+    #[structopt(long)]
+    pub timeout: Option<u16>,
 }
 
 pub(crate) fn selected_shards(

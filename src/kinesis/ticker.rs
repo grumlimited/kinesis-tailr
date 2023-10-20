@@ -29,10 +29,12 @@ pub struct Ticker {
     last_ts: Arc<Mutex<DateTime<Utc>>>,
     rx_ticker_updates: Mutex<Receiver<TickerMessage>>,
     tx_records: Sender<Result<ShardProcessorADT, ProcessError>>,
+    timeout: Option<u16>,
 }
 
 impl Ticker {
     pub fn new(
+        timeout: Option<u16>,
         rx_ticker_updates: Receiver<TickerMessage>,
         tx_records: Sender<Result<ShardProcessorADT, ProcessError>>,
     ) -> Self {
@@ -41,6 +43,7 @@ impl Ticker {
             last_ts: Arc::new(Mutex::new(Utc::now())),
             rx_ticker_updates: Mutex::new(rx_ticker_updates),
             tx_records,
+            timeout,
         }
     }
 
@@ -77,24 +80,26 @@ impl Ticker {
         let last_ts = self.last_ts.clone();
         let tx_records = self.tx_records.clone();
 
-        tokio::spawn({
-            async move {
-                let delay = Duration::from_millis(100);
+        if let Some(timeout) = self.timeout {
+            tokio::spawn({
+                async move {
+                    let delay = Duration::from_millis(100);
 
-                loop {
-                    let last_ts = last_ts.lock().await;
-                    let last_ts = *last_ts;
+                    loop {
+                        let last_ts = last_ts.lock().await;
+                        let last_ts = *last_ts;
 
-                    let duration = Utc::now() - last_ts;
+                        let duration = Utc::now() - last_ts;
 
-                    if duration.num_milliseconds() > 10 * 1000 {
-                        tx_records.send(Err(Timeout(duration))).await.unwrap();
+                        if duration.num_milliseconds() > (timeout * 1000) as i64 {
+                            tx_records.send(Err(Timeout(duration))).await.unwrap();
+                        }
+
+                        sleep(delay).await
                     }
-
-                    sleep(delay).await
                 }
-            }
-        });
+            });
+        }
     }
 
     fn print_timings(&self, counts: Arc<Mutex<HashMap<String, i64>>>) {
