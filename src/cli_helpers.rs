@@ -35,6 +35,10 @@ pub struct Opt {
     #[structopt(long)]
     pub max_messages: Option<u32>,
 
+    /// Exit if no messages received after <timeout> seconds.
+    #[structopt(long)]
+    pub timeout: Option<u16>,
+
     /// Maximum number of aws sdk retries. Increase if you are seeing throttling errors.
     #[structopt(long)]
     #[clap(default_value_t = 3)]
@@ -83,10 +87,6 @@ pub struct Opt {
     /// Display additional information
     #[structopt(short, long)]
     pub verbose: bool,
-
-    /// Exits if no messages received after <timeout> seconds.
-    #[structopt(long)]
-    pub timeout: Option<u16>,
 }
 
 pub(crate) fn selected_shards(
