@@ -1,15 +1,12 @@
-use std::error::Error;
 use std::io;
 use std::sync::Arc;
 use std::time::Duration;
 
 use anyhow::Result;
-use aws_credential_types::provider::error::CredentialsError;
-use aws_sdk_kinesis::error::SdkError;
 use aws_sdk_kinesis::operation::get_shard_iterator::{
     GetShardIteratorError, GetShardIteratorOutput,
 };
-use aws_sdk_kinesis::operation::list_shards::{ListShardsError, ListShardsOutput};
+use aws_sdk_kinesis::operation::list_shards::ListShardsOutput;
 use chrono::Utc;
 use log::{debug, info};
 use tokio::sync::mpsc::Sender;
@@ -182,27 +179,7 @@ pub async fn get_shards(client: &AwsKinesisClient, stream: &str) -> io::Result<V
 
             Ok(shards)
         }
-        Err(e) => {
-            let message = match e.downcast_ref::<SdkError<ListShardsError>>() {
-                Some(SdkError::ServiceError(inner)) => inner.err().to_string(),
-                Some(SdkError::DispatchFailure(a)) => {
-                    let credentials_errors = a
-                        .as_connector_error()
-                        .and_then(|e| e.source())
-                        .and_then(|e| e.downcast_ref::<CredentialsError>())
-                        .and_then(|e| e.source());
-
-                    match credentials_errors {
-                        Some(e) => e.to_string(),
-                        _ => format!("DispatchFailure: {:?}", a),
-                    }
-                }
-                Some(list_shards_errors) => format!("ListShardsError: {:?}", list_shards_errors),
-                other => format!("SdkError: {:?}", other),
-            };
-
-            Err(io::Error::new(io::ErrorKind::Other, message))
-        }
+        Err(e) => Err(io::Error::new(io::ErrorKind::Other, format!("{:?}", e))),
     }
 }
 

@@ -1032,7 +1032,6 @@ dependencies = [
  "anyhow",
  "async-trait",
  "aws-config",
- "aws-credential-types",
  "aws-sdk-kinesis",
  "chrono",
  "clap",
