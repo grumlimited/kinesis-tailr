@@ -100,7 +100,7 @@ async fn main() -> Result<()> {
 
             tokio::spawn({
                 async move {
-                    let ticker = Ticker::new(opt.timeout.clone(), rx_ticker_updates, tx_records);
+                    let ticker = Ticker::new(opt.timeout, rx_ticker_updates, tx_records);
                     ticker.run().await;
                 }
             });

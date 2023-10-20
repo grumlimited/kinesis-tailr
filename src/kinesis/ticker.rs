@@ -152,6 +152,7 @@ impl Ticker {
 
 #[cfg(test)]
 mod tests {
+    use crate::kinesis::models::ProcessError;
     use std::collections::HashMap;
 
     use crate::kinesis::ticker::Ticker;
@@ -170,5 +171,24 @@ mod tests {
                 (&"shard-1".to_string(), &200_i64),
             ]
         );
+    }
+
+    #[tokio::test]
+    async fn check_time_out_1_second() {
+        let timeout = Some(1);
+        let (_, rx_ticker_updates) = tokio::sync::mpsc::channel(1);
+
+        let (tx_records, mut rx_records) = tokio::sync::mpsc::channel(1);
+
+        let ticker = Ticker::new(timeout, rx_ticker_updates, tx_records);
+
+        ticker.check_time_out();
+
+        match rx_records.recv().await {
+            Some(Err(ProcessError::Timeout(m))) => {
+                assert!(m.num_seconds() >= 1, "Expected Timeout")
+            }
+            _ => panic!("Expected Timeout"),
+        }
     }
 }
