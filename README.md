@@ -38,6 +38,7 @@ The [release page](https://github.com/grumlimited/kinesis-tailr/releases) provid
         --from-datetime <FROM_DATETIME>      Start datetime position to tail from. ISO 8601 format
         --to-datetime <TO_DATETIME>          End datetime position to tail up to. ISO 8601 format
         --max-messages <MAX_MESSAGES>        Maximum number of messages to retrieve
+        --timeout <TIMEOUT>                  Exit if no messages received after <timeout> seconds
         --max-attempts <MAX_ATTEMPTS>        Maximum number of aws sdk retries. Increase if you are seeing throttling errors [default: 3]
         --no-color                           Disable color output
         --print-delimiter                    Print a delimiter between each payload

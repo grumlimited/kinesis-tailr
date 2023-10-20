@@ -2,7 +2,7 @@ use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::TimeZone;
-use log::debug;
+use log::{debug, error, warn};
 use std::io;
 use std::io::{BufWriter, Write};
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -175,7 +175,12 @@ where
                     }
                 },
                 Err(ProcessError::PanicError(message)) => {
-                    panic!("Error: {}", message);
+                    error!("Error: {}", message);
+                    std::process::exit(1)
+                }
+                Err(ProcessError::Timeout(elapsed)) => {
+                    warn!("Stream timed out after {}ms.", elapsed.num_milliseconds());
+                    std::process::exit(2)
                 }
             }
         }

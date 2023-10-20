@@ -1,9 +1,15 @@
 #![allow(clippy::result_large_err)]
 
-use anyhow::Result;
-use kinesis::ticker::Ticker;
 use std::sync::Arc;
+
+use anyhow::Result;
+use clap::Parser;
 use tokio::sync::{mpsc, Semaphore};
+use tokio::task::JoinSet;
+
+use kinesis::helpers::get_shards;
+use kinesis::models::*;
+use kinesis::ticker::Ticker;
 
 use crate::aws::client::*;
 use crate::cli_helpers::*;
@@ -11,10 +17,6 @@ use crate::kinesis::ticker::TickerMessage;
 use crate::sink::console::ConsoleSink;
 use crate::sink::file::FileSink;
 use crate::sink::Sink;
-use clap::Parser;
-use kinesis::helpers::get_shards;
-use kinesis::models::*;
-use tokio::task::JoinSet;
 
 mod iterator;
 mod kinesis;
@@ -94,10 +96,11 @@ async fn main() -> Result<()> {
             let (tx_ticker_updates, rx_ticker_updates) =
                 mpsc::channel::<TickerMessage>(shard_count);
 
-            tokio::spawn({
-                let mut ticker = Ticker::new(rx_ticker_updates);
+            let tx_records = tx_records.clone();
 
+            tokio::spawn({
                 async move {
+                    let ticker = Ticker::new(opt.timeout, rx_ticker_updates, tx_records);
                     ticker.run().await;
                 }
             });

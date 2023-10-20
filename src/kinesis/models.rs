@@ -7,7 +7,7 @@ use anyhow::Result;
 use async_trait::async_trait;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::primitives::DateTime;
-use chrono::Utc;
+use chrono::{Duration, Utc};
 use std::fmt::Debug;
 use std::sync::Arc;
 use thiserror::Error;
@@ -32,6 +32,8 @@ pub enum ShardProcessorADT {
 pub enum ProcessError {
     #[error("The stream panicked: {0}")]
     PanicError(String),
+    #[error("The stream timed out after {0}.")]
+    Timeout(Duration),
 }
 
 #[derive(Debug, Clone, PartialEq)]
