@@ -197,8 +197,8 @@ pub async fn get_shards(client: &AwsKinesisClient, stream: &str) -> io::Result<V
                         _ => format!("DispatchFailure: {:?}", a),
                     }
                 }
-                Some(other) => other.to_string(),
-                _ => e.to_string(),
+                Some(list_shards_errors) => format!("ListShardsError: {:?}", list_shards_errors),
+                other => format!("SdkError: {:?}", other),
             };
 
             Err(io::Error::new(io::ErrorKind::Other, message))
