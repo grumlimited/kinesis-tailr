@@ -130,7 +130,8 @@ async fn produced_record_is_processed() {
         ticker_update,
         TickerMessage::CountUpdate(ShardCountUpdate {
             shard_id: "shardId-000000000000".to_string(),
-            millis_behind: 1000
+            millis_behind: 1000,
+            nb_records: 1
         })
     );
 
@@ -176,7 +177,8 @@ async fn beyond_to_timestamp_is_received() {
         ticker_update,
         TickerMessage::CountUpdate(ShardCountUpdate {
             shard_id: "shardId-000000000000".to_string(),
-            millis_behind: 1000
+            millis_behind: 1000,
+            nb_records: 1
         })
     );
 

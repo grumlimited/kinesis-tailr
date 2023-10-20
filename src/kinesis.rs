@@ -200,6 +200,7 @@ where
                     .send(TickerMessage::CountUpdate(ShardCountUpdate {
                         shard_id: self.get_config().shard_id.clone(),
                         millis_behind,
+                        nb_records,
                     }))
                     .await
                     .expect("Could not send TickerUpdate to tx_ticker_updates");
@@ -236,8 +237,7 @@ where
 
             tx_shard_iterator_progress
                 .send(shard_iterator_progress)
-                .await
-                .unwrap();
+                .await?;
         } else {
             debug!(
                 "{} records in batch for shard-id {} and {} records before {}",

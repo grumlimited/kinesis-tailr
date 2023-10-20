@@ -46,6 +46,7 @@ dependencies = ["release"]
 script = '''
     mkdir -p ${DESTDIR}/usr/local/bin
     sudo cp target/release/kinesis-tailr ${DESTDIR}/usr/local/bin/
+    echo Installed to ${DESTDIR}/usr/local/bin/kinesis-tailr
 '''
 
 [tasks.install]
