@@ -13,6 +13,7 @@ edition = "2021"
 anyhow = "1"
 async-trait = "0"
 aws-config = { version = "0" }
+aws-credential-types = { version = "0" }
 aws-sdk-kinesis = { version = "0" }
 chrono = { version = "0", features = ["clock", "std"] }
 clap = { version = "4", features = ["derive"] }
