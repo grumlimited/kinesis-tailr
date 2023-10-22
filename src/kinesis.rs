@@ -46,11 +46,7 @@ where
             match res.next_shard_iterator {
                 Some(shard_iterator) => {
                     let result = self
-                        .publish_records_shard(
-                            &shard_iterator,
-                            self.get_config().tx_ticker_updates.clone(),
-                            tx_shard_iterator_progress.clone(),
-                        )
+                        .publish_records_shard(&shard_iterator, tx_shard_iterator_progress.clone())
                         .await;
 
                     if let Err(e) = result {
@@ -97,7 +93,9 @@ where
                 None => {
                     if let Some(sender) = self.get_config().tx_ticker_updates {
                         sender
-                            .send(TickerMessage::RemoveShard(res.shard_id.clone()))
+                            .send(TickerMessage::RemoveShard(
+                                self.get_config().shard_id.clone(),
+                            ))
                             .await
                             .expect("Could not send RemoveShard to tx_ticker_updates");
                     };
@@ -141,7 +139,6 @@ where
                 tx_shard_iterator_progress
                     .clone()
                     .send(ShardIteratorProgress {
-                        shard_id: self.get_config().shard_id,
                         last_sequence_id: None,
                         next_shard_iterator: shard_iterator,
                     })
@@ -165,10 +162,10 @@ where
     async fn publish_records_shard(
         &self,
         shard_iterator: &str,
-        tx_ticker_updates: Option<Sender<TickerMessage>>,
         tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
     ) -> Result<()> {
         let resp = self.get_config().client.get_records(shard_iterator).await?;
+        let tx_ticker_updates = self.get_config().tx_ticker_updates;
 
         let next_shard_iterator = resp.next_shard_iterator();
 
@@ -230,7 +227,6 @@ where
                 .map(|s| s.into());
 
             let shard_iterator_progress = ShardIteratorProgress {
-                shard_id: self.get_config().shard_id,
                 last_sequence_id,
                 next_shard_iterator: next_shard_iterator.map(|s| s.into()),
             };
@@ -252,7 +248,6 @@ where
 
             tx_shard_iterator_progress
                 .send(ShardIteratorProgress {
-                    shard_id: self.get_config().shard_id.clone(),
                     last_sequence_id: None,
                     next_shard_iterator: None,
                 })

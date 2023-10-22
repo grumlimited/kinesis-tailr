@@ -57,7 +57,6 @@ async fn seed_shards_test() {
 
     let shard_iterator_progress = rx_shard_iterator_progress.recv().await.unwrap();
 
-    assert_eq!(shard_iterator_progress.shard_id, "shardId-000000000000");
     assert_eq!(
         shard_iterator_progress.next_shard_iterator,
         Some("shard_iterator_latest".to_string())
@@ -296,7 +295,6 @@ async fn has_records_beyond_end_ts_when_no_end_ts() {
 #[tokio::test]
 async fn handle_iterator_refresh_ok() {
     let shard_iterator_progress = ShardIteratorProgress {
-        shard_id: "shardId-000000000000".to_string(),
         last_sequence_id: Some("sequence_id".to_string()),
         next_shard_iterator: Some("some_iterator".to_string()),
     };
@@ -331,7 +329,6 @@ async fn handle_iterator_refresh_ok() {
 
     let progress = rx_shard_iterator_progress.recv().await.unwrap();
 
-    assert_eq!(progress.shard_id, "shardId-000000000000".to_string());
     assert_eq!(progress.last_sequence_id, Some("sequence_id".to_string()));
     assert_eq!(
         progress.next_shard_iterator,

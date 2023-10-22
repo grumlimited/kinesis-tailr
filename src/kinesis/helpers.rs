@@ -118,7 +118,6 @@ where
 
             tx_shard_iterator_progress
                 .send(ShardIteratorProgress {
-                    shard_id: shard_iterator_progress.shard_id.clone(),
                     last_sequence_id: sequence_id,
                     next_shard_iterator: Some(iterator),
                 })
