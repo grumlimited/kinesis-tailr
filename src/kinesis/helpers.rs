@@ -101,12 +101,12 @@ where
             .map(|output| {
                 (
                     Some(last_sequence_id.clone()),
-                    output.shard_iterator().map(|v| v.to_string()),
+                    output.shard_iterator().map(str::to_string),
                 )
             }),
         None => get_latest_iterator(iterator_provider)
             .await
-            .map(|output| (None, output.shard_iterator().map(|v| v.to_string()))),
+            .map(|output| (None, output.shard_iterator().map(str::to_string))),
     };
 
     match result {

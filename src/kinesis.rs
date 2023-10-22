@@ -135,12 +135,11 @@ where
 
         match self.get_iterator().await {
             Ok(resp) => {
-                let shard_iterator: Option<String> = resp.shard_iterator().map(|s| s.into());
                 tx_shard_iterator_progress
                     .clone()
                     .send(ShardIteratorProgress {
                         last_sequence_id: None,
-                        next_shard_iterator: shard_iterator,
+                        next_shard_iterator: resp.shard_iterator().map(str::to_string),
                     })
                     .await?;
             }
@@ -228,7 +227,7 @@ where
 
             let shard_iterator_progress = ShardIteratorProgress {
                 last_sequence_id,
-                next_shard_iterator: next_shard_iterator.map(|s| s.into()),
+                next_shard_iterator: next_shard_iterator.map(str::to_string),
             };
 
             tx_shard_iterator_progress
