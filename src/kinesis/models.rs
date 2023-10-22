@@ -16,7 +16,6 @@ use tokio::sync::Semaphore;
 
 #[derive(Debug, Clone)]
 pub struct ShardIteratorProgress {
-    pub(crate) shard_id: String,
     pub(crate) last_sequence_id: Option<String>,
     pub(crate) next_shard_iterator: Option<String>,
 }
@@ -103,7 +102,6 @@ pub trait ShardProcessor<K: KinesisClient>: Send + Sync {
     async fn publish_records_shard(
         &self,
         shard_iterator: &str,
-        tx_ticker: Option<Sender<TickerMessage>>,
         tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
     ) -> Result<()>;
 

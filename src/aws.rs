@@ -4,6 +4,7 @@ pub mod client {
     use aws_config::meta::region::RegionProviderChain;
     use aws_config::retry::RetryConfig;
     use aws_sdk_kinesis::config::Region;
+    use aws_sdk_kinesis::error::SdkError;
     use aws_sdk_kinesis::operation::get_records::GetRecordsOutput;
     use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
     use aws_sdk_kinesis::operation::list_shards::ListShardsOutput;
@@ -49,7 +50,7 @@ pub mod client {
 
         fn get_region(&self) -> Option<&Region>;
 
-        fn to_aws_datetime(timestamp: &chrono::DateTime<Utc>) -> DateTime {
+        fn aws_datetime(timestamp: &chrono::DateTime<Utc>) -> DateTime {
             DateTime::from_millis(timestamp.timestamp_millis())
         }
     }
@@ -66,7 +67,7 @@ pub mod client {
                 None => self.client.list_shards().stream_name(stream),
             };
 
-            builder.send().await.map_err(|e| e.into())
+            builder.send().await.map_err(Into::into)
         }
 
         async fn get_records(&self, shard_iterator: &str) -> Result<GetRecordsOutput> {
@@ -75,8 +76,8 @@ pub mod client {
                 .shard_iterator(shard_iterator)
                 .send()
                 .await
-                .map_err(|e| e.into_service_error())
-                .map_err(|e| e.into())
+                .map_err(SdkError::into_service_error)
+                .map_err(Into::into)
         }
 
         async fn get_shard_iterator_at_timestamp(
@@ -88,13 +89,13 @@ pub mod client {
             self.client
                 .get_shard_iterator()
                 .shard_iterator_type(ShardIteratorType::AtTimestamp)
-                .timestamp(Self::to_aws_datetime(timestamp))
+                .timestamp(Self::aws_datetime(timestamp))
                 .stream_name(stream)
                 .shard_id(shard_id)
                 .send()
                 .await
-                .map_err(|e| e.into_service_error())
-                .map_err(|e| e.into())
+                .map_err(SdkError::into_service_error)
+                .map_err(Into::into)
         }
 
         async fn get_shard_iterator_at_sequence(
@@ -111,8 +112,8 @@ pub mod client {
                 .shard_id(shard_id)
                 .send()
                 .await
-                .map_err(|e| e.into_service_error())
-                .map_err(|e| e.into())
+                .map_err(SdkError::into_service_error)
+                .map_err(Into::into)
         }
 
         async fn get_shard_iterator_latest(
@@ -127,8 +128,8 @@ pub mod client {
                 .shard_id(shard_id)
                 .send()
                 .await
-                .map_err(|e| e.into_service_error())
-                .map_err(|e| e.into())
+                .map_err(SdkError::into_service_error)
+                .map_err(Into::into)
         }
 
         fn get_region(&self) -> Option<&Region> {
