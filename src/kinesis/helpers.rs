@@ -7,6 +7,7 @@ use aws_sdk_kinesis::operation::get_shard_iterator::{
     GetShardIteratorError, GetShardIteratorOutput,
 };
 use aws_sdk_kinesis::operation::list_shards::ListShardsOutput;
+use aws_sdk_kinesis::types::Shard;
 use chrono::Utc;
 use log::{debug, info};
 use tokio::sync::mpsc::Sender;
@@ -165,13 +166,10 @@ pub async fn get_shards(client: &AwsKinesisClient, stream: &str) -> io::Result<V
         Ok(_) => {
             let shards: Vec<String> = results
                 .iter()
-                .flat_map(|r| {
-                    r.shards()
-                        .unwrap()
-                        .iter()
-                        .map(|s| s.shard_id().unwrap().to_string())
-                        .collect::<Vec<String>>()
-                })
+                .filter_map(ListShardsOutput::shards)
+                .flat_map(|s| s.iter())
+                .filter_map(Shard::shard_id)
+                .map(str::to_string)
                 .collect::<Vec<String>>();
 
             info!("Found {} shards", shards.len());

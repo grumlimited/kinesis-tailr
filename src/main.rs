@@ -123,18 +123,18 @@ async fn main() -> Result<()> {
                 let shard_id = shard_id.clone();
                 let semaphore = semaphore.clone();
 
-                tokio::spawn(async move {
-                    let shard_processor = kinesis::helpers::new(
-                        client.clone(),
-                        stream_name,
-                        shard_id,
-                        from_datetime,
-                        to_datetime,
-                        semaphore,
-                        tx_records.clone(),
-                        tx_ticker_updates.clone(),
-                    );
+                let shard_processor = kinesis::helpers::new(
+                    client.clone(),
+                    stream_name,
+                    shard_id,
+                    from_datetime,
+                    to_datetime,
+                    semaphore,
+                    tx_records.clone(),
+                    tx_ticker_updates.clone(),
+                );
 
+                tokio::spawn(async move {
                     shard_processor.run().await.unwrap();
                 })
             })
