@@ -74,8 +74,6 @@ It might be useful to print the raw payload instead though. This can be achieved
 
 Properly UTF-8 encoded payloads will be printed as such and never base64 encoded.
 
-```bash
-
 ### Logging
 
 General logging level for debugging can be turned on with:
