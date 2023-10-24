@@ -23,6 +23,7 @@ impl FileSink {
         print_shard_id: bool,
         print_timestamp: bool,
         print_delimiter: bool,
+        no_base64: bool,
         shard_count: usize,
         file: P,
     ) -> Self {
@@ -35,6 +36,7 @@ impl FileSink {
                 print_shard_id,
                 print_timestamp,
                 print_delimiter,
+                no_base64,
                 exit_after_termination: true,
             },
             file: file.into(),
