@@ -1033,6 +1033,7 @@ dependencies = [
  "async-trait",
  "aws-config",
  "aws-sdk-kinesis",
+ "base64",
  "chrono",
  "clap",
  "colored",

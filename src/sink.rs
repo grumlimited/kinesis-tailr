@@ -1,10 +1,11 @@
+use std::io;
+use std::io::{BufWriter, Write};
+
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
 use chrono::TimeZone;
 use log::{debug, error, warn};
-use std::io;
-use std::io::{BufWriter, Write};
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use crate::kinesis::models::{ProcessError, RecordResult, ShardProcessorADT};
@@ -22,6 +23,7 @@ pub struct SinkConfig {
     print_timestamp: bool,
     print_delimiter: bool,
     exit_after_termination: bool,
+    no_base64: bool,
 }
 
 pub trait Configurable {
@@ -227,7 +229,13 @@ where
     fn format_record(&self, record_result: &RecordResult) -> String {
         let data = match std::str::from_utf8(record_result.data.as_slice()) {
             Ok(payload) => payload.to_string(),
-            Err(_) => String::from_utf8_lossy(record_result.data.as_slice()).to_string(),
+            Err(_) if self.get_config().no_base64 => {
+                String::from_utf8_lossy(record_result.data.as_slice()).to_string()
+            }
+            Err(_) => {
+                use base64::{engine::general_purpose, Engine as _};
+                general_purpose::STANDARD.encode(record_result.data.as_slice())
+            }
         };
 
         let data = if self.get_config().print_key {
