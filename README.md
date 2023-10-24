@@ -51,6 +51,7 @@ The [release page](https://github.com/grumlimited/kinesis-tailr/releases) provid
         -o, --output-file <OUTPUT_FILE>      Output file to write to
         -c, --concurrent <CONCURRENT>        Concurrent number of shards to tail
         -v, --verbose                        Display additional information
+        -n, --no-base64                      Do not base64 encode the payload upon invalid UTF-8 payloads. Print it raw instead
         -h, --help                           Print help
         -V, --version                        Print version
 
@@ -64,6 +65,16 @@ kinesis-tailr \
     --from-datetime '2023-05-04T20:57:12+00:00' \
     --max-messages 2
 ```
+
+### UTF-8
+
+`kinesis-tailr` expects payloads to be UTF-8 encoded. If a payload is not UTF-8 encoded, it will be base64 encoded and printed as such.
+
+It might be useful to print the raw payload instead though. This can be achieved with the `--no-base64` flag.
+
+Properly UTF-8 encoded payloads will be printed as such and never base64 encoded.
+
+```bash
 
 ### Logging
 
