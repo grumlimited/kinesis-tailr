@@ -225,9 +225,10 @@ where
     }
 
     fn format_record(&self, record_result: &RecordResult) -> String {
-        let data = std::str::from_utf8(record_result.data.as_slice())
-            .unwrap()
-            .to_string();
+        let data = match std::str::from_utf8(record_result.data.as_slice()) {
+            Ok(payload) => payload.to_string(),
+            Err(_) => String::from_utf8_lossy(record_result.data.as_slice()).to_string(),
+        };
 
         let data = if self.get_config().print_key {
             let key = record_result.partition_key.to_string();
