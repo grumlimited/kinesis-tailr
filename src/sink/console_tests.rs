@@ -7,17 +7,7 @@ use tokio::sync::mpsc;
 #[test]
 fn format_nb_messages_ok() {
     let console = ConsoleSink {
-        config: SinkConfig {
-            max_messages: None,
-            no_color: false,
-            print_key: false,
-            print_sequence_number: false,
-            print_shard_id: false,
-            print_timestamp: false,
-            print_delimiter: false,
-            exit_after_termination: false,
-            no_base64: false,
-        },
+        config: SinkConfig::default(),
         shard_count: 1,
     };
 
@@ -57,11 +47,6 @@ fn format_outputs() {
 
 #[test]
 fn format_outputs_base64() {
-    let _console = ConsoleSink {
-        config: Default::default(),
-        shard_count: 1,
-    };
-
     let console = ConsoleSink {
         config: SinkConfig {
             no_color: true,
@@ -81,6 +66,29 @@ fn format_outputs_base64() {
     };
 
     assert_eq!(console.format_record(&record), "SGVsbG8g8JCAV29ybGQ=");
+}
+
+#[test]
+fn format_outputs_no_base64() {
+    let console = ConsoleSink {
+        config: SinkConfig {
+            no_base64: true,
+            ..Default::default()
+        },
+        shard_count: 1,
+    };
+
+    let input = b"Hello \xF0\x90\x80World";
+
+    let record = RecordResult {
+        shard_id: "shard_id".to_string(),
+        sequence_id: "sequence_id".to_string(),
+        partition_key: "partition_key".to_string(),
+        datetime: DateTime::from_secs(1_000_000_i64),
+        data: input.to_vec(),
+    };
+
+    assert_eq!(console.format_record(&record), "Hello �World");
 }
 
 #[tokio::test]
