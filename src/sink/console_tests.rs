@@ -16,6 +16,7 @@ fn format_nb_messages_ok() {
             print_timestamp: false,
             print_delimiter: false,
             exit_after_termination: false,
+            no_base64: false,
         },
         shard_count: 1,
     };
@@ -52,6 +53,34 @@ fn format_outputs() {
     assert_eq!(bw_console.write_shard_id("data"), "data");
     assert_eq!(bw_console.write_key("data"), "data");
     assert_eq!(bw_console.write_delimiter("data"), "data");
+}
+
+#[test]
+fn format_outputs_base64() {
+    let _console = ConsoleSink {
+        config: Default::default(),
+        shard_count: 1,
+    };
+
+    let console = ConsoleSink {
+        config: SinkConfig {
+            no_color: true,
+            ..Default::default()
+        },
+        shard_count: 1,
+    };
+
+    let input = b"Hello \xF0\x90\x80World";
+
+    let record = RecordResult {
+        shard_id: "shard_id".to_string(),
+        sequence_id: "sequence_id".to_string(),
+        partition_key: "partition_key".to_string(),
+        datetime: DateTime::from_secs(1_000_000_i64),
+        data: input.to_vec(),
+    };
+
+    assert_eq!(console.format_record(&record), "SGVsbG8g8JCAV29ybGQ=");
 }
 
 #[tokio::test]
