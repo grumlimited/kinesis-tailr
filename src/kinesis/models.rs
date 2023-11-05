@@ -68,8 +68,8 @@ pub struct ShardProcessorAtTimestamp<K: KinesisClient> {
 
 #[async_trait]
 impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorLatest<K> {
-    fn get_config(&self) -> ShardProcessorConfig<K> {
-        self.config.clone()
+    fn get_config(&self) -> &ShardProcessorConfig<K> {
+        &self.config
     }
 
     async fn get_iterator(&self) -> Result<GetShardIteratorOutput> {
@@ -79,8 +79,8 @@ impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorLatest<K> {
 
 #[async_trait]
 impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorAtTimestamp<K> {
-    fn get_config(&self) -> ShardProcessorConfig<K> {
-        self.config.clone()
+    fn get_config(&self) -> &ShardProcessorConfig<K> {
+        &self.config
     }
 
     async fn get_iterator(&self) -> Result<GetShardIteratorOutput> {

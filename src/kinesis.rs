@@ -21,7 +21,7 @@ pub mod ticker;
 
 #[async_trait]
 pub trait IteratorProvider<K: KinesisClient>: Send + Sync + Clone {
-    fn get_config(&self) -> ShardProcessorConfig<K>;
+    fn get_config(&self) -> &ShardProcessorConfig<K>;
 
     async fn get_iterator(&self) -> Result<GetShardIteratorOutput>;
 }
@@ -39,7 +39,13 @@ where
         self.seed_shards(tx_shard_iterator_progress.clone()).await?;
 
         while let Some(res) = rx_shard_iterator_progress.recv().await {
-            let permit = self.get_config().semaphore.acquire_owned().await.unwrap();
+            let permit = self
+                .get_config()
+                .semaphore
+                .clone()
+                .acquire_owned()
+                .await
+                .unwrap();
 
             let res_clone = res.clone();
 
@@ -91,7 +97,7 @@ where
                     }
                 }
                 None => {
-                    if let Some(sender) = self.get_config().tx_ticker_updates {
+                    if let Some(sender) = &self.get_config().tx_ticker_updates {
                         sender
                             .send(TickerMessage::RemoveShard(
                                 self.get_config().shard_id.clone(),
@@ -109,7 +115,7 @@ where
 
         debug!("ShardProcessor {} finished", self.get_config().shard_id);
 
-        if let Some(sender) = self.get_config().tx_ticker_updates {
+        if let Some(sender) = &self.get_config().tx_ticker_updates {
             sender
                 .send(TickerMessage::RemoveShard(
                     self.get_config().shard_id.clone(),
@@ -164,7 +170,7 @@ where
         tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
     ) -> Result<()> {
         let resp = self.get_config().client.get_records(shard_iterator).await?;
-        let tx_ticker_updates = self.get_config().tx_ticker_updates;
+        let tx_ticker_updates = &self.get_config().tx_ticker_updates;
 
         let next_shard_iterator = resp.next_shard_iterator();
 
@@ -177,7 +183,7 @@ where
                 let datetime = *record.approximate_arrival_timestamp().unwrap();
 
                 RecordResult {
-                    shard_id: self.get_config().shard_id,
+                    shard_id: self.get_config().shard_id.clone(),
                     sequence_id: record.sequence_number().unwrap().into(),
                     partition_key: record.partition_key().unwrap_or("none").into(),
                     datetime,

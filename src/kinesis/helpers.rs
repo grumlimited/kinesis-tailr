@@ -71,7 +71,7 @@ pub async fn get_latest_iterator<T, K: KinesisClient>(
 where
     T: IteratorProvider<K>,
 {
-    latest(&iterator_provider.get_config()).iterator().await
+    latest(iterator_provider.get_config()).iterator().await
 }
 
 pub async fn get_iterator_since<T, K: KinesisClient>(
@@ -81,7 +81,7 @@ pub async fn get_iterator_since<T, K: KinesisClient>(
 where
     T: IteratorProvider<K>,
 {
-    at_sequence(&iterator_provider.get_config(), starting_sequence_number)
+    at_sequence(iterator_provider.get_config(), starting_sequence_number)
         .iterator()
         .await
 }
