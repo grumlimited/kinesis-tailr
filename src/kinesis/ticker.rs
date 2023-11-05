@@ -14,12 +14,12 @@ use crate::kinesis::ProcessError::Timeout;
 #[derive(Debug, Clone, PartialEq)]
 pub enum TickerMessage {
     CountUpdate(ShardCountUpdate),
-    RemoveShard(String),
+    RemoveShard(Arc<String>),
 }
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct ShardCountUpdate {
-    pub shard_id: String,
+    pub shard_id: Arc<String>,
     pub millis_behind: i64,
     pub nb_records: usize,
 }
@@ -60,7 +60,7 @@ impl Ticker {
                 let counts = counts.deref_mut();
                 match res {
                     TickerMessage::CountUpdate(res) => {
-                        counts.insert(res.shard_id.clone(), res.millis_behind);
+                        counts.insert(res.shard_id.clone().to_string(), res.millis_behind);
 
                         if res.nb_records > 0 {
                             let mut last_ts = self.last_ts.lock().await;
@@ -69,7 +69,8 @@ impl Ticker {
                         }
                     }
                     TickerMessage::RemoveShard(shard_id) => {
-                        counts.remove(&shard_id);
+                        let x = shard_id.to_string();
+                        counts.remove(&x);
                     }
                 }
             }

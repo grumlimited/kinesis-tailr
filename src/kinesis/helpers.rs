@@ -43,7 +43,7 @@ pub fn new(
             config: ShardProcessorConfig {
                 client,
                 stream,
-                shard_id,
+                shard_id: Arc::new(shard_id),
                 to_datetime,
                 semaphore,
                 tx_records,
@@ -55,7 +55,7 @@ pub fn new(
             config: ShardProcessorConfig {
                 client,
                 stream,
-                shard_id,
+                shard_id: Arc::new(shard_id),
                 to_datetime,
                 semaphore,
                 tx_records,

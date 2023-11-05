@@ -2,6 +2,7 @@ use super::*;
 use crate::kinesis::models::ShardProcessorADT::{BeyondToTimestamp, Progress, Termination};
 use crate::sink::console::ConsoleSink;
 use aws_sdk_kinesis::primitives::DateTime;
+use std::sync::Arc;
 use tokio::sync::mpsc;
 
 #[test]
@@ -58,7 +59,7 @@ fn format_outputs_base64() {
     let input = b"Hello \xF0\x90\x80World";
 
     let record = RecordResult {
-        shard_id: "shard_id".to_string(),
+        shard_id: Arc::new("".to_string()),
         sequence_id: "sequence_id".to_string(),
         partition_key: "partition_key".to_string(),
         datetime: DateTime::from_secs(1_000_000_i64),
@@ -81,7 +82,7 @@ fn format_outputs_no_base64() {
     let input = b"Hello \xF0\x90\x80World";
 
     let record = RecordResult {
-        shard_id: "shard_id".to_string(),
+        shard_id: Arc::new("shard_id".to_string()),
         sequence_id: "sequence_id".to_string(),
         partition_key: "partition_key".to_string(),
         datetime: DateTime::from_secs(1_000_000_i64),
@@ -160,7 +161,7 @@ async fn expect_split() {
     tokio::spawn(async move {
         tx_records_clone
             .send(Ok(Progress(vec![RecordResult {
-                shard_id: "".to_string(),
+                shard_id: Arc::new("".to_string()),
                 sequence_id: "".to_string(),
                 partition_key: "partition_key".to_string(),
                 datetime: DateTime::from_secs(1_000_000_i64),

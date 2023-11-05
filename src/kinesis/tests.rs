@@ -42,7 +42,7 @@ async fn seed_shards_test() {
         config: ShardProcessorConfig {
             client,
             stream: "test".to_string(),
-            shard_id: "shardId-000000000000".to_string(),
+            shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: None,
             semaphore,
             tx_records,
@@ -80,7 +80,7 @@ async fn seed_shards_test_timestamp_in_future() {
         config: ShardProcessorConfig {
             client,
             stream: "test".to_string(),
-            shard_id: "shardId-000000000000".to_string(),
+            shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: None,
             semaphore,
             tx_records,
@@ -111,7 +111,7 @@ async fn produced_record_is_processed() {
         config: ShardProcessorConfig {
             client: client.clone(),
             stream: "test".to_string(),
-            shard_id: "shardId-000000000000".to_string(),
+            shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: None,
             semaphore,
             tx_records,
@@ -128,7 +128,7 @@ async fn produced_record_is_processed() {
     assert_eq!(
         ticker_update,
         TickerMessage::CountUpdate(ShardCountUpdate {
-            shard_id: "shardId-000000000000".to_string(),
+            shard_id: Arc::new("shardId-000000000000".to_string()),
             millis_behind: 1000,
             nb_records: 1
         })
@@ -160,7 +160,7 @@ async fn beyond_to_timestamp_is_received() {
         config: ShardProcessorConfig {
             client,
             stream: "test".to_string(),
-            shard_id: "shardId-000000000000".to_string(),
+            shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: Some(to_datetime),
             semaphore,
             tx_records,
@@ -175,7 +175,7 @@ async fn beyond_to_timestamp_is_received() {
     assert_eq!(
         ticker_update,
         TickerMessage::CountUpdate(ShardCountUpdate {
-            shard_id: "shardId-000000000000".to_string(),
+            shard_id: Arc::new("shardId-000000000000".to_string()),
             millis_behind: 1000,
             nb_records: 1
         })
@@ -202,7 +202,7 @@ async fn has_records_beyond_end_ts_when_has_end_ts() {
         config: ShardProcessorConfig {
             client,
             stream: "test".to_string(),
-            shard_id: "shardId-000000000000".to_string(),
+            shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: Some(to_datetime),
             semaphore,
             tx_records,
@@ -214,7 +214,7 @@ async fn has_records_beyond_end_ts_when_has_end_ts() {
     assert!(processor.has_records_beyond_end_ts(&records));
 
     let record1 = RecordResult {
-        shard_id: "shard_id".to_string(),
+        shard_id: Arc::new("shard_id".to_string()),
         sequence_id: "sequence_id".to_string(),
         partition_key: "partition_key".to_string(),
         datetime: DateTime::from_secs(1000),
@@ -232,7 +232,7 @@ async fn has_records_beyond_end_ts_when_has_end_ts() {
     let future_ts = to_datetime.add(chrono::Duration::days(1));
 
     let record2 = RecordResult {
-        shard_id: "shard_id".to_string(),
+        shard_id: Arc::new("shard_id".to_string()),
         sequence_id: "sequence_id".to_string(),
         partition_key: "partition_key".to_string(),
         datetime: DateTime::from_millis(future_ts.timestamp_millis()),
@@ -263,7 +263,7 @@ async fn has_records_beyond_end_ts_when_no_end_ts() {
         config: ShardProcessorConfig {
             client,
             stream: "test".to_string(),
-            shard_id: "shardId-000000000000".to_string(),
+            shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: None,
             semaphore,
             tx_records,
@@ -279,7 +279,7 @@ async fn has_records_beyond_end_ts_when_no_end_ts() {
     );
 
     let record = RecordResult {
-        shard_id: "shard_id".to_string(),
+        shard_id: Arc::new("shardId-000000000000".to_string()),
         sequence_id: "sequence_id".to_string(),
         partition_key: "partition_key".to_string(),
         datetime: DateTime::from_secs(1000),
@@ -308,7 +308,7 @@ async fn handle_iterator_refresh_ok() {
         config: ShardProcessorConfig {
             client,
             stream: "test".to_string(),
-            shard_id: "shardId-000000000000".to_string(),
+            shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: None,
             semaphore: Arc::new(Semaphore::new(10)),
             tx_records: mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(10).0,

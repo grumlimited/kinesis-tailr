@@ -5,6 +5,7 @@ use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use chrono::prelude::*;
 use chrono::{DateTime, Utc};
 use log::{debug, warn};
+use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{sleep, Duration};
@@ -183,7 +184,7 @@ where
                 let datetime = *record.approximate_arrival_timestamp().unwrap();
 
                 RecordResult {
-                    shard_id: self.get_config().shard_id.clone(),
+                    shard_id: Arc::clone(&self.get_config().shard_id),
                     sequence_id: record.sequence_number().unwrap().into(),
                     partition_key: record.partition_key().unwrap_or("none").into(),
                     datetime,
@@ -200,7 +201,7 @@ where
             if let Some(tx_ticker_updates) = tx_ticker_updates {
                 tx_ticker_updates
                     .send(TickerMessage::CountUpdate(ShardCountUpdate {
-                        shard_id: self.get_config().shard_id.clone(),
+                        shard_id: Arc::clone(&self.get_config().shard_id),
                         millis_behind,
                         nb_records,
                     }))
