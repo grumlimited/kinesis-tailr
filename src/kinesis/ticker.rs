@@ -60,7 +60,7 @@ impl Ticker {
                 let counts = counts.deref_mut();
                 match res {
                     TickerMessage::CountUpdate(res) => {
-                        counts.insert(res.shard_id.clone().to_string(), res.millis_behind);
+                        counts.insert(res.shard_id.to_string(), res.millis_behind);
 
                         if res.nb_records > 0 {
                             let mut last_ts = self.last_ts.lock().await;
@@ -69,8 +69,7 @@ impl Ticker {
                         }
                     }
                     TickerMessage::RemoveShard(shard_id) => {
-                        let x = shard_id.to_string();
-                        counts.remove(&x);
+                        counts.remove(shard_id.as_str());
                     }
                 }
             }
