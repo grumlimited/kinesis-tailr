@@ -5,6 +5,7 @@ use crate::sink::Sink;
 use aws_sdk_kinesis::primitives::DateTime;
 use std::fs;
 use std::path::PathBuf;
+use std::sync::Arc;
 use tokio::sync::mpsc;
 
 #[tokio::test]
@@ -24,7 +25,7 @@ async fn file_sink_ok() {
     tokio::spawn(async move {
         tx_records_clone
             .send(Ok(Progress(vec![RecordResult {
-                shard_id: "".to_string(),
+                shard_id: Arc::new("".to_string()),
                 sequence_id: "".to_string(),
                 partition_key: "partition_key".to_string(),
                 datetime: DateTime::from_secs(1_000_000_i64),

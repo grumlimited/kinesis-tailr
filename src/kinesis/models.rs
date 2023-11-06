@@ -37,7 +37,7 @@ pub enum ProcessError {
 
 #[derive(Debug, Clone, PartialEq)]
 pub struct RecordResult {
-    pub shard_id: String,
+    pub shard_id: Arc<String>,
     pub sequence_id: String,
     pub partition_key: String,
     pub datetime: DateTime,
@@ -48,7 +48,7 @@ pub struct RecordResult {
 pub struct ShardProcessorConfig<K: KinesisClient> {
     pub client: K,
     pub stream: String,
-    pub shard_id: String,
+    pub shard_id: Arc<String>,
     pub to_datetime: Option<chrono::DateTime<Utc>>,
     pub semaphore: Arc<Semaphore>,
     pub tx_records: Sender<Result<ShardProcessorADT, ProcessError>>,
@@ -68,8 +68,8 @@ pub struct ShardProcessorAtTimestamp<K: KinesisClient> {
 
 #[async_trait]
 impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorLatest<K> {
-    fn get_config(&self) -> ShardProcessorConfig<K> {
-        self.config.clone()
+    fn get_config(&self) -> &ShardProcessorConfig<K> {
+        &self.config
     }
 
     async fn get_iterator(&self) -> Result<GetShardIteratorOutput> {
@@ -79,8 +79,8 @@ impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorLatest<K> {
 
 #[async_trait]
 impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorAtTimestamp<K> {
-    fn get_config(&self) -> ShardProcessorConfig<K> {
-        self.config.clone()
+    fn get_config(&self) -> &ShardProcessorConfig<K> {
+        &self.config
     }
 
     async fn get_iterator(&self) -> Result<GetShardIteratorOutput> {
