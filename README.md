@@ -1,5 +1,7 @@
 # kinesis-tailr
 
+![Continuous integration](https://github.com/grumlimited/kinesis-tailr/workflows/Continuous%20integration/badge.svg?branch=main)
+
 A simple tool to tail a Kinesis stream built with Rust.
 
 ## Installation
@@ -23,7 +25,8 @@ cargo install --git https://github.com/grumlimited/kinesis-tailr
 
 ### Releases
 
-The [release page](https://github.com/grumlimited/kinesis-tailr/releases) provides packages for Debian and CentOS and Arch Linux.
+The [release page](https://github.com/grumlimited/kinesis-tailr/releases) provides packages for Debian and CentOS and
+Arch Linux.
 
 ## Usage
 
@@ -68,7 +71,8 @@ kinesis-tailr \
 
 ### UTF-8
 
-`kinesis-tailr` expects payloads to be UTF-8 encoded. If a payload is not UTF-8 encoded, it will be base64 encoded and printed as such.
+`kinesis-tailr` expects payloads to be UTF-8 encoded. If a payload is not UTF-8 encoded, it will be base64 encoded and
+printed as such.
 
 It might be useful to print the raw payload instead though. This can be achieved with the `--no-base64` flag.
 
@@ -97,6 +101,7 @@ export RUST_LOG="WARN,kinesis_tailr=INFO"
 
 kinesis-tailr --stream-name mystream --from-datetime '2023-05-17T19:00:00Z' -o output.json
 ```
+
     [2023-05-17T20:37:35Z INFO  kinesis_tailr::kinesis::ticker] shardId-000000001119: 00:31:23
     [2023-05-17T20:37:35Z INFO  kinesis_tailr::kinesis::ticker] shardId-000000001144: 00:31:27
     [2023-05-17T20:37:35Z INFO  kinesis_tailr::kinesis::ticker] shardId-000000001085: 00:31:31
@@ -106,7 +111,8 @@ kinesis-tailr --stream-name mystream --from-datetime '2023-05-17T19:00:00Z' -o o
     [2023-05-17T20:37:35Z INFO  kinesis_tailr::kinesis::ticker] 10 shards behind
     [...]
 
-It is recommended to use `-o output.json` to write the output to a file, as the output can be quite verbose. This can then be inspected with `jq` or similar.
+It is recommended to use `-o output.json` to write the output to a file, as the output can be quite verbose. This can
+then be inspected with `jq` or similar.
 
 Moreover, it also frees the console output for informational messages. Use
 
