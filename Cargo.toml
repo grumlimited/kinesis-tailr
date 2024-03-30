@@ -12,8 +12,8 @@ edition = "2021"
 [dependencies]
 anyhow = "1"
 async-trait = "0"
-aws-config = { version = "0" }
-aws-sdk-kinesis = { version = "0" }
+aws-config = { version = "1" }
+aws-sdk-kinesis = { version = "1" }
 base64 = "0"
 chrono = { version = "0", features = ["clock", "std"] }
 clap = { version = "4", features = ["derive"] }
@@ -26,7 +26,7 @@ log4rs = "1"
 nix = { version = "0", features = ["signal"] }
 rand = "0"
 thiserror = "1"
-tokio = { version = "1", features = ["rt-multi-thread",  "macros"] }
+tokio = { version = "1", features = ["rt-multi-thread", "macros"] }
 
 [features]
 default = ["clap/cargo", "clap/derive"]

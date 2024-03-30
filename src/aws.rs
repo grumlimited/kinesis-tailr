@@ -3,6 +3,7 @@ pub mod client {
     use async_trait::async_trait;
     use aws_config::meta::region::RegionProviderChain;
     use aws_config::retry::RetryConfig;
+    use aws_config::BehaviorVersion;
     use aws_sdk_kinesis::config::Region;
     use aws_sdk_kinesis::error::SdkError;
     use aws_sdk_kinesis::operation::get_records::GetRecordsOutput;
@@ -133,7 +134,7 @@ pub mod client {
         }
 
         fn get_region(&self) -> Option<&Region> {
-            self.client.conf().region()
+            self.client.config().region()
         }
     }
 
@@ -147,7 +148,7 @@ pub mod client {
             .or_else(Region::new("us-east-1"));
 
         let shared_config = {
-            let inner = aws_config::from_env().region(region_provider);
+            let inner = aws_config::defaults(BehaviorVersion::latest()).region(region_provider);
 
             let inner = match endpoint_url {
                 Some(endpoint_url) => inner.endpoint_url(endpoint_url.as_str()),

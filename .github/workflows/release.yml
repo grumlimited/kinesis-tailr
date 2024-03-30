@@ -3,7 +3,7 @@ on:
     types:
       - created
 
-name: Continuous integration
+name: Release
 
 env:
   DEB_PKG_NAME: kinesis-tailr-${{ github.event.release.tag_name }}-x86_64.deb
@@ -16,7 +16,7 @@ jobs:
     strategy:
       matrix:
         rust:
-          - 1.73.0  # MSRV
+          - 1.77.0  # MSRV
 
     steps:
       - name: Checkout
@@ -58,7 +58,7 @@ jobs:
 
       - name: Create Debian package
         env:
-          DESTDIR: '~/kinesis-tailr-deb'
+          DESTDIR: '/tmp/kinesis-tailr-deb'
         run: |
           mkdir -p $DESTDIR
           RELEASE_VERSION=${{ github.event.release.tag_name }} DESTDIR=$DESTDIR cargo make debian-pkg
