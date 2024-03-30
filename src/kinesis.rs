@@ -177,16 +177,15 @@ where
 
         let record_results = resp
             .records()
-            .unwrap()
             .iter()
             .map(|record| {
-                let data = record.data().unwrap().as_ref();
+                let data = record.data().as_ref();
                 let datetime = *record.approximate_arrival_timestamp().unwrap();
 
                 RecordResult {
                     shard_id: Arc::clone(&self.get_config().shard_id),
-                    sequence_id: record.sequence_number().unwrap().into(),
-                    partition_key: record.partition_key().unwrap_or("none").into(),
+                    sequence_id: record.sequence_number().into(),
+                    partition_key: record.partition_key().into(),
                     datetime,
                     data: data.into(),
                 }
@@ -228,9 +227,11 @@ where
         if should_continue {
             let last_sequence_id: Option<String> = resp
                 .records()
-                .and_then(|r| r.last())
-                .and_then(|r| r.sequence_number())
-                .map(|s| s.into());
+                .iter()
+                .map(|r| r.sequence_number())
+                .collect::<Vec<_>>()
+                .last()
+                .map(|s| s.to_string());
 
             let shard_iterator_progress = ShardIteratorProgress {
                 last_sequence_id,

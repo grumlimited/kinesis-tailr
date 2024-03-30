@@ -360,7 +360,7 @@ impl KinesisClient for TestKinesisClient {
         _next_token: Option<&str>,
     ) -> Result<ListShardsOutput> {
         Ok(ListShardsOutput::builder()
-            .shards(Shard::builder().shard_id("000001").build())
+            .shards(Shard::builder().shard_id("000001").build().unwrap())
             .build())
     }
 
@@ -368,23 +368,26 @@ impl KinesisClient for TestKinesisClient {
         let mut current_done = self.done.lock().unwrap();
 
         if *current_done {
-            Ok(GetRecordsOutput::builder().build())
+            Ok(GetRecordsOutput::builder().build().unwrap())
         } else {
             *current_done = true;
 
             let to_datetime = Utc.with_ymd_and_hms(2021, 6, 1, 12, 0, 0).unwrap();
             let dt = DateTime::from_secs(to_datetime.timestamp());
             let record = Record::builder()
+                .partition_key("pk1")
                 .approximate_arrival_timestamp(dt)
                 .sequence_number("1")
                 .data(Blob::new("data"))
-                .build();
+                .build()
+                .unwrap();
 
             Ok(GetRecordsOutput::builder()
                 .records(record)
                 .next_shard_iterator("shard_iterator2".to_string())
                 .millis_behind_latest(1000)
-                .build())
+                .build()
+                .unwrap())
         }
     }
 

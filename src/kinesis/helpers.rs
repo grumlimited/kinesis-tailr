@@ -166,9 +166,9 @@ pub async fn get_shards(client: &AwsKinesisClient, stream: &str) -> io::Result<V
         Ok(_) => {
             let shards: Vec<String> = results
                 .iter()
-                .filter_map(ListShardsOutput::shards)
+                .map(ListShardsOutput::shards)
                 .flat_map(|s| s.iter())
-                .filter_map(Shard::shard_id)
+                .map(Shard::shard_id)
                 .map(str::to_string)
                 .collect::<Vec<String>>();
 
