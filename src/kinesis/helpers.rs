@@ -66,7 +66,7 @@ pub fn new(
 }
 
 pub async fn get_latest_iterator<T, K: KinesisClient>(
-    iterator_provider: T,
+    iterator_provider: &T,
 ) -> Result<GetShardIteratorOutput>
 where
     T: IteratorProvider<K>,
@@ -75,7 +75,7 @@ where
 }
 
 pub async fn get_iterator_since<T, K: KinesisClient>(
-    iterator_provider: T,
+    iterator_provider: &T,
     starting_sequence_number: &str,
 ) -> Result<GetShardIteratorOutput>
 where
@@ -88,7 +88,7 @@ where
 
 pub async fn handle_iterator_refresh<T, K: KinesisClient>(
     shard_iterator_progress: ShardIteratorProgress,
-    iterator_provider: T,
+    iterator_provider: &T,
     tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
 ) -> Result<()>
 where
@@ -97,7 +97,7 @@ where
     let cloned_shard_iterator_progress = shard_iterator_progress.clone();
 
     let result = match shard_iterator_progress.last_sequence_id {
-        Some(last_sequence_id) => get_iterator_since(iterator_provider.clone(), &last_sequence_id)
+        Some(last_sequence_id) => get_iterator_since(iterator_provider, &last_sequence_id)
             .await
             .map(|output| {
                 (

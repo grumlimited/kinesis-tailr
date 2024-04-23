@@ -21,7 +21,7 @@ pub mod models;
 pub mod ticker;
 
 #[async_trait]
-pub trait IteratorProvider<K: KinesisClient>: Send + Sync + Clone {
+pub trait IteratorProvider<K: KinesisClient>: Send + Sync {
     fn get_config(&self) -> &ShardProcessorConfig<K>;
 
     async fn get_iterator(&self) -> Result<GetShardIteratorOutput>;
@@ -66,7 +66,7 @@ where
                                 );
                                 helpers::handle_iterator_refresh(
                                     res_clone.clone(),
-                                    self.clone(),
+                                    self,
                                     tx_shard_iterator_progress.clone(),
                                 )
                                 .await
@@ -81,7 +81,7 @@ where
                                 sleep(Duration::from_millis(milliseconds)).await;
                                 helpers::handle_iterator_refresh(
                                     res_clone.clone(),
-                                    self.clone(),
+                                    self,
                                     tx_shard_iterator_progress.clone(),
                                 )
                                 .await

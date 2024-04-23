@@ -20,7 +20,7 @@ pub mod client {
     }
 
     #[async_trait]
-    pub trait KinesisClient: Sync + Send + Clone {
+    pub trait KinesisClient: Sync + Send {
         async fn list_shards(
             &self,
             stream: &str,

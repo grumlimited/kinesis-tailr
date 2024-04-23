@@ -126,7 +126,7 @@ async fn main() -> Result<()> {
                 let semaphore = semaphore.clone();
 
                 let shard_processor = kinesis::helpers::new(
-                    client.clone(),
+                    client,
                     stream_name,
                     shard_id,
                     from_datetime,

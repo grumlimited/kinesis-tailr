@@ -321,7 +321,7 @@ async fn handle_iterator_refresh_ok() {
 
     helpers::handle_iterator_refresh(
         shard_iterator_progress,
-        provider,
+        &provider,
         tx_shard_iterator_progress,
     )
     .await
