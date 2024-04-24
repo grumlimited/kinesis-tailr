@@ -24,6 +24,7 @@ pub struct ShardIteratorProgress {
 pub enum ShardProcessorADT {
     Termination,
     BeyondToTimestamp,
+    Flush,
     Progress(Vec<RecordResult>),
 }
 

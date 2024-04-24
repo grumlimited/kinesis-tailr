@@ -4,6 +4,7 @@ use std::io::{BufWriter, Write};
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
+use buffer_flush::BufferTicker;
 use chrono::TimeZone;
 use log::{debug, error, warn};
 use tokio::sync::mpsc::{Receiver, Sender};
@@ -113,6 +114,13 @@ where
     ) -> io::Result<()> {
         self.delimiter(handle).unwrap();
 
+        /*
+         * Start the buffer ticker to flush the buffer every 5 second
+         * This is needed because if the buffer is not full (not enough message to trigger a nature flush),
+         * then no output is displayed until ctrl^c is pressed.
+         */
+        BufferTicker::new(tx_records.clone()).start();
+
         let mut count = 0;
         let mut sc = self.shard_count();
 
@@ -165,6 +173,7 @@ where
                             });
                         }
                     },
+                    ShardProcessorADT::Flush => handle.flush().unwrap(),
                     ShardProcessorADT::Termination => {
                         debug!("Termination message received");
                         let messages_processed = count;
@@ -298,6 +307,8 @@ where
         Ok(())
     }
 }
+
+mod buffer_flush;
 
 #[cfg(test)]
 mod console_tests;
