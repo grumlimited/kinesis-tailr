@@ -24,6 +24,8 @@ pub mod ticker;
 pub trait IteratorProvider<K: StreamClient>: Send + Sync {
     fn get_client(&self) -> &K;
 
+    fn get_client(&self) -> &K;
+
     fn get_config(&self) -> &ShardProcessorConfig;
 
     async fn get_iterator(&self) -> Result<GetShardIteratorOutput>;
