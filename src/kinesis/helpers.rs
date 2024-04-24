@@ -40,8 +40,8 @@ pub fn new(
 
     match from_datetime {
         Some(from_datetime) => Box::new(ShardProcessorAtTimestamp {
+            client,
             config: ShardProcessorConfig {
-                client,
                 stream,
                 shard_id: Arc::new(shard_id),
                 to_datetime,
@@ -52,8 +52,8 @@ pub fn new(
             from_datetime,
         }),
         None => Box::new(ShardProcessorLatest {
+            client,
             config: ShardProcessorConfig {
-                client,
                 stream,
                 shard_id: Arc::new(shard_id),
                 to_datetime,
@@ -71,7 +71,12 @@ pub async fn get_latest_iterator<T, K: KinesisClient>(
 where
     T: IteratorProvider<K>,
 {
-    latest(iterator_provider.get_config()).iterator().await
+    latest(
+        iterator_provider.get_client(),
+        iterator_provider.get_config(),
+    )
+    .iterator()
+    .await
 }
 
 pub async fn get_iterator_since<T, K: KinesisClient>(
@@ -81,9 +86,13 @@ pub async fn get_iterator_since<T, K: KinesisClient>(
 where
     T: IteratorProvider<K>,
 {
-    at_sequence(iterator_provider.get_config(), starting_sequence_number)
-        .iterator()
-        .await
+    at_sequence(
+        iterator_provider.get_client(),
+        iterator_provider.get_config(),
+        starting_sequence_number,
+    )
+    .iterator()
+    .await
 }
 
 pub async fn handle_iterator_refresh<T, K: KinesisClient>(

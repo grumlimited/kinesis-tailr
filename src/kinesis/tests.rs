@@ -39,8 +39,8 @@ async fn seed_shards_test() {
     let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
 
     let processor = ShardProcessorLatest {
+        client,
         config: ShardProcessorConfig {
-            client,
             stream: "test".to_string(),
             shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: None,
@@ -77,8 +77,8 @@ async fn seed_shards_test_timestamp_in_future() {
     let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
 
     let processor = ShardProcessorAtTimestamp {
+        client,
         config: ShardProcessorConfig {
-            client,
             stream: "test".to_string(),
             shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: None,
@@ -108,8 +108,8 @@ async fn produced_record_is_processed() {
     let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
 
     let processor = ShardProcessorLatest {
+        client: client.clone(),
         config: ShardProcessorConfig {
-            client: client.clone(),
             stream: "test".to_string(),
             shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: None,
@@ -157,8 +157,8 @@ async fn beyond_to_timestamp_is_received() {
 
     let to_datetime = Utc.with_ymd_and_hms(2020, 6, 1, 12, 0, 0).unwrap();
     let processor = ShardProcessorLatest {
+        client,
         config: ShardProcessorConfig {
-            client,
             stream: "test".to_string(),
             shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: Some(to_datetime),
@@ -199,8 +199,8 @@ async fn has_records_beyond_end_ts_when_has_end_ts() {
 
     let to_datetime = Utc.with_ymd_and_hms(2020, 6, 1, 12, 0, 0).unwrap();
     let processor = ShardProcessorLatest {
+        client,
         config: ShardProcessorConfig {
-            client,
             stream: "test".to_string(),
             shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: Some(to_datetime),
@@ -260,8 +260,8 @@ async fn has_records_beyond_end_ts_when_no_end_ts() {
     let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
 
     let processor = ShardProcessorLatest {
+        client,
         config: ShardProcessorConfig {
-            client,
             stream: "test".to_string(),
             shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: None,
@@ -305,8 +305,8 @@ async fn handle_iterator_refresh_ok() {
     };
 
     let provider = ShardProcessorLatest {
+        client,
         config: ShardProcessorConfig {
-            client,
             stream: "test".to_string(),
             shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: None,
