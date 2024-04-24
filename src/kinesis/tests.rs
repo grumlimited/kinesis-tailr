@@ -14,7 +14,7 @@ use chrono::prelude::*;
 use chrono::Utc;
 use tokio::sync::{mpsc, Semaphore};
 
-use crate::aws::client::KinesisClient;
+use crate::aws::stream::StreamClient;
 use crate::kinesis::helpers;
 use crate::kinesis::helpers::wait_milliseconds;
 use crate::kinesis::models::{
@@ -39,8 +39,8 @@ async fn seed_shards_test() {
     let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
 
     let processor = ShardProcessorLatest {
+        client,
         config: ShardProcessorConfig {
-            client,
             stream: "test".to_string(),
             shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: None,
@@ -77,8 +77,8 @@ async fn seed_shards_test_timestamp_in_future() {
     let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
 
     let processor = ShardProcessorAtTimestamp {
+        client,
         config: ShardProcessorConfig {
-            client,
             stream: "test".to_string(),
             shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: None,
@@ -108,8 +108,8 @@ async fn produced_record_is_processed() {
     let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
 
     let processor = ShardProcessorLatest {
+        client: client.clone(),
         config: ShardProcessorConfig {
-            client: client.clone(),
             stream: "test".to_string(),
             shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: None,
@@ -157,8 +157,8 @@ async fn beyond_to_timestamp_is_received() {
 
     let to_datetime = Utc.with_ymd_and_hms(2020, 6, 1, 12, 0, 0).unwrap();
     let processor = ShardProcessorLatest {
+        client,
         config: ShardProcessorConfig {
-            client,
             stream: "test".to_string(),
             shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: Some(to_datetime),
@@ -199,8 +199,8 @@ async fn has_records_beyond_end_ts_when_has_end_ts() {
 
     let to_datetime = Utc.with_ymd_and_hms(2020, 6, 1, 12, 0, 0).unwrap();
     let processor = ShardProcessorLatest {
+        client,
         config: ShardProcessorConfig {
-            client,
             stream: "test".to_string(),
             shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: Some(to_datetime),
@@ -260,8 +260,8 @@ async fn has_records_beyond_end_ts_when_no_end_ts() {
     let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
 
     let processor = ShardProcessorLatest {
+        client,
         config: ShardProcessorConfig {
-            client,
             stream: "test".to_string(),
             shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: None,
@@ -305,8 +305,8 @@ async fn handle_iterator_refresh_ok() {
     };
 
     let provider = ShardProcessorLatest {
+        client,
         config: ShardProcessorConfig {
-            client,
             stream: "test".to_string(),
             shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: None,
@@ -321,7 +321,7 @@ async fn handle_iterator_refresh_ok() {
 
     helpers::handle_iterator_refresh(
         shard_iterator_progress,
-        provider,
+        &provider,
         tx_shard_iterator_progress,
     )
     .await
@@ -353,7 +353,7 @@ pub struct TestKinesisClient {
 }
 
 #[async_trait]
-impl KinesisClient for TestKinesisClient {
+impl StreamClient for TestKinesisClient {
     async fn list_shards(
         &self,
         _stream: &str,
@@ -432,7 +432,7 @@ impl KinesisClient for TestKinesisClient {
 pub struct TestTimestampInFutureKinesisClient {}
 
 #[async_trait]
-impl KinesisClient for TestTimestampInFutureKinesisClient {
+impl StreamClient for TestTimestampInFutureKinesisClient {
     async fn list_shards(
         &self,
         _stream: &str,

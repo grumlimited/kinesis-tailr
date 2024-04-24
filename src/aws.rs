@@ -1,4 +1,52 @@
+pub mod stream {
+    use async_trait::async_trait;
+    use aws_config::Region;
+    use aws_sdk_kinesis::operation::get_records::GetRecordsOutput;
+    use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
+    use aws_sdk_kinesis::operation::list_shards::ListShardsOutput;
+    use aws_sdk_kinesis::primitives::DateTime;
+    use chrono::Utc;
+
+    #[async_trait]
+    pub trait StreamClient: Sync + Send {
+        async fn list_shards(
+            &self,
+            stream: &str,
+            next_token: Option<&str>,
+        ) -> anyhow::Result<ListShardsOutput>;
+
+        async fn get_records(&self, shard_iterator: &str) -> anyhow::Result<GetRecordsOutput>;
+
+        async fn get_shard_iterator_at_timestamp(
+            &self,
+            stream: &str,
+            shard_id: &str,
+            timestamp: &chrono::DateTime<Utc>,
+        ) -> anyhow::Result<GetShardIteratorOutput>;
+
+        async fn get_shard_iterator_at_sequence(
+            &self,
+            stream: &str,
+            shard_id: &str,
+            starting_sequence_number: &str,
+        ) -> anyhow::Result<GetShardIteratorOutput>;
+
+        async fn get_shard_iterator_latest(
+            &self,
+            stream: &str,
+            shard_id: &str,
+        ) -> anyhow::Result<GetShardIteratorOutput>;
+
+        fn get_region(&self) -> Option<&Region>;
+
+        fn aws_datetime(timestamp: &chrono::DateTime<Utc>) -> DateTime {
+            DateTime::from_millis(timestamp.timestamp_millis())
+        }
+    }
+}
+
 pub mod client {
+    use crate::aws::stream::StreamClient;
     use anyhow::Result;
     use async_trait::async_trait;
     use aws_config::meta::region::RegionProviderChain;
@@ -9,7 +57,6 @@ pub mod client {
     use aws_sdk_kinesis::operation::get_records::GetRecordsOutput;
     use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
     use aws_sdk_kinesis::operation::list_shards::ListShardsOutput;
-    use aws_sdk_kinesis::primitives::DateTime;
     use aws_sdk_kinesis::types::ShardIteratorType;
     use aws_sdk_kinesis::Client;
     use chrono::Utc;
@@ -20,44 +67,7 @@ pub mod client {
     }
 
     #[async_trait]
-    pub trait KinesisClient: Sync + Send + Clone {
-        async fn list_shards(
-            &self,
-            stream: &str,
-            next_token: Option<&str>,
-        ) -> Result<ListShardsOutput>;
-
-        async fn get_records(&self, shard_iterator: &str) -> Result<GetRecordsOutput>;
-
-        async fn get_shard_iterator_at_timestamp(
-            &self,
-            stream: &str,
-            shard_id: &str,
-            timestamp: &chrono::DateTime<Utc>,
-        ) -> Result<GetShardIteratorOutput>;
-
-        async fn get_shard_iterator_at_sequence(
-            &self,
-            stream: &str,
-            shard_id: &str,
-            starting_sequence_number: &str,
-        ) -> Result<GetShardIteratorOutput>;
-
-        async fn get_shard_iterator_latest(
-            &self,
-            stream: &str,
-            shard_id: &str,
-        ) -> Result<GetShardIteratorOutput>;
-
-        fn get_region(&self) -> Option<&Region>;
-
-        fn aws_datetime(timestamp: &chrono::DateTime<Utc>) -> DateTime {
-            DateTime::from_millis(timestamp.timestamp_millis())
-        }
-    }
-
-    #[async_trait]
-    impl KinesisClient for AwsKinesisClient {
+    impl StreamClient for AwsKinesisClient {
         async fn list_shards(
             &self,
             stream: &str,

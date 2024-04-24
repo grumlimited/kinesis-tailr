@@ -1,4 +1,4 @@
-use crate::aws::client::KinesisClient;
+use crate::aws::stream::StreamClient;
 use crate::iterator::ShardIterator;
 use crate::iterator::{at_timestamp, latest};
 use crate::kinesis::ticker::TickerMessage;
@@ -24,6 +24,7 @@ pub struct ShardIteratorProgress {
 pub enum ShardProcessorADT {
     Termination,
     BeyondToTimestamp,
+    Flush,
     Progress(Vec<RecordResult>),
 }
 
@@ -45,8 +46,7 @@ pub struct RecordResult {
 }
 
 #[derive(Clone)]
-pub struct ShardProcessorConfig<K: KinesisClient> {
-    pub client: K,
+pub struct ShardProcessorConfig {
     pub stream: String,
     pub shard_id: Arc<String>,
     pub to_datetime: Option<chrono::DateTime<Utc>>,
@@ -56,42 +56,52 @@ pub struct ShardProcessorConfig<K: KinesisClient> {
 }
 
 #[derive(Clone)]
-pub struct ShardProcessorLatest<K: KinesisClient> {
-    pub config: ShardProcessorConfig<K>,
+pub struct ShardProcessorLatest<K: StreamClient> {
+    pub client: K,
+    pub config: ShardProcessorConfig,
 }
 
 #[derive(Clone)]
-pub struct ShardProcessorAtTimestamp<K: KinesisClient> {
-    pub config: ShardProcessorConfig<K>,
+pub struct ShardProcessorAtTimestamp<K: StreamClient> {
+    pub client: K,
+    pub config: ShardProcessorConfig,
     pub from_datetime: chrono::DateTime<Utc>,
 }
 
 #[async_trait]
-impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorLatest<K> {
-    fn get_config(&self) -> &ShardProcessorConfig<K> {
+impl<K: StreamClient> IteratorProvider<K> for ShardProcessorLatest<K> {
+    fn get_client(&self) -> &K {
+        &self.client
+    }
+
+    fn get_config(&self) -> &ShardProcessorConfig {
         &self.config
     }
 
     async fn get_iterator(&self) -> Result<GetShardIteratorOutput> {
-        latest(&self.config).iterator().await
+        latest(&self.client, &self.config).iterator().await
     }
 }
 
 #[async_trait]
-impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorAtTimestamp<K> {
-    fn get_config(&self) -> &ShardProcessorConfig<K> {
+impl<K: StreamClient> IteratorProvider<K> for ShardProcessorAtTimestamp<K> {
+    fn get_client(&self) -> &K {
+        &self.client
+    }
+
+    fn get_config(&self) -> &ShardProcessorConfig {
         &self.config
     }
 
     async fn get_iterator(&self) -> Result<GetShardIteratorOutput> {
-        at_timestamp(&self.config, &self.from_datetime)
+        at_timestamp(&self.client, &self.config, &self.from_datetime)
             .iterator()
             .await
     }
 }
 
 #[async_trait]
-pub trait ShardProcessor<K: KinesisClient>: Send + Sync {
+pub trait ShardProcessor<K: StreamClient>: Send + Sync {
     async fn run(&self) -> Result<()>;
 
     async fn seed_shards(

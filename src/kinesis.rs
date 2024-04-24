@@ -11,7 +11,7 @@ use tokio::sync::mpsc::Sender;
 use tokio::time::{sleep, Duration};
 use GetRecordsError::{ExpiredIteratorException, ProvisionedThroughputExceededException};
 
-use crate::aws::client::KinesisClient;
+use crate::aws::stream::StreamClient;
 use crate::kinesis::helpers::wait_milliseconds;
 use crate::kinesis::models::*;
 use crate::kinesis::ticker::{ShardCountUpdate, TickerMessage};
@@ -21,8 +21,10 @@ pub mod models;
 pub mod ticker;
 
 #[async_trait]
-pub trait IteratorProvider<K: KinesisClient>: Send + Sync + Clone {
-    fn get_config(&self) -> &ShardProcessorConfig<K>;
+pub trait IteratorProvider<K: StreamClient>: Send + Sync {
+    fn get_client(&self) -> &K;
+
+    fn get_config(&self) -> &ShardProcessorConfig;
 
     async fn get_iterator(&self) -> Result<GetShardIteratorOutput>;
 }
@@ -30,7 +32,7 @@ pub trait IteratorProvider<K: KinesisClient>: Send + Sync + Clone {
 #[async_trait]
 impl<T, K> ShardProcessor<K> for T
 where
-    K: KinesisClient,
+    K: StreamClient,
     T: IteratorProvider<K>,
 {
     async fn run(&self) -> Result<()> {
@@ -66,7 +68,7 @@ where
                                 );
                                 helpers::handle_iterator_refresh(
                                     res_clone.clone(),
-                                    self.clone(),
+                                    self,
                                     tx_shard_iterator_progress.clone(),
                                 )
                                 .await
@@ -81,7 +83,7 @@ where
                                 sleep(Duration::from_millis(milliseconds)).await;
                                 helpers::handle_iterator_refresh(
                                     res_clone.clone(),
-                                    self.clone(),
+                                    self,
                                     tx_shard_iterator_progress.clone(),
                                 )
                                 .await
@@ -170,7 +172,7 @@ where
         shard_iterator: &str,
         tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
     ) -> Result<()> {
-        let resp = self.get_config().client.get_records(shard_iterator).await?;
+        let resp = self.get_client().get_records(shard_iterator).await?;
         let tx_ticker_updates = &self.get_config().tx_ticker_updates;
 
         let next_shard_iterator = resp.next_shard_iterator();
