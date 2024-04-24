@@ -58,11 +58,13 @@ pub struct ShardProcessorConfig {
 #[derive(Clone)]
 pub struct ShardProcessorLatest<K: StreamClient> {
     pub client: K,
+    pub client: K,
     pub config: ShardProcessorConfig,
 }
 
 #[derive(Clone)]
 pub struct ShardProcessorAtTimestamp<K: StreamClient> {
+    pub client: K,
     pub client: K,
     pub config: ShardProcessorConfig,
     pub from_datetime: chrono::DateTime<Utc>,
