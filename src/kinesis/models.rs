@@ -1,4 +1,4 @@
-use crate::aws::client::KinesisClient;
+use crate::aws::stream::StreamClient;
 use crate::iterator::ShardIterator;
 use crate::iterator::{at_timestamp, latest};
 use crate::kinesis::ticker::TickerMessage;
@@ -55,20 +55,20 @@ pub struct ShardProcessorConfig {
 }
 
 #[derive(Clone)]
-pub struct ShardProcessorLatest<K: KinesisClient> {
+pub struct ShardProcessorLatest<K: StreamClient> {
     pub client: K,
     pub config: ShardProcessorConfig,
 }
 
 #[derive(Clone)]
-pub struct ShardProcessorAtTimestamp<K: KinesisClient> {
+pub struct ShardProcessorAtTimestamp<K: StreamClient> {
     pub client: K,
     pub config: ShardProcessorConfig,
     pub from_datetime: chrono::DateTime<Utc>,
 }
 
 #[async_trait]
-impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorLatest<K> {
+impl<K: StreamClient> IteratorProvider<K> for ShardProcessorLatest<K> {
     fn get_client(&self) -> &K {
         &self.client
     }
@@ -83,7 +83,7 @@ impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorLatest<K> {
 }
 
 #[async_trait]
-impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorAtTimestamp<K> {
+impl<K: StreamClient> IteratorProvider<K> for ShardProcessorAtTimestamp<K> {
     fn get_client(&self) -> &K {
         &self.client
     }
@@ -100,7 +100,7 @@ impl<K: KinesisClient> IteratorProvider<K> for ShardProcessorAtTimestamp<K> {
 }
 
 #[async_trait]
-pub trait ShardProcessor<K: KinesisClient>: Send + Sync {
+pub trait ShardProcessor<K: StreamClient>: Send + Sync {
     async fn run(&self) -> Result<()>;
 
     async fn seed_shards(

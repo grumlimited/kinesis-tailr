@@ -11,7 +11,7 @@ use tokio::sync::mpsc::Sender;
 use tokio::time::{sleep, Duration};
 use GetRecordsError::{ExpiredIteratorException, ProvisionedThroughputExceededException};
 
-use crate::aws::client::KinesisClient;
+use crate::aws::stream::StreamClient;
 use crate::kinesis::helpers::wait_milliseconds;
 use crate::kinesis::models::*;
 use crate::kinesis::ticker::{ShardCountUpdate, TickerMessage};
@@ -21,7 +21,7 @@ pub mod models;
 pub mod ticker;
 
 #[async_trait]
-pub trait IteratorProvider<K: KinesisClient>: Send + Sync {
+pub trait IteratorProvider<K: StreamClient>: Send + Sync {
     fn get_client(&self) -> &K;
 
     fn get_config(&self) -> &ShardProcessorConfig;
@@ -32,7 +32,7 @@ pub trait IteratorProvider<K: KinesisClient>: Send + Sync {
 #[async_trait]
 impl<T, K> ShardProcessor<K> for T
 where
-    K: KinesisClient,
+    K: StreamClient,
     T: IteratorProvider<K>,
 {
     async fn run(&self) -> Result<()> {

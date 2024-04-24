@@ -1,4 +1,4 @@
-use crate::aws::client::KinesisClient;
+use crate::aws::stream::StreamClient;
 use crate::kinesis::models::ShardProcessorConfig;
 use anyhow::Result;
 use async_trait::async_trait;
@@ -10,14 +10,14 @@ pub trait ShardIterator {
     async fn iterator(&self) -> Result<GetShardIteratorOutput>;
 }
 
-pub fn latest<'a, K: KinesisClient>(
+pub fn latest<'a, K: StreamClient>(
     client: &'a K,
     config: &'a ShardProcessorConfig,
 ) -> LatestShardIterator<'a, K> {
     LatestShardIterator { client, config }
 }
 
-pub fn at_sequence<'a, K: KinesisClient>(
+pub fn at_sequence<'a, K: StreamClient>(
     client: &'a K,
     config: &'a ShardProcessorConfig,
     starting_sequence_number: &'a str,
@@ -29,7 +29,7 @@ pub fn at_sequence<'a, K: KinesisClient>(
     }
 }
 
-pub fn at_timestamp<'a, K: KinesisClient>(
+pub fn at_timestamp<'a, K: StreamClient>(
     client: &'a K,
     config: &'a ShardProcessorConfig,
     timestamp: &'a chrono::DateTime<Utc>,
@@ -41,25 +41,25 @@ pub fn at_timestamp<'a, K: KinesisClient>(
     }
 }
 
-pub struct LatestShardIterator<'a, K: KinesisClient> {
+pub struct LatestShardIterator<'a, K: StreamClient> {
     client: &'a K,
     config: &'a ShardProcessorConfig,
 }
 
-pub struct AtSequenceShardIterator<'a, K: KinesisClient> {
+pub struct AtSequenceShardIterator<'a, K: StreamClient> {
     client: &'a K,
     config: &'a ShardProcessorConfig,
     starting_sequence_number: &'a str,
 }
 
-pub struct AtTimestampShardIterator<'a, K: KinesisClient> {
+pub struct AtTimestampShardIterator<'a, K: StreamClient> {
     client: &'a K,
     config: &'a ShardProcessorConfig,
     timestamp: &'a chrono::DateTime<Utc>,
 }
 
 #[async_trait]
-impl<K: KinesisClient> ShardIterator for LatestShardIterator<'_, K> {
+impl<K: StreamClient> ShardIterator for LatestShardIterator<'_, K> {
     async fn iterator(&self) -> Result<GetShardIteratorOutput> {
         self.client
             .get_shard_iterator_latest(&self.config.stream, &self.config.shard_id)
@@ -68,7 +68,7 @@ impl<K: KinesisClient> ShardIterator for LatestShardIterator<'_, K> {
 }
 
 #[async_trait]
-impl<K: KinesisClient> ShardIterator for AtSequenceShardIterator<'_, K> {
+impl<K: StreamClient> ShardIterator for AtSequenceShardIterator<'_, K> {
     async fn iterator(&self) -> Result<GetShardIteratorOutput> {
         self.client
             .get_shard_iterator_at_sequence(
@@ -81,7 +81,7 @@ impl<K: KinesisClient> ShardIterator for AtSequenceShardIterator<'_, K> {
 }
 
 #[async_trait]
-impl<K: KinesisClient> ShardIterator for AtTimestampShardIterator<'_, K> {
+impl<K: StreamClient> ShardIterator for AtTimestampShardIterator<'_, K> {
     async fn iterator(&self) -> Result<GetShardIteratorOutput> {
         self.client
             .get_shard_iterator_at_timestamp(

@@ -14,7 +14,7 @@ use chrono::prelude::*;
 use chrono::Utc;
 use tokio::sync::{mpsc, Semaphore};
 
-use crate::aws::client::KinesisClient;
+use crate::aws::stream::StreamClient;
 use crate::kinesis::helpers;
 use crate::kinesis::helpers::wait_milliseconds;
 use crate::kinesis::models::{
@@ -353,7 +353,7 @@ pub struct TestKinesisClient {
 }
 
 #[async_trait]
-impl KinesisClient for TestKinesisClient {
+impl StreamClient for TestKinesisClient {
     async fn list_shards(
         &self,
         _stream: &str,
@@ -432,7 +432,7 @@ impl KinesisClient for TestKinesisClient {
 pub struct TestTimestampInFutureKinesisClient {}
 
 #[async_trait]
-impl KinesisClient for TestTimestampInFutureKinesisClient {
+impl StreamClient for TestTimestampInFutureKinesisClient {
     async fn list_shards(
         &self,
         _stream: &str,

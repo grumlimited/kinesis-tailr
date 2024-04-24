@@ -14,7 +14,8 @@ use tokio::sync::mpsc::Sender;
 use tokio::sync::Semaphore;
 use tokio::time::sleep;
 
-use crate::aws::client::{AwsKinesisClient, KinesisClient};
+use crate::aws::client::AwsKinesisClient;
+use crate::aws::stream::StreamClient;
 use crate::iterator::at_sequence;
 use crate::iterator::latest;
 use crate::iterator::ShardIterator;
@@ -65,7 +66,7 @@ pub fn new(
     }
 }
 
-pub async fn get_latest_iterator<T, K: KinesisClient>(
+pub async fn get_latest_iterator<T, K: StreamClient>(
     iterator_provider: &T,
 ) -> Result<GetShardIteratorOutput>
 where
@@ -79,7 +80,7 @@ where
     .await
 }
 
-pub async fn get_iterator_since<T, K: KinesisClient>(
+pub async fn get_iterator_since<T, K: StreamClient>(
     iterator_provider: &T,
     starting_sequence_number: &str,
 ) -> Result<GetShardIteratorOutput>
@@ -95,7 +96,7 @@ where
     .await
 }
 
-pub async fn handle_iterator_refresh<T, K: KinesisClient>(
+pub async fn handle_iterator_refresh<T, K: StreamClient>(
     shard_iterator_progress: ShardIteratorProgress,
     iterator_provider: &T,
     tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
