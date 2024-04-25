@@ -1,4 +1,5 @@
 pub mod stream {
+    use anyhow::Result;
     use async_trait::async_trait;
     use aws_config::Region;
     use aws_sdk_kinesis::operation::get_records::GetRecordsOutput;
@@ -13,29 +14,29 @@ pub mod stream {
             &self,
             stream: &str,
             next_token: Option<&str>,
-        ) -> anyhow::Result<ListShardsOutput>;
+        ) -> Result<ListShardsOutput>;
 
-        async fn get_records(&self, shard_iterator: &str) -> anyhow::Result<GetRecordsOutput>;
+        async fn get_records(&self, shard_iterator: &str) -> Result<GetRecordsOutput>;
 
         async fn get_shard_iterator_at_timestamp(
             &self,
             stream: &str,
             shard_id: &str,
             timestamp: &chrono::DateTime<Utc>,
-        ) -> anyhow::Result<GetShardIteratorOutput>;
+        ) -> Result<GetShardIteratorOutput>;
 
         async fn get_shard_iterator_at_sequence(
             &self,
             stream: &str,
             shard_id: &str,
             starting_sequence_number: &str,
-        ) -> anyhow::Result<GetShardIteratorOutput>;
+        ) -> Result<GetShardIteratorOutput>;
 
         async fn get_shard_iterator_latest(
             &self,
             stream: &str,
             shard_id: &str,
-        ) -> anyhow::Result<GetShardIteratorOutput>;
+        ) -> Result<GetShardIteratorOutput>;
 
         fn get_region(&self) -> Option<&Region>;
 
