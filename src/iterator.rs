@@ -19,7 +19,6 @@ pub fn latest<'a, K: StreamClient>(
 
 pub fn at_sequence<'a, K: StreamClient>(
     client: &'a K,
-    client: &'a K,
     config: &'a ShardProcessorConfig,
     starting_sequence_number: &'a str,
 ) -> AtSequenceShardIterator<'a, K> {
@@ -31,7 +30,6 @@ pub fn at_sequence<'a, K: StreamClient>(
 }
 
 pub fn at_timestamp<'a, K: StreamClient>(
-    client: &'a K,
     client: &'a K,
     config: &'a ShardProcessorConfig,
     timestamp: &'a chrono::DateTime<Utc>,
@@ -45,19 +43,16 @@ pub fn at_timestamp<'a, K: StreamClient>(
 
 pub struct LatestShardIterator<'a, K: StreamClient> {
     client: &'a K,
-    client: &'a K,
     config: &'a ShardProcessorConfig,
 }
 
 pub struct AtSequenceShardIterator<'a, K: StreamClient> {
-    client: &'a K,
     client: &'a K,
     config: &'a ShardProcessorConfig,
     starting_sequence_number: &'a str,
 }
 
 pub struct AtTimestampShardIterator<'a, K: StreamClient> {
-    client: &'a K,
     client: &'a K,
     config: &'a ShardProcessorConfig,
     timestamp: &'a chrono::DateTime<Utc>,
