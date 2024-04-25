@@ -1,13 +1,15 @@
+use std::cmp::{max, min};
 use std::io;
 use std::io::{BufWriter, Write};
 
 use anyhow::Error;
 use anyhow::Result;
 use async_trait::async_trait;
-use buffer_flush::BufferTicker;
 use chrono::TimeZone;
 use log::{debug, error, warn};
 use tokio::sync::mpsc::{Receiver, Sender};
+
+use buffer_flush::BufferTicker;
 
 use crate::kinesis::models::{ProcessError, RecordResult, ShardProcessorADT};
 
@@ -104,7 +106,7 @@ where
 impl<T, W> Sink<T, W> for T
 where
     W: Write + Send,
-    T: SinkOutput<W> + Configurable + Send + Sync,
+    T: SinkOutput<W> + Configurable + Send,
 {
     async fn run_inner(
         &mut self,
@@ -115,14 +117,14 @@ where
         self.delimiter(handle).unwrap();
 
         /*
-         * Start the buffer ticker to flush the buffer every 5 second
+         * Start the buffer ticker to flush the buffer every 5 seconds.
          * This is needed because if the buffer is not full (not enough message to trigger a nature flush),
          * then no output is displayed until ctrl^c is pressed.
          */
         BufferTicker::new(tx_records.clone()).start();
 
-        let mut count = 0;
-        let mut sc = self.shard_count();
+        let mut total_records_processed = 0;
+        let mut active_shards_count = self.shard_count();
 
         self.handle_termination(tx_records.clone());
 
@@ -130,34 +132,37 @@ where
             match res {
                 Ok(adt) => match adt {
                     ShardProcessorADT::BeyondToTimestamp => {
-                        if sc > 0 {
-                            sc = sc.saturating_sub(1);
+                        if active_shards_count > 0 {
+                            active_shards_count = active_shards_count.saturating_sub(1);
                         }
 
-                        if sc == 0 {
+                        if active_shards_count == 0 {
                             tx_records
                                 .send(Ok(ShardProcessorADT::Termination))
                                 .await
                                 .expect("Could not send termination message");
                         }
                     }
-                    ShardProcessorADT::Progress(res) => match self.get_config().max_messages {
+                    ShardProcessorADT::Progress(records) => match self.get_config().max_messages {
+                        Some(max_messages) if total_records_processed >= max_messages => self
+                            .termination_message_and_exit(
+                                handle,
+                                total_records_processed,
+                                &mut rx_records,
+                            )?,
                         Some(max_messages) => {
-                            if count >= max_messages {
-                                self.termination_message_and_exit(handle, count, &mut rx_records)?;
-                            }
-
                             let remaining_records_to_display =
-                                std::cmp::max(max_messages - count, 0);
+                                max(max_messages - total_records_processed, 0);
 
-                            if remaining_records_to_display > 0 && !res.is_empty() {
-                                let split_at =
-                                    std::cmp::min(remaining_records_to_display as usize, res.len());
-                                count += split_at as u32;
+                            if remaining_records_to_display > 0 && !records.is_empty() {
+                                let records_to_display_count =
+                                    min(remaining_records_to_display as usize, records.len());
+                                total_records_processed += records_to_display_count as u32;
 
-                                let (to_display, _) = res.split_at(split_at);
+                                let (records_to_display, _) =
+                                    records.split_at(records_to_display_count);
 
-                                to_display.iter().for_each(|record| {
+                                records_to_display.iter().for_each(|record| {
                                     let data = self.format_record(record);
                                     writeln!(handle, "{}", data).unwrap();
                                     self.delimiter(handle).unwrap();
@@ -165,8 +170,8 @@ where
                             }
                         }
                         None => {
-                            count += res.len() as u32;
-                            res.iter().for_each(|record| {
+                            total_records_processed += records.len() as u32;
+                            records.iter().for_each(|record| {
                                 let data = self.format_record(record);
                                 writeln!(handle, "{}", data).unwrap();
                                 self.delimiter(handle).unwrap()
@@ -176,7 +181,7 @@ where
                     ShardProcessorADT::Flush => handle.flush().unwrap(),
                     ShardProcessorADT::Termination => {
                         debug!("Termination message received");
-                        let messages_processed = count;
+                        let messages_processed = total_records_processed;
 
                         self.termination_message_and_exit(
                             handle,
