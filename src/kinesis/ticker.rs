@@ -105,7 +105,6 @@ impl Ticker {
         tokio::spawn({
             async move {
                 let delay = Duration::from_secs(30);
-                let counts = counts.clone();
 
                 loop {
                     {
