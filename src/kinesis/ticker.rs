@@ -52,25 +52,23 @@ impl Ticker {
         self.print_timings(counts);
         self.check_time_out();
 
-        {
-            let counts = self.counts.clone();
+        let counts = self.counts.clone();
 
-            while let Some(res) = self.rx_ticker_updates.lock().await.recv().await {
-                let mut counts = counts.lock().await;
-                let counts = counts.deref_mut();
-                match res {
-                    TickerMessage::CountUpdate(res) => {
-                        counts.insert(res.shard_id.to_string(), res.millis_behind);
+        while let Some(res) = self.rx_ticker_updates.lock().await.recv().await {
+            let mut counts = counts.lock().await;
+            let counts = counts.deref_mut();
+            match res {
+                TickerMessage::CountUpdate(res) => {
+                    counts.insert(res.shard_id.to_string(), res.millis_behind);
 
-                        if res.nb_records > 0 {
-                            let mut last_ts = self.last_ts.lock().await;
-                            let last_ts = last_ts.deref_mut();
-                            *last_ts = Utc::now();
-                        }
+                    if res.nb_records > 0 {
+                        let mut last_ts = self.last_ts.lock().await;
+                        let last_ts = last_ts.deref_mut();
+                        *last_ts = Utc::now();
                     }
-                    TickerMessage::RemoveShard(shard_id) => {
-                        counts.remove(shard_id.as_str());
-                    }
+                }
+                TickerMessage::RemoveShard(shard_id) => {
+                    counts.remove(shard_id.as_str());
                 }
             }
         }
@@ -81,25 +79,23 @@ impl Ticker {
         let tx_records = self.tx_records.clone();
 
         if let Some(timeout) = self.timeout {
-            tokio::spawn({
-                async move {
-                    let delay = Duration::from_millis(100);
+            tokio::spawn(async move {
+                let delay = Duration::from_millis(100);
 
-                    loop {
-                        let last_ts = last_ts.lock().await;
-                        let last_ts = *last_ts;
+                loop {
+                    let last_ts = last_ts.lock().await;
+                    let last_ts = *last_ts;
 
-                        let duration = Utc::now() - last_ts;
+                    let duration = Utc::now() - last_ts;
 
-                        if duration.num_milliseconds() > (timeout * 1000) as i64 {
-                            tx_records
-                                .send(Err(Timeout(duration)))
-                                .await
-                                .expect("Could not sent Timeout to tx_records");
-                        }
-
-                        sleep(delay).await
+                    if duration.num_milliseconds() > (timeout * 1000) as i64 {
+                        tx_records
+                            .send(Err(Timeout(duration)))
+                            .await
+                            .expect("Could not sent Timeout to tx_records");
                     }
+
+                    sleep(delay).await
                 }
             });
         }
