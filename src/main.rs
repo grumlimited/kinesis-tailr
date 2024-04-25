@@ -102,7 +102,7 @@ async fn main() -> Result<()> {
 
             tokio::spawn({
                 async move {
-                    let ticker = Ticker::new(opt.timeout, rx_ticker_updates, tx_records);
+                    let mut ticker = Ticker::new(opt.timeout, rx_ticker_updates, tx_records);
                     ticker.run().await;
                 }
             });

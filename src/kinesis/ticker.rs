@@ -27,7 +27,7 @@ pub struct ShardCountUpdate {
 pub struct Ticker {
     counts: Arc<Mutex<HashMap<String, i64>>>,
     last_ts: Arc<Mutex<DateTime<Utc>>>,
-    rx_ticker_updates: Mutex<Receiver<TickerMessage>>,
+    rx_ticker_updates: Receiver<TickerMessage>,
     tx_records: Sender<Result<ShardProcessorADT, ProcessError>>,
     timeout: Option<u16>,
 }
@@ -41,20 +41,20 @@ impl Ticker {
         Self {
             counts: Arc::new(Mutex::new(HashMap::new())),
             last_ts: Arc::new(Mutex::new(Utc::now())),
-            rx_ticker_updates: Mutex::new(rx_ticker_updates),
+            rx_ticker_updates,
             tx_records,
             timeout,
         }
     }
 
-    pub async fn run(&self) {
+    pub async fn run(&mut self) {
         let counts = self.counts.clone();
         self.print_timings(counts);
         self.check_time_out();
 
         let counts = self.counts.clone();
 
-        while let Some(res) = self.rx_ticker_updates.lock().await.recv().await {
+        while let Some(res) = self.rx_ticker_updates.recv().await {
             let mut counts = counts.lock().await;
             let counts = counts.deref_mut();
             match res {
