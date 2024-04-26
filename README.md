@@ -54,7 +54,7 @@ Arch Linux.
         -o, --output-file <OUTPUT_FILE>      Output file to write to
         -c, --concurrent <CONCURRENT>        Concurrent number of shards to tail
         -v, --verbose                        Display additional information
-        -n, --no-base64                      Do not base64 encode the payload upon invalid UTF-8 payloads. Print it raw instead
+        -b, --base64-encoding                Base64 encode the payload (for binary payloads)
         -h, --help                           Print help
         -V, --version                        Print version
 

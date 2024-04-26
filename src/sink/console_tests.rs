@@ -73,7 +73,7 @@ fn format_outputs_base64() {
 fn format_outputs_no_base64() {
     let console = ConsoleSink {
         config: SinkConfig {
-            no_base64: true,
+            base64_encoding: true,
             ..Default::default()
         },
         shard_count: 1,

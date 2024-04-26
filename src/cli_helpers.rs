@@ -88,9 +88,9 @@ pub struct Opt {
     #[structopt(short, long)]
     pub verbose: bool,
 
-    /// Do not base64 encode the payload upon invalid UTF-8 payloads. Print it raw instead.
+    /// Base64 encode the payload (eg. for binary payloads)
     #[structopt(short, long)]
-    pub no_base64: bool,
+    pub base64_encoding: bool,
 }
 
 pub(crate) fn selected_shards(

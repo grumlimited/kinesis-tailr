@@ -67,7 +67,7 @@ async fn main() -> Result<()> {
                         opt.print_shard_id,
                         opt.print_timestamp,
                         opt.print_delimiter,
-                        opt.no_base64,
+                        opt.base64_encoding,
                         shard_count,
                         file,
                     )
@@ -83,7 +83,7 @@ async fn main() -> Result<()> {
                         opt.print_shard_id,
                         opt.print_timestamp,
                         opt.print_delimiter,
-                        opt.no_base64,
+                        opt.base64_encoding,
                         shard_count,
                     )
                     .run(tx_records, rx_records)
