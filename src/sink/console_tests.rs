@@ -1,9 +1,12 @@
-use super::*;
+use std::sync::Arc;
+
+use aws_sdk_kinesis::primitives::DateTime;
+use tokio::sync::mpsc;
+
 use crate::kinesis::models::ShardProcessorADT::{BeyondToTimestamp, Progress, Termination};
 use crate::sink::console::ConsoleSink;
-use aws_sdk_kinesis::primitives::DateTime;
-use std::sync::Arc;
-use tokio::sync::mpsc;
+
+use super::*;
 
 #[test]
 fn format_nb_messages_ok() {
@@ -50,6 +53,7 @@ fn format_outputs() {
 fn format_outputs_base64() {
     let console = ConsoleSink {
         config: SinkConfig {
+            base64_encoding: true,
             no_color: true,
             ..Default::default()
         },
@@ -66,14 +70,17 @@ fn format_outputs_base64() {
         data: input.to_vec(),
     };
 
-    assert_eq!(console.format_record(&record), "SGVsbG8g8JCAV29ybGQ=");
+    let vec = console.format_record(&record);
+    let result = String::from_utf8_lossy(vec.as_slice());
+    assert_eq!(result, "SGVsbG8g8JCAV29ybGQ=\n");
 }
 
 #[test]
-fn format_outputs_no_base64() {
+fn format_outputs_raw() {
     let console = ConsoleSink {
         config: SinkConfig {
-            base64_encoding: true,
+            base64_encoding: false,
+            no_color: true,
             ..Default::default()
         },
         shard_count: 1,
@@ -89,7 +96,9 @@ fn format_outputs_no_base64() {
         data: input.to_vec(),
     };
 
-    assert_eq!(console.format_record(&record), "Hello �World");
+    let vec = console.format_record(&record);
+    let result = String::from_utf8_lossy(vec.as_slice());
+    assert_eq!(result, "Hello �World\n");
 }
 
 #[tokio::test]
