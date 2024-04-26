@@ -32,7 +32,7 @@ impl ConsoleSink {
                 print_shard_id,
                 print_timestamp,
                 print_delimiter,
-                no_base64,
+                base64_encoding: no_base64,
                 exit_after_termination: true,
             },
             shard_count,
