@@ -1,3 +1,4 @@
+use anyhow::Result;
 use std::fs::File;
 use std::io;
 use std::io::BufWriter;
@@ -56,15 +57,13 @@ impl Configurable for FileSink {
 }
 
 impl SinkOutput<File> for FileSink {
-    fn output(&self) -> BufWriter<File> {
-        let file = File::create(&self.file)
-            .map_err(|e| {
-                io::Error::new(
-                    e.kind(),
-                    format!("Could not write to file {}", self.file.display()),
-                )
-            })
-            .unwrap();
-        BufWriter::with_capacity(FILE_BUF_SIZE, file)
+    fn output(&self) -> Result<BufWriter<File>> {
+        let file = File::create(&self.file).map_err(|e| {
+            io::Error::new(
+                e.kind(),
+                format!("Could not write to file {}", self.file.display()),
+            )
+        })?;
+        Ok(BufWriter::with_capacity(FILE_BUF_SIZE, file))
     }
 }

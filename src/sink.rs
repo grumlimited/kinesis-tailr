@@ -39,7 +39,7 @@ pub trait SinkOutput<W>
 where
     W: Write,
 {
-    fn output(&self) -> BufWriter<W>;
+    fn output(&self) -> Result<BufWriter<W>>;
 
     fn write_date(&self, date: &str) -> String {
         date.to_string()
@@ -73,13 +73,13 @@ where
         tx_records: Sender<Result<ShardProcessorADT, ProcessError>>,
         rx_records: Receiver<Result<ShardProcessorADT, ProcessError>>,
         handle: &mut BufWriter<W>,
-    ) -> io::Result<()>;
+    ) -> Result<()>;
 
     async fn run(
         &mut self,
         tx_records: Sender<Result<ShardProcessorADT, ProcessError>>,
         rx_records: Receiver<Result<ShardProcessorADT, ProcessError>>,
-    ) -> io::Result<()>;
+    ) -> Result<()>;
 
     fn handle_termination(&self, tx_records: Sender<Result<ShardProcessorADT, ProcessError>>);
 
@@ -114,7 +114,7 @@ where
         tx_records: Sender<Result<ShardProcessorADT, ProcessError>>,
         mut rx_records: Receiver<Result<ShardProcessorADT, ProcessError>>,
         handle: &mut BufWriter<W>,
-    ) -> io::Result<()> {
+    ) -> Result<()> {
         self.delimiter(handle).unwrap();
 
         /*
@@ -213,8 +213,8 @@ where
         &mut self,
         tx_records: Sender<Result<ShardProcessorADT, ProcessError>>,
         rx_records: Receiver<Result<ShardProcessorADT, ProcessError>>,
-    ) -> io::Result<()> {
-        let output = &mut self.output();
+    ) -> Result<()> {
+        let output = &mut self.output()?;
         self.run_inner(tx_records, rx_records, output).await
     }
 

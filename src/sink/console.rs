@@ -1,4 +1,5 @@
 use crate::sink::{Configurable, SinkConfig, SinkOutput};
+use anyhow::Result;
 use colored::Colorize;
 use std::io;
 use std::io::{BufWriter, Stdout};
@@ -50,9 +51,9 @@ impl Configurable for ConsoleSink {
 }
 
 impl SinkOutput<Stdout> for ConsoleSink {
-    fn output(&self) -> BufWriter<Stdout> {
+    fn output(&self) -> Result<BufWriter<Stdout>> {
         let stdout = io::stdout(); // get the global stdout entity
-        io::BufWriter::with_capacity(CONSOLE_BUF_SIZE, stdout)
+        Ok(BufWriter::with_capacity(CONSOLE_BUF_SIZE, stdout))
     }
 
     fn write_date(&self, date: &str) -> String {

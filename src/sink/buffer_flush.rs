@@ -20,17 +20,15 @@ impl BufferTicker {
     pub fn start(&self) {
         let tx_records = self.tx_records.clone();
 
-        tokio::spawn({
-            async move {
-                let delay = Duration::from_secs(5);
+        tokio::spawn(async move {
+            let delay = Duration::from_secs(5);
 
-                loop {
-                    sleep(delay).await;
-                    tx_records
-                        .send(Ok(ShardProcessorADT::Flush))
-                        .await
-                        .expect("Count not send ");
-                }
+            loop {
+                sleep(delay).await;
+                tx_records
+                    .send(Ok(ShardProcessorADT::Flush))
+                    .await
+                    .expect("Count not send ShardProcessorADT::Flush");
             }
         });
     }
