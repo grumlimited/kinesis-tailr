@@ -212,7 +212,7 @@ pub struct StringSink {
 }
 
 impl SinkOutput<Vec<u8>> for StringSink {
-    fn output(&self) -> BufWriter<Vec<u8>> {
+    fn output(&self) -> Result<BufWriter<Vec<u8>>> {
         unimplemented!()
     }
 }
