@@ -2,7 +2,7 @@
 
 ![Continuous integration](https://github.com/grumlimited/kinesis-tailr/workflows/Continuous%20integration/badge.svg?branch=main)
 
-A simple tool to tail a Kinesis stream built with Rust.
+A simple tool to tail a Kinesis stream. Built with Rust.
 
 ## Installation
 
