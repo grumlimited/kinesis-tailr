@@ -6,7 +6,7 @@ on:
     branches:
       - main
 
-name: Continuous integration
+name: CI
 
 jobs:
   ci:
