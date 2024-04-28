@@ -1,3 +1,4 @@
+use crate::sink::PayloadEnc;
 use anyhow::{anyhow, Result};
 use aws_sdk_kinesis::meta::PKG_VERSION;
 use chrono::{DateTime, Utc};
@@ -89,12 +90,26 @@ pub struct Opt {
     pub verbose: bool,
 
     /// Base64 encode payloads (eg. for binary data)
-    #[structopt(short, long)]
+    #[structopt(long)]
+    #[arg(group = "encoding")]
     pub base64: bool,
 
-    /// Treat payloads as UTF_8 encoded strings
-    #[structopt(short, long)]
+    /// Forces UTF-8 printable payloads
+    #[structopt(long)]
+    #[arg(group = "encoding")]
     pub utf8: bool,
+}
+
+impl Opt {
+    pub fn encoding(&self) -> PayloadEnc {
+        if self.base64 {
+            PayloadEnc::Base64
+        } else if self.utf8 {
+            PayloadEnc::Utf8
+        } else {
+            PayloadEnc::Raw
+        }
+    }
 }
 
 pub(crate) fn selected_shards(

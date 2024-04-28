@@ -4,7 +4,7 @@ use std::io;
 use std::io::BufWriter;
 use std::path::PathBuf;
 
-use crate::sink::{Configurable, SinkConfig, SinkOutput};
+use crate::sink::{Configurable, PayloadEnc, SinkConfig, SinkOutput};
 
 pub const FILE_BUF_SIZE: usize = 512 * 1024; // 512Ko
 
@@ -24,8 +24,7 @@ impl FileSink {
         print_shard_id: bool,
         print_timestamp: bool,
         print_delimiter: bool,
-        base64_encoding: bool,
-        utf8_encoding: bool,
+        encoding: PayloadEnc,
         shard_count: usize,
         file: P,
     ) -> Self {
@@ -38,8 +37,7 @@ impl FileSink {
                 print_shard_id,
                 print_timestamp,
                 print_delimiter,
-                base64_encoding,
-                utf8_encoding,
+                encoding,
                 exit_after_termination: true,
             },
             file: file.into(),

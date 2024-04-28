@@ -18,6 +18,14 @@ pub mod console;
 pub mod file;
 
 #[derive(Clone, Default)]
+pub enum PayloadEnc {
+    Base64,
+    Utf8,
+    #[default]
+    Raw,
+}
+
+#[derive(Clone, Default)]
 pub struct SinkConfig {
     max_messages: Option<u32>,
     no_color: bool,
@@ -27,8 +35,7 @@ pub struct SinkConfig {
     print_timestamp: bool,
     print_delimiter: bool,
     exit_after_termination: bool,
-    base64_encoding: bool,
-    utf8_encoding: bool,
+    encoding: PayloadEnc,
 }
 
 pub trait Configurable {
@@ -249,17 +256,17 @@ where
     fn format_record(&self, record_result: &RecordResult) -> Vec<u8> {
         let line_feed = vec![b'\n'];
 
-        let payload: Cow<[u8]> = match &record_result.data {
-            payload if self.get_config().base64_encoding => {
+        let payload: Cow<[u8]> = match self.get_config().encoding {
+            PayloadEnc::Base64 => {
                 use base64::{engine::general_purpose, Engine as _};
-                let base64_str = general_purpose::STANDARD.encode(payload);
+                let base64_str = general_purpose::STANDARD.encode(&record_result.data);
                 Cow::Owned(Vec::from(base64_str.as_bytes()))
             }
-            payload if self.get_config().utf8_encoding => {
-                let utf8_str = String::from_utf8_lossy(payload);
+            PayloadEnc::Utf8 => {
+                let utf8_str = String::from_utf8_lossy(&record_result.data);
                 unsafe { std::mem::transmute::<Cow<str>, Cow<'_, [u8]>>(utf8_str) }
             }
-            payload => Cow::Borrowed(payload),
+            PayloadEnc::Raw => Cow::Borrowed(&record_result.data),
         };
 
         let partition_key = if self.get_config().print_key {

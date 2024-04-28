@@ -1,4 +1,4 @@
-use crate::sink::{Configurable, SinkConfig, SinkOutput};
+use crate::sink::{Configurable, PayloadEnc, SinkConfig, SinkOutput};
 use anyhow::Result;
 use colored::Colorize;
 use std::io;
@@ -21,8 +21,7 @@ impl ConsoleSink {
         print_shard_id: bool,
         print_timestamp: bool,
         print_delimiter: bool,
-        base64_encoding: bool,
-        utf8_encoding: bool,
+        encoding: PayloadEnc,
         shard_count: usize,
     ) -> Self {
         ConsoleSink {
@@ -34,8 +33,7 @@ impl ConsoleSink {
                 print_shard_id,
                 print_timestamp,
                 print_delimiter,
-                base64_encoding,
-                utf8_encoding,
+                encoding,
                 exit_after_termination: true,
             },
             shard_count,
