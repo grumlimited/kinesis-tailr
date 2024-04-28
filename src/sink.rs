@@ -28,6 +28,7 @@ pub struct SinkConfig {
     print_delimiter: bool,
     exit_after_termination: bool,
     base64_encoding: bool,
+    utf8_encoding: bool,
 }
 
 pub trait Configurable {
@@ -248,15 +249,15 @@ where
     fn format_record(&self, record_result: &RecordResult) -> Vec<u8> {
         let line_feed = vec![b'\n'];
 
-        let payload = match &record_result.data {
+        let payload: Cow<[u8]> = match &record_result.data {
             payload if self.get_config().base64_encoding => {
                 use base64::{engine::general_purpose, Engine as _};
-                Cow::Owned(
-                    general_purpose::STANDARD
-                        .encode(payload)
-                        .as_bytes()
-                        .to_vec(),
-                )
+                let base64_str = general_purpose::STANDARD.encode(payload);
+                Cow::Owned(Vec::from(base64_str.as_bytes()))
+            }
+            payload if self.get_config().utf8_encoding => {
+                let utf8_str = String::from_utf8_lossy(payload);
+                unsafe { std::mem::transmute::<Cow<str>, Cow<'_, [u8]>>(utf8_str) }
             }
             payload => Cow::Borrowed(payload),
         };
@@ -306,7 +307,7 @@ where
             sequence_number.as_bytes(),
             shard_id.as_bytes(),
             date.as_bytes(),
-            payload.as_slice(),
+            payload.as_ref(),
             line_feed.as_slice(),
         ]
         .concat()
