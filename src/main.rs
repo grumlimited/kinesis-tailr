@@ -56,6 +56,8 @@ async fn main() -> Result<()> {
 
     let handle = tokio::spawn({
         let tx_records = tx_records.clone();
+        let encoding = opt.encoding().clone();
+
         async move {
             match opt.output_file {
                 Some(file) => {
@@ -67,7 +69,7 @@ async fn main() -> Result<()> {
                         opt.print_shard_id,
                         opt.print_timestamp,
                         opt.print_delimiter,
-                        opt.base64_encoding,
+                        encoding,
                         shard_count,
                         file,
                     )
@@ -83,7 +85,7 @@ async fn main() -> Result<()> {
                         opt.print_shard_id,
                         opt.print_timestamp,
                         opt.print_delimiter,
-                        opt.base64_encoding,
+                        encoding,
                         shard_count,
                     )
                     .run(tx_records, rx_records)

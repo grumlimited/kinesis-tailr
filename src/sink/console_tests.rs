@@ -53,7 +53,7 @@ fn format_outputs() {
 fn format_outputs_base64() {
     let console = ConsoleSink {
         config: SinkConfig {
-            base64_encoding: true,
+            encoding: PayloadEnc::Base64,
             no_color: true,
             ..Default::default()
         },
@@ -76,10 +76,36 @@ fn format_outputs_base64() {
 }
 
 #[test]
+fn format_outputs_utf8() {
+    let console = ConsoleSink {
+        config: SinkConfig {
+            encoding: PayloadEnc::Utf8,
+            no_color: true,
+            ..Default::default()
+        },
+        shard_count: 1,
+    };
+
+    let input = b"Hello \xF0\x90\x80World";
+
+    let record = RecordResult {
+        shard_id: Arc::new("".to_string()),
+        sequence_id: "sequence_id".to_string(),
+        partition_key: "partition_key".to_string(),
+        datetime: DateTime::from_secs(1_000_000_i64),
+        data: input.to_vec(),
+    };
+
+    let vec = console.format_record(&record);
+    let result = String::from_utf8_lossy(vec.as_slice());
+    assert_eq!(result, "Hello �World\n");
+}
+
+#[test]
 fn format_outputs_raw() {
     let console = ConsoleSink {
         config: SinkConfig {
-            base64_encoding: false,
+            encoding: PayloadEnc::Raw,
             no_color: true,
             ..Default::default()
         },
