@@ -123,8 +123,7 @@ fn format_outputs_raw() {
     };
 
     let vec = console.format_record(&record);
-    let result = String::from_utf8_lossy(vec.as_slice());
-    assert_eq!(result, "Hello �World\n");
+    assert_eq!(vec, b"Hello \xF0\x90\x80World\n");
 }
 
 #[tokio::test]

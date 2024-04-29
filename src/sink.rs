@@ -311,11 +311,9 @@ where
 
         let partition_key = if self.get_config().print_key {
             let key = record_result.partition_key.to_string();
-            let key = self.write_key(&key);
-
-            format!("{} ", key)
+            Metadata::content(self.write_key(&key))
         } else {
-            "".to_string()
+            Metadata::Empty
         };
 
         let sequence_number = if self.get_config().print_sequence_number {
