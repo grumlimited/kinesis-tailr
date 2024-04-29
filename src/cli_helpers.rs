@@ -1,4 +1,4 @@
-use crate::sink::PayloadEnc;
+use crate::sink::config::PayloadEnc;
 use anyhow::{anyhow, Result};
 use aws_sdk_kinesis::meta::PKG_VERSION;
 use chrono::{DateTime, Utc};
