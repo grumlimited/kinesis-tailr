@@ -1,4 +1,3 @@
-use std::borrow::Cow;
 use std::cmp::{max, min};
 use std::io::{BufWriter, Write};
 use std::{io, str};
@@ -11,31 +10,57 @@ use log::{debug, error, warn};
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use buffer_flush::BufferTicker;
+use helpers::Payload;
 
 use crate::kinesis::models::{ProcessError, RecordResult, ShardProcessorADT};
+use crate::sink::config::{PayloadEnc, SinkConfig};
 
 pub mod console;
 pub mod file;
 
-#[derive(Clone, Default)]
-pub enum PayloadEnc {
-    Base64,
-    Utf8,
-    #[default]
-    Raw,
+pub mod config {
+    #[derive(Clone, Default)]
+    pub enum PayloadEnc {
+        Base64,
+        Utf8,
+        #[default]
+        Raw,
+    }
+
+    #[derive(Clone, Default)]
+    pub struct SinkConfig {
+        pub max_messages: Option<u32>,
+        pub no_color: bool,
+        pub print_key: bool,
+        pub print_sequence_number: bool,
+        pub print_shard_id: bool,
+        pub print_timestamp: bool,
+        pub print_delimiter: bool,
+        pub exit_after_termination: bool,
+        pub encoding: PayloadEnc,
+    }
 }
 
-#[derive(Clone, Default)]
-pub struct SinkConfig {
-    max_messages: Option<u32>,
-    no_color: bool,
-    print_key: bool,
-    print_sequence_number: bool,
-    print_shard_id: bool,
-    print_timestamp: bool,
-    print_delimiter: bool,
-    exit_after_termination: bool,
-    encoding: PayloadEnc,
+mod buffer_flush;
+
+mod helpers {
+    use std::borrow::Cow;
+
+    pub enum Payload<'a> {
+        Base64(Vec<u8>),
+        Utf8(Cow<'a, str>),
+        Raw(&'a [u8]),
+    }
+
+    impl Payload<'_> {
+        pub fn as_bytes(&self) -> &[u8] {
+            match self {
+                Self::Base64(bytes) => bytes,
+                Self::Utf8(string) => string.as_bytes(),
+                Self::Raw(bytes) => bytes,
+            }
+        }
+    }
 }
 
 pub trait Configurable {
@@ -256,17 +281,14 @@ where
     fn format_record(&self, record_result: &RecordResult) -> Vec<u8> {
         let line_feed = vec![b'\n'];
 
-        let payload: Cow<[u8]> = match self.get_config().encoding {
+        let payload = match self.get_config().encoding {
             PayloadEnc::Base64 => {
                 use base64::{engine::general_purpose, Engine as _};
                 let base64_str = general_purpose::STANDARD.encode(&record_result.data);
-                Cow::Owned(Vec::from(base64_str.as_bytes()))
+                Payload::Base64(base64_str.into_bytes())
             }
-            PayloadEnc::Utf8 => {
-                let utf8_str = String::from_utf8_lossy(&record_result.data);
-                unsafe { std::mem::transmute::<Cow<str>, Cow<'_, [u8]>>(utf8_str) }
-            }
-            PayloadEnc::Raw => Cow::Borrowed(&record_result.data),
+            PayloadEnc::Utf8 => Payload::Utf8(String::from_utf8_lossy(&record_result.data)),
+            PayloadEnc::Raw => Payload::Raw(&record_result.data),
         };
 
         let partition_key = if self.get_config().print_key {
@@ -279,10 +301,10 @@ where
         };
 
         let sequence_number = if self.get_config().print_sequence_number {
-            let key = record_result.sequence_id.to_string();
-            let key = self.write_sequence_number(&key);
+            let sequence_id = record_result.sequence_id.to_string();
+            let sequence_id = self.write_sequence_number(&sequence_id);
 
-            format!("{} ", key)
+            format!("{} ", sequence_id)
         } else {
             "".to_string()
         };
@@ -314,7 +336,7 @@ where
             sequence_number.as_bytes(),
             shard_id.as_bytes(),
             date.as_bytes(),
-            payload.as_ref(),
+            payload.as_bytes(),
             line_feed.as_slice(),
         ]
         .concat()
@@ -339,8 +361,6 @@ where
         Ok(())
     }
 }
-
-mod buffer_flush;
 
 #[cfg(test)]
 mod console_tests;
