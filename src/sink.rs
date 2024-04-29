@@ -10,7 +10,7 @@ use log::{debug, error, warn};
 use tokio::sync::mpsc::{Receiver, Sender};
 
 use buffer_flush::BufferTicker;
-use helpers::Payload;
+use helpers::{Metadata, Payload};
 
 use crate::kinesis::models::{ProcessError, RecordResult, ShardProcessorADT};
 use crate::sink::config::{PayloadEnc, SinkConfig};
@@ -58,6 +58,24 @@ mod helpers {
                 Self::Base64(bytes) => bytes,
                 Self::Utf8(string) => string.as_bytes(),
                 Self::Raw(bytes) => bytes,
+            }
+        }
+    }
+
+    pub enum Metadata {
+        Content(String),
+        Empty,
+    }
+
+    impl Metadata {
+        pub fn content(metadata: String) -> Self {
+            Self::Content(format!("{} {}", metadata, " "))
+        }
+
+        pub fn as_bytes(&self) -> &[u8] {
+            match self {
+                Self::Content(metadata) => metadata.as_bytes(),
+                Self::Empty => "".as_bytes(),
             }
         }
     }
@@ -302,20 +320,16 @@ where
 
         let sequence_number = if self.get_config().print_sequence_number {
             let sequence_id = record_result.sequence_id.to_string();
-            let sequence_id = self.write_sequence_number(&sequence_id);
-
-            format!("{} ", sequence_id)
+            Metadata::content(self.write_sequence_number(&sequence_id))
         } else {
-            "".to_string()
+            Metadata::Empty
         };
 
         let shard_id = if self.get_config().print_shard_id {
             let shard_id = record_result.shard_id.to_string();
-            let shard_id = self.write_shard_id(&shard_id);
-
-            format!("{} ", shard_id)
+            Metadata::content(self.write_shard_id(&shard_id))
         } else {
-            "".to_string()
+            Metadata::Empty
         };
 
         let date = if self.get_config().print_timestamp {
@@ -324,11 +338,9 @@ where
                 .unwrap();
 
             let date = date.format("%+").to_string();
-            let date = self.write_date(&date);
-
-            format!("{} ", date)
+            Metadata::content(self.write_date(&date))
         } else {
-            "".to_string()
+            Metadata::Empty
         };
 
         [
