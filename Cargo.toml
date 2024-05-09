@@ -18,7 +18,6 @@ base64 = "0"
 chrono = { version = "0", features = ["clock", "std"] }
 clap = { version = "4", features = ["derive"] }
 colored = "2"
-ctrlc-async = "3"
 env_logger = "0"
 humantime = "2"
 log = "0"
