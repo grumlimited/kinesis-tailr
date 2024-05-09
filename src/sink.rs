@@ -132,8 +132,6 @@ where
         rx_records: Receiver<Result<ShardProcessorADT, ProcessError>>,
     ) -> Result<()>;
 
-    fn handle_termination(&self, tx_records: Sender<Result<ShardProcessorADT, ProcessError>>);
-
     fn delimiter(&self, handle: &mut BufWriter<W>) -> Result<(), Error>;
 
     fn format_nb_messages(&self, messages_processed: u32) -> String {
@@ -177,8 +175,6 @@ where
 
         let mut total_records_processed = 0;
         let mut active_shards_count = self.shard_count();
-
-        self.handle_termination(tx_records.clone());
 
         while let Some(res) = rx_records.recv().await {
             match res {
@@ -267,20 +263,6 @@ where
     ) -> Result<()> {
         let output = &mut self.output()?;
         self.run_inner(tx_records, rx_records, output).await
-    }
-
-    fn handle_termination(&self, tx_records: Sender<Result<ShardProcessorADT, ProcessError>>) {
-        // Note: the exit_after_termination check is to help
-        // with tests where only one handler can be registered.
-        if self.get_config().exit_after_termination {
-            ctrlc_async::set_async_handler(async move {
-                tx_records
-                    .send(Ok(ShardProcessorADT::Termination))
-                    .await
-                    .unwrap();
-            })
-            .expect("Error setting Ctrl-C handler");
-        }
     }
 
     fn delimiter(&self, handle: &mut BufWriter<W>) -> Result<()> {

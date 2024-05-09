@@ -115,7 +115,5 @@ pub trait ShardProcessor<K: StreamClient>: Send + Sync {
         tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
     ) -> Result<()>;
 
-    fn has_records_beyond_end_ts(&self, records: &[RecordResult]) -> bool;
-
     fn records_before_end_ts(&self, records: Vec<RecordResult>) -> Vec<RecordResult>;
 }

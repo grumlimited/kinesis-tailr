@@ -3,7 +3,6 @@ use std::sync::{Arc, Mutex};
 
 use anyhow::Result;
 use async_trait::async_trait;
-use aws_sdk_kinesis::config::Region;
 use aws_sdk_kinesis::operation::get_records::GetRecordsOutput;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use aws_sdk_kinesis::operation::list_shards::ListShardsOutput;
@@ -32,7 +31,6 @@ async fn seed_shards_test() {
         mpsc::channel::<ShardIteratorProgress>(1);
 
     let client = TestKinesisClient {
-        region: Some(Region::new("us-east-1")),
         done: Arc::new(Mutex::new(false)),
     };
 
@@ -101,7 +99,6 @@ async fn produced_record_is_processed() {
     let (tx_ticker_updates, mut rx_ticker_updates) = mpsc::channel::<TickerMessage>(10);
 
     let client = TestKinesisClient {
-        region: Some(Region::new("us-east-1")),
         done: Arc::new(Mutex::new(false)),
     };
 
@@ -149,7 +146,6 @@ async fn beyond_to_timestamp_is_received() {
     let (tx_ticker_updates, mut rx_ticker_updates) = mpsc::channel::<TickerMessage>(10);
 
     let client = TestKinesisClient {
-        region: Some(Region::new("us-east-1")),
         done: Arc::new(Mutex::new(false)),
     };
 
@@ -191,7 +187,6 @@ async fn has_records_beyond_end_ts_when_has_end_ts() {
     let (tx_ticker_updates, _) = mpsc::channel::<TickerMessage>(10);
 
     let client = TestKinesisClient {
-        region: Some(Region::new("us-east-1")),
         done: Arc::new(Mutex::new(false)),
     };
 
@@ -211,7 +206,7 @@ async fn has_records_beyond_end_ts_when_has_end_ts() {
     };
 
     let records = vec![];
-    assert!(processor.has_records_beyond_end_ts(&records));
+    assert_eq!(processor.records_before_end_ts(records).len(), 0);
 
     let record1 = RecordResult {
         shard_id: Arc::new("shard_id".to_string()),
@@ -253,7 +248,6 @@ async fn has_records_beyond_end_ts_when_no_end_ts() {
     let (tx_ticker_updates, _) = mpsc::channel::<TickerMessage>(10);
 
     let client = TestKinesisClient {
-        region: Some(Region::new("us-east-1")),
         done: Arc::new(Mutex::new(false)),
     };
 
@@ -300,7 +294,6 @@ async fn handle_iterator_refresh_ok() {
     };
 
     let client = TestKinesisClient {
-        region: Some(Region::new("us-east-1")),
         done: Arc::new(Mutex::new(false)),
     };
 
@@ -348,7 +341,6 @@ fn wait_secs_ok() {
 
 #[derive(Clone, Debug)]
 pub struct TestKinesisClient {
-    region: Option<Region>,
     done: Arc<Mutex<bool>>,
 }
 
@@ -422,10 +414,6 @@ impl StreamClient for TestKinesisClient {
             .shard_iterator("shard_iterator_latest".to_string())
             .build())
     }
-
-    fn get_region(&self) -> Option<&Region> {
-        self.region.as_ref()
-    }
 }
 
 #[derive(Clone, Debug)]
@@ -473,10 +461,6 @@ impl StreamClient for TestTimestampInFutureKinesisClient {
         _stream: &str,
         _shard_id: &str,
     ) -> Result<GetShardIteratorOutput> {
-        unimplemented!()
-    }
-
-    fn get_region(&self) -> Option<&Region> {
         unimplemented!()
     }
 }

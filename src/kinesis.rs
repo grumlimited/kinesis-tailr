@@ -3,7 +3,7 @@ use async_trait::async_trait;
 use aws_sdk_kinesis::operation::get_records::GetRecordsError;
 use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use chrono::prelude::*;
-use chrono::{DateTime, Utc};
+use chrono::Utc;
 use log::{debug, warn};
 use std::sync::Arc;
 use tokio::sync::mpsc;
@@ -264,27 +264,6 @@ where
         }
 
         Ok(())
-    }
-
-    fn has_records_beyond_end_ts(&self, records: &[RecordResult]) -> bool {
-        match self.get_config().to_datetime {
-            Some(end_ts) if !records.is_empty() => {
-                let epoch = Utc.with_ymd_and_hms(1970, 1, 1, 0, 0, 0).unwrap();
-
-                let find_most_recent_ts = |records: &[RecordResult]| -> DateTime<Utc> {
-                    records.iter().fold(epoch, |current_ts, record| {
-                        let record_ts = Utc.timestamp_nanos(record.datetime.as_nanos() as i64);
-
-                        std::cmp::max(current_ts, record_ts)
-                    })
-                };
-
-                let most_recent_ts = find_most_recent_ts(records);
-
-                most_recent_ts >= end_ts
-            }
-            _ => true,
-        }
     }
 
     fn records_before_end_ts(&self, records: Vec<RecordResult>) -> Vec<RecordResult> {

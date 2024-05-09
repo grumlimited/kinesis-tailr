@@ -1,7 +1,6 @@
 pub mod stream {
     use anyhow::Result;
     use async_trait::async_trait;
-    use aws_config::Region;
     use aws_sdk_kinesis::operation::get_records::GetRecordsOutput;
     use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
     use aws_sdk_kinesis::operation::list_shards::ListShardsOutput;
@@ -37,8 +36,6 @@ pub mod stream {
             stream: &str,
             shard_id: &str,
         ) -> Result<GetShardIteratorOutput>;
-
-        fn get_region(&self) -> Option<&Region>;
 
         fn aws_datetime(timestamp: &chrono::DateTime<Utc>) -> DateTime {
             DateTime::from_millis(timestamp.timestamp_millis())
@@ -142,10 +139,6 @@ pub mod client {
                 .await
                 .map_err(SdkError::into_service_error)
                 .map_err(Into::into)
-        }
-
-        fn get_region(&self) -> Option<&Region> {
-            self.client.config().region()
         }
     }
 
