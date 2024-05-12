@@ -155,7 +155,7 @@ pub mod client {
             let inner = aws_config::defaults(BehaviorVersion::latest()).region(region_provider);
 
             let inner = match endpoint_url {
-                Some(endpoint_url) => inner.endpoint_url(endpoint_url.as_str()),
+                Some(endpoint_url) => inner.endpoint_url(endpoint_url),
                 None => inner,
             };
 
