@@ -42,7 +42,7 @@ Arch Linux.
         --to-datetime <TO_DATETIME>          End datetime position to tail up to. ISO 8601 format
         --max-messages <MAX_MESSAGES>        Maximum number of messages to retrieve
         --timeout <TIMEOUT>                  Exit if no messages received after <timeout> seconds
-        --max-attempts <MAX_ATTEMPTS>        Maximum number of aws sdk retries. Increase if you are seeing throttling errors [default: 3]
+        --max-attempts <MAX_ATTEMPTS>        Maximum number of aws sdk retries. Increase if you are seeing throttling errors [default: 10]
         --no-color                           Disable color output
         --print-delimiter                    Print a delimiter between each payload
         --print-key                          Print the partition key
@@ -52,7 +52,6 @@ Arch Linux.
         --progress                           Print progress status
         --shard-id <SHARD_ID>                Shard ID to tail from. Repeat option for each shard ID to filter on
         -o, --output-file <OUTPUT_FILE>      Output file to write to
-        -c, --concurrent <CONCURRENT>        Concurrent number of shards to tail
         -v, --verbose                        Display additional information
             --base64                         Base64 encode payloads (eg. for binary data)
             --utf8                           Forces UTF-8 printable payloads

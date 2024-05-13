@@ -1,3 +1,5 @@
+use std::sync::Arc;
+
 use anyhow::Result;
 use async_trait::async_trait;
 use aws_sdk_kinesis::operation::get_records::GetRecordsError;
@@ -5,7 +7,6 @@ use aws_sdk_kinesis::operation::get_shard_iterator::GetShardIteratorOutput;
 use chrono::prelude::*;
 use chrono::Utc;
 use log::{debug, warn};
-use std::sync::Arc;
 use tokio::sync::mpsc;
 use tokio::sync::mpsc::Sender;
 use tokio::time::{sleep, Duration};
@@ -42,14 +43,6 @@ where
         self.seed_shards(tx_shard_iterator_progress.clone()).await?;
 
         while let Some(res) = rx_shard_iterator_progress.recv().await {
-            let permit = self
-                .get_config()
-                .semaphore
-                .clone()
-                .acquire_owned()
-                .await
-                .unwrap();
-
             let res_clone = res.clone();
 
             match res.next_shard_iterator {
@@ -112,8 +105,6 @@ where
                     rx_shard_iterator_progress.close();
                 }
             };
-
-            drop(permit);
         }
 
         debug!("ShardProcessor {} finished", self.get_config().shard_id);
@@ -138,8 +129,6 @@ where
         &self,
         tx_shard_iterator_progress: Sender<ShardIteratorProgress>,
     ) -> Result<()> {
-        let permit = self.get_config().semaphore.clone().acquire_owned().await?;
-
         debug!("Seeding shard {}", self.get_config().shard_id);
 
         match self.get_iterator().await {
@@ -160,7 +149,6 @@ where
             }
         }
 
-        drop(permit);
         Ok(())
     }
 
