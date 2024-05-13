@@ -120,20 +120,13 @@ async fn main() -> Result<()> {
         selected_shards
             .iter()
             .map(|shard_id| {
-                let tx_ticker_updates = tx_ticker_updates.clone();
-                let tx_records = tx_records.clone();
-                let client = client.clone();
-                let stream_name = opt.stream_name.clone();
-                let shard_id = shard_id.clone();
-                let semaphore = semaphore.clone();
-
                 let shard_processor = kinesis::helpers::new(
-                    client,
-                    stream_name,
-                    shard_id,
+                    client.clone(),
+                    opt.stream_name.clone(),
+                    shard_id.clone(),
                     from_datetime,
                     to_datetime,
-                    semaphore,
+                    semaphore.clone(),
                     tx_records.clone(),
                     tx_ticker_updates.clone(),
                 );
