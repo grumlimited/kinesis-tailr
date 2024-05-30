@@ -5,6 +5,8 @@ use chrono::{DateTime, Utc};
 use clap::Parser;
 use log::info;
 
+pub const SEMAPHORE_DEFAULT_SIZE: usize = 50;
+
 #[derive(Debug, Parser)]
 #[command(
     version = "{#RELEASE_VERSION} - Grum Ltd\nReport bugs to https://github.com/grumlimited/kinesis-tailr/issues"
@@ -78,6 +80,10 @@ pub struct Opt {
     /// Output file to write to
     #[structopt(long, short)]
     pub output_file: Option<String>,
+
+    /// Concurrent number of shards to tail
+    #[structopt(short, long)]
+    pub concurrent: Option<usize>,
 
     /// Display additional information
     #[structopt(short, long)]

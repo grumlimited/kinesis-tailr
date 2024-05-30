@@ -12,6 +12,7 @@ use std::fmt::Debug;
 use std::sync::Arc;
 use thiserror::Error;
 use tokio::sync::mpsc::Sender;
+use tokio::sync::Semaphore;
 
 #[derive(Debug, Clone)]
 pub struct ShardIteratorProgress {
@@ -49,6 +50,7 @@ pub struct ShardProcessorConfig {
     pub stream: String,
     pub shard_id: Arc<String>,
     pub to_datetime: Option<chrono::DateTime<Utc>>,
+    pub semaphore: Arc<Semaphore>,
     pub tx_records: Sender<Result<ShardProcessorADT, ProcessError>>,
     pub tx_ticker_updates: Option<Sender<TickerMessage>>,
 }

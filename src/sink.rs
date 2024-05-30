@@ -224,7 +224,6 @@ where
                             total_records_processed += records.len() as u32;
                             records.iter().for_each(|record| {
                                 let data = self.format_record(record);
-                                // writeln!(handle, "{}", data).unwrap();
                                 let _ = handle.write(data.as_slice()).unwrap();
                                 self.delimiter(handle).unwrap()
                             });

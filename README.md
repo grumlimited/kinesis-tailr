@@ -52,6 +52,7 @@ Arch Linux.
         --progress                           Print progress status
         --shard-id <SHARD_ID>                Shard ID to tail from. Repeat option for each shard ID to filter on
         -o, --output-file <OUTPUT_FILE>      Output file to write to
+        -c, --concurrent <CONCURRENT>        Concurrent number of shards to tail
         -v, --verbose                        Display additional information
             --base64                         Base64 encode payloads (eg. for binary data)
             --utf8                           Forces UTF-8 printable payloads

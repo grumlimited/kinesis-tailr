@@ -11,6 +11,7 @@ use aws_sdk_kinesis::types::Shard;
 use chrono::Utc;
 use log::{debug, info};
 use tokio::sync::mpsc::Sender;
+use tokio::sync::Semaphore;
 use tokio::time::sleep;
 
 use crate::aws::client::AwsKinesisClient;
@@ -32,6 +33,7 @@ pub fn new(
     shard_id: String,
     from_datetime: Option<chrono::DateTime<Utc>>,
     to_datetime: Option<chrono::DateTime<Utc>>,
+    semaphore: Arc<Semaphore>,
     tx_records: Sender<Result<ShardProcessorADT, ProcessError>>,
     tx_ticker_updates: Option<Sender<TickerMessage>>,
 ) -> Box<dyn ShardProcessor<AwsKinesisClient> + Send + Sync> {
@@ -44,6 +46,7 @@ pub fn new(
                 stream,
                 shard_id: Arc::new(shard_id),
                 to_datetime,
+                semaphore,
                 tx_records,
                 tx_ticker_updates,
             },
@@ -55,6 +58,7 @@ pub fn new(
                 stream,
                 shard_id: Arc::new(shard_id),
                 to_datetime,
+                semaphore,
                 tx_records,
                 tx_ticker_updates,
             },
