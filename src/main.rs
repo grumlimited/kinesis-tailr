@@ -1,8 +1,10 @@
 #![allow(clippy::result_large_err)]
 
+use std::sync::Arc;
+
 use anyhow::Result;
 use clap::Parser;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, Semaphore};
 use tokio::task::JoinSet;
 
 use kinesis::helpers::get_shards;
@@ -113,6 +115,8 @@ async fn main() -> Result<()> {
     };
 
     let shard_processors = {
+        let semaphore = semaphore(shard_count, opt.concurrent);
+
         selected_shards
             .iter()
             .map(|shard_id| {
@@ -122,6 +126,7 @@ async fn main() -> Result<()> {
                     shard_id.clone(),
                     from_datetime,
                     to_datetime,
+                    semaphore.clone(),
                     tx_records.clone(),
                     tx_ticker_updates.clone(),
                 );
@@ -144,4 +149,13 @@ async fn main() -> Result<()> {
     let _ = handle.await?;
 
     Ok(())
+}
+
+fn semaphore(shard_count: usize, concurrent: Option<usize>) -> Arc<Semaphore> {
+    let concurrent = match concurrent {
+        Some(concurrent) => concurrent,
+        None => std::cmp::min(shard_count, SEMAPHORE_DEFAULT_SIZE),
+    };
+
+    Arc::new(Semaphore::new(concurrent))
 }

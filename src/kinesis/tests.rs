@@ -11,7 +11,7 @@ use aws_sdk_kinesis::types::error::InvalidArgumentException;
 use aws_sdk_kinesis::types::{Record, Shard};
 use chrono::prelude::*;
 use chrono::Utc;
-use tokio::sync::mpsc;
+use tokio::sync::{mpsc, Semaphore};
 
 use crate::aws::stream::StreamClient;
 use crate::kinesis::helpers;
@@ -34,12 +34,15 @@ async fn seed_shards_test() {
         done: Arc::new(Mutex::new(false)),
     };
 
+    let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
+
     let processor = ShardProcessorLatest {
         client,
         config: ShardProcessorConfig {
             stream: "test".to_string(),
             shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: None,
+            semaphore,
             tx_records,
             tx_ticker_updates: Some(tx_ticker_updates),
         },
@@ -69,12 +72,15 @@ async fn seed_shards_test_timestamp_in_future() {
 
     let client = TestTimestampInFutureKinesisClient {};
 
+    let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
+
     let processor = ShardProcessorAtTimestamp {
         client,
         config: ShardProcessorConfig {
             stream: "test".to_string(),
             shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: None,
+            semaphore,
             tx_records,
             tx_ticker_updates: Some(tx_ticker_updates),
         },
@@ -96,12 +102,15 @@ async fn produced_record_is_processed() {
         done: Arc::new(Mutex::new(false)),
     };
 
+    let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
+
     let processor = ShardProcessorLatest {
         client: client.clone(),
         config: ShardProcessorConfig {
             stream: "test".to_string(),
             shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: None,
+            semaphore,
             tx_records,
             tx_ticker_updates: Some(tx_ticker_updates),
         },
@@ -140,6 +149,8 @@ async fn beyond_to_timestamp_is_received() {
         done: Arc::new(Mutex::new(false)),
     };
 
+    let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
+
     let to_datetime = Utc.with_ymd_and_hms(2020, 6, 1, 12, 0, 0).unwrap();
     let processor = ShardProcessorLatest {
         client,
@@ -147,6 +158,7 @@ async fn beyond_to_timestamp_is_received() {
             stream: "test".to_string(),
             shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: Some(to_datetime),
+            semaphore,
             tx_records,
             tx_ticker_updates: Some(tx_ticker_updates),
         },
@@ -178,6 +190,8 @@ async fn has_records_beyond_end_ts_when_has_end_ts() {
         done: Arc::new(Mutex::new(false)),
     };
 
+    let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
+
     let to_datetime = Utc.with_ymd_and_hms(2020, 6, 1, 12, 0, 0).unwrap();
     let processor = ShardProcessorLatest {
         client,
@@ -185,6 +199,7 @@ async fn has_records_beyond_end_ts_when_has_end_ts() {
             stream: "test".to_string(),
             shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: Some(to_datetime),
+            semaphore,
             tx_records,
             tx_ticker_updates: Some(tx_ticker_updates),
         },
@@ -236,12 +251,15 @@ async fn has_records_beyond_end_ts_when_no_end_ts() {
         done: Arc::new(Mutex::new(false)),
     };
 
+    let semaphore: Arc<Semaphore> = Arc::new(Semaphore::new(10));
+
     let processor = ShardProcessorLatest {
         client,
         config: ShardProcessorConfig {
             stream: "test".to_string(),
             shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: None,
+            semaphore,
             tx_records,
             tx_ticker_updates: Some(tx_ticker_updates),
         },
@@ -285,6 +303,7 @@ async fn handle_iterator_refresh_ok() {
             stream: "test".to_string(),
             shard_id: Arc::new("shardId-000000000000".to_string()),
             to_datetime: None,
+            semaphore: Arc::new(Semaphore::new(10)),
             tx_records: mpsc::channel::<Result<ShardProcessorADT, ProcessError>>(10).0,
             tx_ticker_updates: Some(mpsc::channel::<TickerMessage>(10).0),
         },
