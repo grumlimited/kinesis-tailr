@@ -192,7 +192,7 @@ pub async fn get_shards(client: &AwsKinesisClient, stream: &str) -> io::Result<V
 
 pub fn wait_milliseconds() -> u64 {
     use rand::prelude::*;
-    let mut rng = thread_rng();
+    let mut rng = rand::rng();
 
-    rng.gen_range(50..=100)
+    rng.random_range(50..=100)
 }
