@@ -135,7 +135,7 @@ where
                 .await?;
         }
         Ok((_, None)) => {
-            Err(io::Error::new(io::ErrorKind::Other, "No iterator returned"))?;
+            Err(io::Error::other("No iterator returned"))?;
         }
         Err(e) => match e.downcast_ref::<GetShardIteratorError>() {
             Some(e) => {
@@ -186,7 +186,7 @@ pub async fn get_shards(client: &AwsKinesisClient, stream: &str) -> io::Result<V
 
             Ok(shards)
         }
-        Err(e) => Err(io::Error::new(io::ErrorKind::Other, format!("{:?}", e))),
+        Err(e) => Err(io::Error::other(format!("{:?}", e))),
     }
 }
 
