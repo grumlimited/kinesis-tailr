@@ -15,6 +15,9 @@ use helpers::{Metadata, Payload};
 use crate::kinesis::models::{ProcessError, RecordResult, ShardProcessorADT};
 use crate::sink::config::{PayloadEnc, SinkConfig};
 
+/// Default delimiter line used between records
+const DEFAULT_DELIMITER: &str = "------------------------------------------------------------------------";
+
 pub mod console;
 pub mod file;
 
@@ -164,7 +167,7 @@ where
         mut rx_records: Receiver<Result<ShardProcessorADT, ProcessError>>,
         handle: &mut BufWriter<W>,
     ) -> Result<()> {
-        self.delimiter(handle).unwrap();
+        self.delimiter(handle)?;
 
         /*
          * Start the buffer ticker to flush the buffer every 5 seconds.
@@ -210,26 +213,25 @@ where
                                 let (records_to_display, _) =
                                     records.split_at(records_to_display_count);
 
-                                records_to_display.iter().for_each(|record| {
+                                records_to_display.iter().try_for_each(|record| -> Result<()> {
                                     let data = self.format_record(record);
-
-                                    let _ = handle.write(data.as_slice()).unwrap();
-                                    // writeln!(handle, "{}", data).unwrap();
-
-                                    self.delimiter(handle).unwrap();
-                                });
+                                    handle.write_all(data.as_slice())?;
+                                    self.delimiter(handle)?;
+                                    Ok(())
+                                })?;
                             }
                         }
                         None => {
                             total_records_processed += records.len() as u32;
-                            records.iter().for_each(|record| {
+                            records.iter().try_for_each(|record| -> Result<()> {
                                 let data = self.format_record(record);
-                                let _ = handle.write(data.as_slice()).unwrap();
-                                self.delimiter(handle).unwrap()
-                            });
+                                handle.write_all(data.as_slice())?;
+                                self.delimiter(handle)?;
+                                Ok(())
+                            })?;
                         }
                     },
-                    ShardProcessorADT::Flush => handle.flush().unwrap(),
+                    ShardProcessorADT::Flush => handle.flush()?,
                     ShardProcessorADT::Termination => {
                         debug!("Termination message received");
                         let messages_processed = total_records_processed;
@@ -269,9 +271,7 @@ where
             writeln!(
                 handle,
                 "{}",
-                self.write_delimiter(
-                    "------------------------------------------------------------------------"
-                )
+                self.write_delimiter(DEFAULT_DELIMITER)
             )?
         }
         Ok(())
@@ -314,7 +314,11 @@ where
         let date = if self.get_config().print_timestamp {
             let date = chrono::Utc
                 .timestamp_opt(record_result.datetime.secs(), 0)
-                .unwrap();
+                .single()
+                .unwrap_or_else(|| {
+                    warn!("Invalid timestamp: {}, using current time", record_result.datetime.secs());
+                    chrono::Utc::now()
+                });
 
             let date = date.format("%+").to_string();
             Metadata::content(self.write_date(&date))

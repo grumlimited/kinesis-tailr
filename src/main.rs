@@ -25,12 +25,17 @@ mod sink;
 mod aws;
 mod cli_helpers;
 
+/// Main entry point for kinesis-tailr.
+/// 
+/// This function sets up signal handling, parses CLI arguments, creates AWS clients,
+/// and orchestrates the tailing of Kinesis shards with appropriate output sinks.
 #[tokio::main]
 async fn main() -> Result<()> {
-    reset_signal_pipe_handler().expect("TODO: panic message");
+    reset_signal_pipe_handler().expect("Failed to reset signal pipe handler");
     set_log_level();
 
     let opt = Opt::parse();
+    opt.validate()?;
 
     let from_datetime = parse_date(opt.from_datetime.as_deref())?;
     let to_datetime = parse_date(opt.to_datetime.as_deref())?;
@@ -151,6 +156,10 @@ async fn main() -> Result<()> {
     Ok(())
 }
 
+/// Creates a semaphore for controlling concurrent shard processing.
+/// 
+/// If `concurrent` is specified, uses that value. Otherwise, uses the minimum of
+/// the shard count and the default semaphore size to prevent overwhelming the system.
 fn semaphore(shard_count: usize, concurrent: Option<usize>) -> Arc<Semaphore> {
     let concurrent = match concurrent {
         Some(concurrent) => concurrent,

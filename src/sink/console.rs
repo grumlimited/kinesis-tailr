@@ -4,6 +4,7 @@ use colored::Colorize;
 use std::io;
 use std::io::{BufWriter, Stdout};
 
+/// Buffer size for console output (32KB)
 pub const CONSOLE_BUF_SIZE: usize = 32 * 1024;
 
 pub struct ConsoleSink {

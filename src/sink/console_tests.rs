@@ -139,7 +139,7 @@ async fn expect_zero_messages_processed() {
         tx_records_clone
             .send(Ok(Termination))
             .await
-            .expect("TODO: panic message");
+            .expect("Failed to send termination message");
     });
 
     let mut handle = BufWriter::new(Vec::new());
@@ -168,7 +168,7 @@ async fn sending_beyondtotimestamp_should_terminate_sink() {
         tx_records_clone
             .send(Ok(BeyondToTimestamp))
             .await
-            .expect("TODO: panic message");
+            .expect("Failed to send beyond timestamp message");
     });
 
     let mut handle = BufWriter::new(Vec::new());
@@ -202,12 +202,12 @@ async fn expect_split() {
                 data: "payload".as_bytes().to_vec(),
             }])))
             .await
-            .expect("TODO: panic message");
+            .expect("Failed to send progress message");
 
         tx_records_clone
             .send(Ok(Termination))
             .await
-            .expect("TODO: panic message");
+            .expect("Failed to send termination message");
     });
 
     let mut handle = BufWriter::new(Vec::new());

@@ -72,12 +72,13 @@ kinesis-tailr \
 
 ### UTF-8
 
-`kinesis-tailr` expects payloads to be UTF-8 encoded. If a payload is not UTF-8 encoded, it will be base64 encoded and
-printed as such.
+`kinesis-tailr` expects payloads to be UTF-8 encoded by default. If a payload is not UTF-8 encoded, it will be base64 encoded and printed as such.
 
-It might be useful to print the raw payload instead though. This can be achieved with the `--no-base64` flag.
+You can control the payload encoding behavior with:
+- `--base64`: Force base64 encoding of all payloads (useful for binary data)
+- `--utf8`: Force UTF-8 interpretation of all payloads
 
-Properly UTF-8 encoded payloads will be printed as such and never base64 encoded.
+Properly UTF-8 encoded payloads will be printed as such when using the default or `--utf8` mode.
 
 ### Logging
 

@@ -13,94 +13,95 @@ pub const SEMAPHORE_DEFAULT_SIZE: usize = 50;
 )]
 pub struct Opt {
     /// AWS Region
-    #[structopt(short, long)]
+    #[arg(short, long)]
     pub region: Option<String>,
 
     /// Name of the stream
-    #[structopt(short, long)]
+    #[arg(short, long)]
     pub stream_name: String,
 
     /// Endpoint URL to use
-    #[structopt(long)]
+    #[arg(long)]
     pub endpoint_url: Option<String>,
 
     /// Start datetime position to tail from. ISO 8601 format.
-    #[structopt(long)]
+    #[arg(long)]
     pub from_datetime: Option<String>,
 
     /// End datetime position to tail up to. ISO 8601 format.
-    #[structopt(long)]
+    #[arg(long)]
     pub to_datetime: Option<String>,
 
     /// Maximum number of messages to retrieve
-    #[structopt(long)]
+    #[arg(long)]
     pub max_messages: Option<u32>,
 
     /// Exit if no messages received after <timeout> seconds.
-    #[structopt(long)]
+    #[arg(long)]
     pub timeout: Option<u16>,
 
     /// Maximum number of aws sdk retries. Increase if you are seeing throttling errors.
-    #[structopt(long)]
+    #[arg(long)]
     #[clap(default_value_t = 10)]
     pub max_attempts: u32,
 
     /// Disable color output
-    #[structopt(long)]
+    #[arg(long)]
     pub no_color: bool,
 
     /// Print a delimiter between each payload
-    #[structopt(long)]
+    #[arg(long)]
     pub print_delimiter: bool,
 
     /// Print the partition key
-    #[structopt(long)]
+    #[arg(long)]
     pub print_key: bool,
 
     /// Print the sequence number
-    #[structopt(long)]
+    #[arg(long)]
     pub print_sequence_number: bool,
 
     /// Print the shard ID.
-    #[structopt(long)]
+    #[arg(long)]
     pub print_shard_id: bool,
 
     /// Print timestamps
-    #[structopt(long)]
+    #[arg(long)]
     pub print_timestamp: bool,
 
     /// Print progress status
-    #[structopt(long)]
+    #[arg(long)]
     pub progress: bool,
 
     /// Shard ID to tail from. Repeat option for each shard ID to filter on
-    #[structopt(long)]
+    #[arg(long)]
     pub shard_id: Option<Vec<String>>,
 
     /// Output file to write to
-    #[structopt(long, short)]
+    #[arg(long, short)]
     pub output_file: Option<String>,
 
     /// Concurrent number of shards to tail
-    #[structopt(short, long)]
+    #[arg(short, long)]
     pub concurrent: Option<usize>,
 
     /// Display additional information
-    #[structopt(short, long)]
+    #[arg(short, long)]
     pub verbose: bool,
 
     /// Base64 encode payloads (eg. for binary data)
-    #[structopt(long)]
+    #[arg(long)]
     #[arg(group = "encoding")]
     pub base64: bool,
 
     /// Forces UTF-8 printable payloads
-    #[structopt(long)]
+    #[arg(long)]
     #[arg(group = "encoding")]
     pub utf8: bool,
 }
 
 impl Opt {
+    /// Returns the payload encoding strategy based on CLI flags.
     pub fn encoding(&self) -> PayloadEnc {
         if self.base64 {
             PayloadEnc::Base64
@@ -109,6 +110,34 @@ impl Opt {
         } else {
             PayloadEnc::Raw
         }
+    }
+
+    /// Validates the configuration options.
+    pub fn validate(&self) -> Result<()> {
+        // Validate output file path if specified
+        if let Some(ref output_file) = self.output_file {
+            if output_file.trim().is_empty() {
+                return Err(anyhow!("Output file path cannot be empty"));
+            }
+            // Check if parent directory exists for the output file
+            if let Some(parent) = std::path::Path::new(output_file).parent() {
+                if !parent.exists() {
+                    return Err(anyhow!(
+                        "Parent directory does not exist for output file: {}",
+                        output_file
+                    ));
+                }
+            }
+        }
+
+        // Validate concurrent value
+        if let Some(concurrent) = self.concurrent {
+            if concurrent == 0 {
+                return Err(anyhow!("Concurrent value must be greater than 0"));
+            }
+        }
+
+        Ok(())
     }
 }
 
@@ -291,5 +320,95 @@ mod tests {
         assert!(validate_time_boundaries(&from, &None).is_ok());
         assert!(validate_time_boundaries(&None, &to).is_ok());
         assert!(validate_time_boundaries(&None, &None).is_ok());
+    }
+
+    #[test]
+    fn opt_validate_empty_output_file() {
+        let mut opt = Opt {
+            region: None,
+            stream_name: "test-stream".to_string(),
+            endpoint_url: None,
+            from_datetime: None,
+            to_datetime: None,
+            max_messages: None,
+            timeout: None,
+            max_attempts: 10,
+            no_color: false,
+            print_delimiter: false,
+            print_key: false,
+            print_sequence_number: false,
+            print_shard_id: false,
+            print_timestamp: false,
+            progress: false,
+            shard_id: None,
+            output_file: Some("".to_string()),
+            concurrent: None,
+            verbose: false,
+            base64: false,
+            utf8: false,
+        };
+
+        assert!(opt.validate().is_err());
+
+        opt.output_file = Some("   ".to_string());
+        assert!(opt.validate().is_err());
+    }
+
+    #[test]
+    fn opt_validate_zero_concurrent() {
+        let opt = Opt {
+            region: None,
+            stream_name: "test-stream".to_string(),
+            endpoint_url: None,
+            from_datetime: None,
+            to_datetime: None,
+            max_messages: None,
+            timeout: None,
+            max_attempts: 10,
+            no_color: false,
+            print_delimiter: false,
+            print_key: false,
+            print_sequence_number: false,
+            print_shard_id: false,
+            print_timestamp: false,
+            progress: false,
+            shard_id: None,
+            output_file: None,
+            concurrent: Some(0),
+            verbose: false,
+            base64: false,
+            utf8: false,
+        };
+
+        assert!(opt.validate().is_err());
+    }
+
+    #[test]
+    fn opt_validate_success() {
+        let opt = Opt {
+            region: None,
+            stream_name: "test-stream".to_string(),
+            endpoint_url: None,
+            from_datetime: None,
+            to_datetime: None,
+            max_messages: None,
+            timeout: None,
+            max_attempts: 10,
+            no_color: false,
+            print_delimiter: false,
+            print_key: false,
+            print_sequence_number: false,
+            print_shard_id: false,
+            print_timestamp: false,
+            progress: false,
+            shard_id: None,
+            output_file: None,
+            concurrent: Some(5),
+            verbose: false,
+            base64: false,
+            utf8: false,
+        };
+
+        assert!(opt.validate().is_ok());
     }
 }

@@ -32,12 +32,12 @@ async fn file_sink_ok() {
                 data: "payload".as_bytes().to_vec(),
             }])))
             .await
-            .expect("TODO: panic message");
+            .expect("Failed to send progress message");
 
         tx_records_clone
             .send(Ok(Termination))
             .await
-            .expect("TODO: panic message");
+            .expect("Failed to send termination message");
     });
 
     sink.run(tx_records, rx_records).await.unwrap();
